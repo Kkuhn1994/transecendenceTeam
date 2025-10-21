@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  nginx:
+    build: src/nginx/.
+    container_name: nginx
+    ports:
+      - "80:80"
+    networks:
+      - webnet
+  main_service:
+    build: src/main_service/backend/.
+    container_name: main_service
+    expose:
+      - "3001"
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    
