@@ -1,8 +1,26 @@
 server {
-    listen 80;
+    listen 1080;
 
     location / {
         proxy_pass http://main_service:3001;  # Containername + Port, kein "localhost"!
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /login {
+        proxy_pass http://login_service:3000/;  # Containername + Port, kein "localhost"!
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /sign_up {
+        proxy_pass http://sign_up_service:3000/;  # Containername + Port, kein "localhost"!
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

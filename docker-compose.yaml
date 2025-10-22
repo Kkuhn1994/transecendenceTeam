@@ -5,14 +5,28 @@ services:
     build: src/nginx/.
     container_name: nginx
     ports:
-      - "80:80"
+      - "1080:1080"
     networks:
       - webnet
   main_service:
-    build: src/main_service/backend/.
+    build: src/main_service/service/.
     container_name: main_service
     expose:
       - "3001"
+    networks:
+      - webnet
+  login_service:
+    build: src/login_service/service/.
+    container_name: login_service
+    expose:
+      - "3000"
+    networks:
+      - webnet
+  sign_up_service:
+    build: src/sign_up_service/service/.
+    container_name: sign_up_service
+    expose:
+      - "3000"
     networks:
       - webnet
 
