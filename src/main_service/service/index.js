@@ -1,12 +1,25 @@
-// index.js
-const express = require('express');
-const app = express();
+// Require the framework and instantiate it
+// CommonJs
+const fastify = require('fastify')({
+  logger: true
+})
+const fs = require('fs')
+const path = require('path')
 
-app.get('/', (req, res) => {
-  res.send('Hallo von Node.js hinter NGINX!');
-});
+// Declare a route
+fastify.get('/', function (request, reply) {
+  console.log("route / test")
+  const filePath = path.join(__dirname, 'index.html')
+  const fileStream = fs.createReadStream(filePath)
+  reply.type('text/html').send(fileStream)
+})
 
-const PORT = 3001;
-app.listen(PORT, () => {
-  console.log(`Server läuft auf http://localhost:${PORT}`);
-});
+// Run the server!
+fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
+  if (err) {
+    fastify.log.error(err)
+    process.exit(1)
+  }
+  // Server is now listening on ${address}
+   fastify.log.info(`Server running at ${address}`)
+})

@@ -7,7 +7,7 @@ COPY . .
 RUN npm -y init
 
 RUN npm install
-RUN npm install express
+RUN npm install fastify
 
 
 CMD ["node", "index.js"]
