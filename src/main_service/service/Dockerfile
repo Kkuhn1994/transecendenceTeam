@@ -3,7 +3,9 @@ FROM node:18
 WORKDIR /service
 
 # package.json kopieren
-COPY package.json .
+COPY json/package.json package.json
+
+COPY json/tsconfig.json tsconfig.json
 
 # TypeScript und Typen installieren
 RUN npm install --save-dev typescript @types/node
@@ -18,7 +20,7 @@ COPY . .
 RUN mkdir -p public
 
 # TypeScript kompilieren
-RUN npx tsc login.ts --outDir ./public --lib "ES2015,DOM"
+RUN npx tsc frontend/login.ts --outDir ./frontend --lib "ES2015,DOM"
 
 # Startbefehl
 CMD ["node", "index.js"]

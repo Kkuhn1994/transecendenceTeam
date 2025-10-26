@@ -10,29 +10,29 @@ fastify.register(fastifyStatic, {
 
 // Index-Route (optional, sendet index.html explizit)
 fastify.get('/', (req, reply) => {
-  reply.sendFile('index.html'); // HTML über HTTP ausliefern
+  reply.sendFile('frontend/index.html'); // HTML über HTTP ausliefern
 });
 
 
-fastify.post('/login',  async (req, reply) => {
-  console.log(`login buttton clicked`)
-  fastify.log.info('login button clicked')
-  const { email, password } = req.body
-   try {
-    const res = await fetch( '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    })
+// fastify.post('/login',  async (req, reply) => {
+//   console.log(`login buttton clicked`)
+//   fastify.log.info('login button clicked')
+//   const { email, password } = req.body
+//    try {
+//     const res = await fetch( '/login', {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({ email, password })
+//     })
 
-    // Antwort des anderen Containers lesen
-    const data = await res.json()
-    reply.send(data)
-  } catch (err) {
-    fastify.log.error(err.message)
-    reply.code(500).send({ error: 'Login-Service nicht erreichbar' })
-  }
-})
+//     // Antwort des anderen Containers lesen
+//     const data = await res.json()
+//     reply.send(data)
+//   } catch (err) {
+//     fastify.log.error(err.message)
+//     reply.code(500).send({ error: 'Login-Service nicht erreichbar' })
+//   }
+// })
 
 
 // Run the server!
