@@ -2,30 +2,23 @@ FROM node:18
 
 WORKDIR /service
 
-
-
-# Kopiere die package.json (lokal vorbereitet, keine npm init nötig)
+# package.json kopieren
 COPY package.json .
 
-RUN cat package.json
+# TypeScript und Typen installieren
+RUN npm install --save-dev typescript @types/node
 
-# Installiere alle Dependencies (prod + dev)
-RUN npm install
-
-RUN npm install fastify && npm install @fastify/static
-
-
-# TypeScript installieren (falls devDependency)
-RUN npm install -D typescript @types/node
+# Fastify installieren
+RUN npm install fastify @fastify/static
 
 # Quellcode kopieren
 COPY . .
 
+# public-Verzeichnis erstellen
+RUN mkdir -p public
+
 # TypeScript kompilieren
-RUN npx tsc login.ts
+RUN npx tsc login.ts --outDir ./public --lib "ES2015,DOM"
 
-
-
-
+# Startbefehl
 CMD ["node", "index.js"]
-

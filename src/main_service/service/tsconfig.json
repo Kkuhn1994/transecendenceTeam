@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "commonjs",
+    "outDir": "./public",
+    "strict": true,
+    "esModuleInterop": true,
+    "lib": ["ES2015", "DOM"]   // <- hier die fehlenden Bibliotheken
+  },
+  "include": ["login.ts"]
+}

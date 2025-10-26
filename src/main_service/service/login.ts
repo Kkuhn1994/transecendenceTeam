@@ -13,6 +13,7 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
   const body: LoginRequest = { email, password };
 
   try {
+    alert("request");
     const response = await fetch('http://localhost:1080/login', {
       method: 'POST',
       headers: {
@@ -36,11 +37,17 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
 }
 
 // Beispiel: Nutzung
+
+window.addEventListener('DOMContentLoaded', () => {
+  alert('Script und DOM sind geladen!');
+
+
 const emailInput = document.getElementById('email') as HTMLInputElement;
 const passwordInput = document.getElementById('password') as HTMLInputElement;
 const form = document.querySelector('form') as HTMLFormElement;
 
 form.addEventListener('submit', async (e) => {
+  console.log('sbmit');
   e.preventDefault(); // verhindert normalen Form-Submit
 
   const email = emailInput.value;
@@ -49,3 +56,8 @@ form.addEventListener('submit', async (e) => {
   const result = await loginUser(email, password);
   console.log('Server response:', result);
 });
+
+});
+
+
+
