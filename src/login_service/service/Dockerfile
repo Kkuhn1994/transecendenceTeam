@@ -4,8 +4,11 @@ WORKDIR /service
 
 COPY . .
 
-RUN npm -y init
 
+# Optional: Install CLI for debugging (optional)
+RUN apt-get update && apt-get install -y sqlite3
+
+RUN npm -y init
 RUN npm install
 RUN npm install fastify
 
