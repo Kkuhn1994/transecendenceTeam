@@ -13,6 +13,10 @@ fastify.get('/', (req, reply) => {
   reply.sendFile('frontend/index.html'); // HTML über HTTP ausliefern
 });
 
+fastify.get('/gamestart', (req, reply) => {
+  reply.sendFile('frontend/game.html'); // HTML über HTTP ausliefern
+});
+
 
 // fastify.post('/login',  async (req, reply) => {
 //   console.log(`login buttton clicked`)

@@ -63,3 +63,42 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
+    <!-- <script>
+document.addEventListener("DOMContentLoaded", () => {
+  alert("loaded"); // Test, dass das DOM bereit ist
+
+  const form = document.querySelector("form");
+  if (!form) {
+    alert("Formular nicht gefunden!");
+    return;
+  } else {
+    alert("Formular gefunden!");
+  }
+
+  
+  document.body.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    
+    try {
+      alert("request");
+      const response = await fetch("http://localhost:1080/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+      const data = await response.json();
+      console.log("Login response:", data);
+      alert("Login erfolgreich!");
+    } catch (err) {
+      console.error("Fehler beim Login:", err);
+      alert("Login fehlgeschlagen!");
+    }
+  });
+});
+</script> -->

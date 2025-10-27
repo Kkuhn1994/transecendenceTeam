@@ -23,8 +23,8 @@ services:
     networks:
       - webnet
   sign_up_service:
-    build: src/sign_up_service/service/.
-    container_name: sign_up_service
+    build: src/game_service/service/.
+    container_name: game_service
     expose:
       - "3000"
     networks:
