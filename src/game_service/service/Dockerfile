@@ -13,5 +13,4 @@ RUN npm install sqlite3
 
 RUN npm install fastify
 
-
 CMD ["node", "index.js"]
