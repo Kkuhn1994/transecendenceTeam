@@ -1,6 +1,11 @@
 version: "3.8"
 
 services:
+  database:
+    build: src/database/.
+    container_name: database
+    volumes:
+      - sqlite-data:/app/data
   nginx:
     build: src/nginx/.
     container_name: nginx
@@ -8,6 +13,13 @@ services:
       - "1080:1080"
     networks:
       - webnet
+    volumes:
+      - sqlite-data:/app/data
+    depends_on:
+      - main_service
+      - login_service
+      - game_service
+      - database
   main_service:
     build: src/main_service/service/.
     container_name: main_service
@@ -15,6 +27,8 @@ services:
       - "3000"
     networks:
       - webnet
+    volumes:
+      - sqlite-data:/app/data
   login_service:
     build: src/login_service/service/.
     container_name: login_service
@@ -22,14 +36,21 @@ services:
       - "3000"
     networks:
       - webnet
-  sign_up_service:
+    volumes:
+      - sqlite-data:/app/data
+  game_service:
     build: src/game_service/service/.
     container_name: game_service
     expose:
       - "3000"
     networks:
       - webnet
+    volumes:
+      - sqlite-data:/app/data
 
+volumes:
+  sqlite-data:
+ 
 networks:
   webnet:
     
