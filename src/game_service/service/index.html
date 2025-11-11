@@ -54,15 +54,120 @@
     <div class="card">
       <div class="card-body">
         <h1>👋 Willkommen!</h1>
-        <p>Dies ist eine einfache HTML-Seite mit Bootstrap-Styling.</p>
+        <p>Dies ist ein Penis.</p>
         <a href="/login" class="btn btn-primary">Zum Login</a>
       </div>
+    </div>
+    <div class="container">
+      <h1 class="text-center">👾 Pong Game</h1>
+      <canvas id="pongCanvas" width="800" height="400"></canvas>
     </div>
 
     <!-- Bootstrap JS (optional) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const canvas = document.getElementById('pongCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const paddleWidth = 10, paddleHeight = 100, ballSize = 10;
+        let paddleSpeed = 4;
+        let leftPaddleY = (canvas.height - paddleHeight) / 2;
+        let rightPaddleY = (canvas.height - paddleHeight) / 2;
+        let ballX = canvas.width / 2, ballY = canvas.height / 2;
+        let ballSpeedX = 4, ballSpeedY = 4;
+
+        // Tasten für Steuerung
+        let upPressed = false, downPressed = false;
+        let wPressed = false, sPressed = false;
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowUp') upPressed = true;
+          if (e.key === 'ArrowDown') downPressed = true;
+          if (e.key === 'w') wPressed = true;
+          if (e.key === 's') sPressed = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+          if (e.key === 'ArrowUp') upPressed = false;
+          if (e.key === 'ArrowDown') downPressed = false;
+          if (e.key === 'w') wPressed = false;
+          if (e.key === 's') sPressed = false;
+        });
+
+
+    // Funktion, um das Spiel zu rendern
+    function draw() {
+      // Hintergrund
+      ctx.fillStyle = '#f4f4f9';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Schläger zeichnen
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, leftPaddleY, paddleWidth, paddleHeight); // Linker Schläger
+      ctx.fillRect(canvas.width - paddleWidth, rightPaddleY, paddleWidth, paddleHeight); // Rechter Schläger
+
+      // Ball zeichnen
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
+      ctx.fillStyle = '#000';
+      ctx.fill();
+      ctx.closePath();
+
+      // Schlägerbewegung
+      if (upPressed && rightPaddleY > 0) rightPaddleY -= paddleSpeed;
+      if (downPressed && rightPaddleY + paddleHeight < canvas.height) rightPaddleY += paddleSpeed;
+      if (wPressed && leftPaddleY > 0) leftPaddleY -= paddleSpeed;
+      if (sPressed && leftPaddleY + paddleHeight < canvas.height) leftPaddleY += paddleSpeed;
+
+      // Ballbewegung (dynamische Logik kann hier eingebaut werden)
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Ballprall an oberen und unteren Rändern
+      if (ballY - ballSize <= 0 || ballY + ballSize >= canvas.height) {
+        ballSpeedY = -ballSpeedY;
+      }
+
+      // Ballprall an den Schlägern (logische Kollisionsabfrage musst du einbauen)
+      if (ballX - ballSize <= paddleWidth && ballY >= leftPaddleY && ballY <= leftPaddleY + paddleHeight) {
+        ballSpeedX = -ballSpeedX;
+      }
+      if (ballX + ballSize >= canvas.width - paddleWidth && ballY >= rightPaddleY && ballY <= rightPaddleY + paddleHeight) {
+        ballSpeedX = -ballSpeedX;
+      }
+
+      // Ball verlassen des Spielfeldes (Game Over Logik einbauen)
+      if (ballX - ballSize <= 0 || ballX + ballSize >= canvas.width) {
+        // Hier kannst du eine Spielüberprüfung oder Punktevergabe machen.
+      }
+
+      // Animationsaufruf
+      requestAnimationFrame(draw);
+    }
+
+    // Start des Spiels
+    draw();
+    </script>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <!-- <script>
 document.addEventListener("DOMContentLoaded", () => {
   alert("loaded"); // Test, dass das DOM bereit ist
@@ -101,4 +206,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-</script> -->
+</script> -->docker compose up --build
