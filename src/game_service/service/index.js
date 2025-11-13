@@ -14,6 +14,29 @@ fastify.get('/', function (request, reply) {
   reply.type('text/html').send(fileStream)
 })
 
+fastify.post('//game', function (request, reply) {
+  console.log("route / test")
+  console.log(request.body)
+  canvasheight = request.body.canvasheight
+  canvaswidth = request.body.canvaswidth
+  const paddleWidth = 10, paddleHeight = 100, ballSize = 10;
+  let paddleSpeed = 4;
+  let leftPaddleY = (canvasheight - paddleHeight) / 2;
+  let rightPaddleY = (canvasheight - paddleHeight) / 2;
+  let ballX = canvaswidth / 2, ballY = canvasheight / 2;
+  let ballSpeedX = 4, ballSpeedY = 4;
+
+  ballX += ballSpeedX;
+  ballY += ballSpeedY;
+
+  reply.send({
+    leftPaddleY,
+    rightPaddleY,
+    ballX,
+    ballY,
+  });
+})
+
 // Run the server!
 fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
   if (err) {
