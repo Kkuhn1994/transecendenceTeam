@@ -23,7 +23,7 @@ fastify.post('//game', function (request, reply) {
   let paddleSpeed = 4;
   let leftPaddleY = (canvasheight - paddleHeight) / 2;
   let rightPaddleY = (canvasheight - paddleHeight) / 2;
-  let ballX = canvaswidth / 2, ballY = canvasheight / 2;
+  let ballX = request.body.ballX, ballY = request.body.ballY;
   let ballSpeedX = 4, ballSpeedY = 4;
 
   ballX += ballSpeedX;

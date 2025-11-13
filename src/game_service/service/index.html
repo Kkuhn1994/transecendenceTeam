@@ -70,8 +70,8 @@
         const ctx = canvas.getContext('2d');
         let leftPaddleY;
         let rightPaddleY;
-        let ballX;
-        let ballY;
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;;
 
         // Tasten für Steuerung
         let upPressed = false, downPressed = false;
@@ -135,7 +135,7 @@
         rightPaddleY = response.rightPaddleY;
         ballX = response.ballX;
         ballY = response.ballY;
-        alert(ballX);
+        // alert(ballX);
       })
       .catch(err => {
         console.error('Fehler bei der Anfrage:', err);
