@@ -13,6 +13,8 @@ RUN npm install --save-dev typescript @types/node
 # Fastify installieren
 RUN npm install fastify @fastify/static
 
+RUN npm install @fastify/cookie
+
 # Quellcode kopieren
 COPY . .
 

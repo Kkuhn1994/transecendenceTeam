@@ -1,7 +1,7 @@
 FROM debian:latest
 
-RUN apt update && apt upgrade && apt install -y \
-    nginx
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nginx
 
 COPY default /etc/nginx/sites-available/.
 

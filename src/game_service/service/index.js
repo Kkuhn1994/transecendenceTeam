@@ -14,20 +14,51 @@ fastify.get('/', function (request, reply) {
   reply.type('text/html').send(fileStream)
 })
 
+let ballSpeedX = 4, ballSpeedY = 4;
+
 fastify.post('//game', function (request, reply) {
   console.log("route / test")
-  console.log(request.body)
+  // console.log(request.body)
   canvasheight = request.body.canvasheight
   canvaswidth = request.body.canvaswidth
   const paddleWidth = 10, paddleHeight = 100, ballSize = 10;
   let paddleSpeed = 4;
-  let leftPaddleY = (canvasheight - paddleHeight) / 2;
-  let rightPaddleY = (canvasheight - paddleHeight) / 2;
+  let leftPaddleY = request.body.leftPaddleY;
+  let rightPaddleY = request.body.rightPaddleY;
   let ballX = request.body.ballX, ballY = request.body.ballY;
-  let ballSpeedX = 4, ballSpeedY = 4;
+ 
 
   ballX += ballSpeedX;
   ballY += ballSpeedY;
+
+  if(ballY > canvasheight || ballY < 0)
+  {
+    ballSpeedY = -ballSpeedY;
+  }
+  if (ballX + ballSize <= 0 + paddleWidth && ballY + ballSize >= leftPaddleY && ballY - ballSize <= leftPaddleY + paddleHeight) 
+  {
+    ballSpeedX = -ballSpeedX; // Abprallen
+  }
+  if (ballX + ballSize >= canvaswidth - paddleWidth && ballY + ballSize >= rightPaddleY && ballY - ballSize <= rightPaddleY + paddleHeight) 
+  {
+    ballSpeedX = -ballSpeedX; // Abprallen
+  }
+  if(request.body.upPressed == true)
+  {
+    rightPaddleY -= paddleSpeed;
+  }
+  else if(request.body.downPressed == true)
+  { 
+    rightPaddleY += paddleSpeed;
+  }
+  if(request.body.wPressed == true)
+  {
+    leftPaddleY -= paddleSpeed;
+  }
+  else if(request.body.sPressed == true)
+  {
+    leftPaddleY += paddleSpeed;
+  }
 
   reply.send({
     leftPaddleY,

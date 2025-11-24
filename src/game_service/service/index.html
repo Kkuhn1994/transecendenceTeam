@@ -55,7 +55,7 @@
       <div class="card-body">
         <h1>👋 Willkommen!</h1>
         <p>Dies ist ein Penis.</p>
-        <a href="/login" class="btn btn-primary">Zum Login</a>
+        <a href="/login_service" class="btn btn-primary">Zum Login</a>
       </div>
     </div>
     <div class="container">
@@ -68,8 +68,8 @@
     <script>
         const canvas = document.getElementById('pongCanvas');
         const ctx = canvas.getContext('2d');
-        let leftPaddleY;
-        let rightPaddleY;
+        let leftPaddleY = canvas.height / 2;
+        let rightPaddleY = canvas.height / 2;
         let ballX = canvas.width / 2;
         let ballY = canvas.height / 2;;
 
@@ -120,7 +120,11 @@
         wPressed,
         sPressed,
         canvasheight,
-        canvaswidth
+        canvaswidth,
+        leftPaddleY,
+        rightPaddleY,
+        ballX,
+        ballY
       };
 
       fetch('/game_service/game', {
