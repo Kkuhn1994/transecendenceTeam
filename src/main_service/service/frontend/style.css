@@ -1,0 +1,57 @@
+/* body {
+background-color: #f8f9fa;
+display: flex;
+align-items: center;
+justify-content: center;
+height: 100vh;
+} */
+
+.login-container {
+width: 100%;
+max-width: 400px;
+background: white;
+padding: 2rem;
+border-radius: 10px;
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-control:focus {
+box-shadow: none;
+border-color: #0d6efd;
+}
+
+body {
+background-color: aqua;
+font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+}
+
+.card {
+max-width: 400px;
+width: 100%;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+border: none;
+border-radius: 10px;
+}
+
+.card-body {
+text-align: center;
+padding: 2rem;
+}
+
+h1 {
+font-size: 1.8rem;
+margin-bottom: 1rem;
+}
+
+p {
+color: #555;
+}
+
+.btn-primary {
+margin-top: 1rem;
+width: 100%;
+}
