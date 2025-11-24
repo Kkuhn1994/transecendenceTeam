@@ -45,13 +45,6 @@ const views = {
   `,
 
   "/game": `
-     <div class="card">
-      <div class="card-body">
-        <h1>👋 Willkommen!</h1>
-        <p>Dies ist ein Penis.</p>
-        <a href="/login_service" class="btn btn-primary">Zum Login</a>
-      </div>
-    </div>
     <div class="container">
       <h1 class="text-center">👾 Pong Game</h1>
       <canvas id="pongCanvas" width="800" height="400"></canvas>
@@ -61,10 +54,11 @@ const views = {
 
 function loadGameScript() {
   const script = document.createElement("script");
-  script.src = "frontend/game.js";
+  script.src = "frontend/game_frontend.js";
   script.defer = true;
   document.body.appendChild(script);
 }
+
 // Router
 function router() {
     

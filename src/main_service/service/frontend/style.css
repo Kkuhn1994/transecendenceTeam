@@ -6,13 +6,37 @@ justify-content: center;
 height: 100vh;
 } */
 
+/* Alle Links auf der Seite */
+a {
+  color: #007bff;  /* Standard Link-Farbe */
+  text-decoration: none; /* Entfernt die Unterstreichung */
+}
+
+a:hover {
+  color: #0056b3; /* Hover-Farbe für Links */
+  text-decoration: underline; /* Fügt eine Unterstreichung beim Hover hinzu */
+}
+
+nav {
+  position: fixed; /* Fixiert das nav oben */
+  top: 0; /* Setzt es ganz oben */
+  left: 0; /* Setzt es ganz links */
+  padding: 10px 20px; /* Abstand von den Rändern */
+  background-color: #fff; /* Optional: Hintergrundfarbe für das nav */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Schatten, um es hervorzuheben */
+  z-index: 1000; /* Stellt sicher, dass es über anderen Inhalten liegt */
+}
+
+
 .login-container {
-width: 100%;
-max-width: 400px;
-background: white;
-padding: 2rem;
-border-radius: 10px;
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  margin-top: 50px; /* Abstand vom oberen Rand */
+  background-color: #f9f9f9;
 }
 
 .form-control:focus {

@@ -35,11 +35,13 @@ fastify.post('//game', function (request, reply) {
   {
     ballSpeedY = -ballSpeedY;
   }
+
+  ///work on condition
   if (ballX + ballSize <= 0 + paddleWidth && ballY + ballSize >= leftPaddleY && ballY - ballSize <= leftPaddleY + paddleHeight) 
   {
     ballSpeedX = -ballSpeedX; // Abprallen
   }
-  if (ballX + ballSize >= canvaswidth - paddleWidth && ballY + ballSize >= rightPaddleY && ballY - ballSize <= rightPaddleY + paddleHeight) 
+  if (ballX + ballSize >= canvaswidth - paddleWidth && ballY + ballSize >= rightPaddleY || ballY - ballSize <= rightPaddleY + paddleHeight) 
   {
     ballSpeedX = -ballSpeedX; // Abprallen
   }
