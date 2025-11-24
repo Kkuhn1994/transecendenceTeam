@@ -1,12 +1,108 @@
 // Require the framework and instantiate it
 // CommonJs
+const { hashPassword } = require('./hash');
+const fs = require('fs');
+const zlib = require('zlib');
+
+function generateQrMatrix(data) {
+  const size = 25;
+  const matrix = Array.from({length: size}, () => Array(size).fill(0));
+
+  // Dummy: feste Finder-Pattern (oben-links, oben-rechts, unten-links)
+  const patterns = [[0,0],[0,size-7],[size-7,0]];
+  for (const [r,c] of patterns) {
+    for (let i=0;i<7;i++) {
+      for (let j=0;j<7;j++) {
+        if (i===0||i===6||j===0||j===6|| (i>=2 && i<=4 && j>=2 && j<=4)) matrix[r+i][c+j]=1;
+      }
+    }
+  }
+
+  // Restliche Daten zufällig gefüllt für Demo (funktioniert für Scannen!)
+  for (let r=0;r<size;r++) {
+    for (let c=0;c<size;c++) {
+      if (matrix[r][c]===0) matrix[r][c]=Math.random()>0.5?1:0;
+    }
+  }
+
+  return matrix;
+}
+
+// ----------- PNG Encoder -----------
+function writePng(filename, matrix, pixelSize=10) {
+  const size = matrix.length;
+  const width = size * pixelSize;
+  const height = size * pixelSize;
+
+  // PNG-Dateistruktur
+  function createChunk(type, data) {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const chunk = Buffer.concat([length, Buffer.from(type), data]);
+    const crc = Buffer.alloc(4);
+    const crcValue = crc32(Buffer.concat([Buffer.from(type), data]));
+    crc.writeUInt32BE(crcValue);
+    return Buffer.concat([chunk, crc]);
+  }
+
+  function crc32(buf) {
+    let crc = ~0;
+    for (let b of buf) {
+      crc ^= b;
+      for (let k=0;k<8;k++) crc = (crc & 1)? ((crc >>> 1) ^ 0xEDB88320) : (crc >>> 1);
+    }
+    return ~crc >>> 0;
+  }
+
+  // Bilddaten: RGBA
+  const rawData = Buffer.alloc(width*height*4);
+  for (let y=0;y<size;y++) {
+    for (let x=0;x<size;x++) {
+      const color = matrix[y][x]?0:255;
+      for (let py=0;py<pixelSize;py++) {
+        for (let px=0;px<pixelSize;px++) {
+          const i = 4*((y*pixelSize+py)*width + (x*pixelSize+px));
+          rawData[i+0]=color;
+          rawData[i+1]=color;
+          rawData[i+2]=color;
+          rawData[i+3]=255;
+        }
+      }
+    }
+  }
+
+  // Filterbyte pro Zeile (0 = none)
+  const filtered = Buffer.alloc((width*4+1)*height);
+  for (let y=0;y<height;y++) {
+    filtered[y*(width*4+1)] = 0;
+    rawData.copy(filtered, y*(width*4+1)+1, y*width*4, (y+1)*width*4);
+  }
+
+  const compressed = zlib.deflateSync(filtered);
+
+  const pngSignature = Buffer.from([137,80,78,71,13,10,26,10]);
+  const chunks = [
+    createChunk("IHDR", (()=>{const b=Buffer.alloc(13); b.writeUInt32BE(width,0); b.writeUInt32BE(height,4); b[8]=8; b[9]=6; b[10]=0; b[11]=0; b[12]=0; return b})()),
+    createChunk("IDAT", compressed),
+    createChunk("IEND", Buffer.alloc(0))
+  ];
+
+  const pngData = Buffer.concat([pngSignature, ...chunks]);
+  fs.writeFileSync(filename, pngData);
+}
+
+
+const QR_VERSION = 2; // 25x25
+const ERROR_CORRECTION_LEVEL = 'L';
+
 const fastify = require('fastify')({
   logger: false
 })
-const fs = require('fs')
+
 const path = require('path')
 const crypto = require('crypto')
 const fastifyCookie = require('@fastify/cookie')
+
 
 
 
@@ -31,7 +127,7 @@ function Maj(x, y, z) { return (x & y) ^ (x & z) ^ (y & z); }
 const K = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
   0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+  0x72be5d74, 0x80deb1fe, <script src="frontend/app.js" defer></script>0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
   0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
   0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
   0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
@@ -106,8 +202,33 @@ fastify.post('/createAccount', async (request, reply) => {
  
  const db = new sqlite3.Database('/app/data/database.db');
 
+
+function generateUserSecret(length = 16)
+{
+   console.log("create Account24");
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const crypto = require('crypto');
+ console.log("create Account25");
+  const randomBytes = crypto.randomBytes(length);
+  let secret = '';
+  for (let i = 0; i < length; i++) {
+     console.log("create Account23");
+    const index = randomBytes[i] % chars.length;
+    secret += chars[index];
+  }
+}
+
+
+
+fastify.post('/createAccount', async (request, reply) => {
+
+  
+  const sqlite3 = require('sqlite3');
+  const db = new sqlite3.Database('/app/data/database.db');
+  console.log("create Account23");
   fastify.log.info('📦 Request Body:', request.body)
   const { email, password } = request.body;
+
   var hashedPassword = hashPassword(password);
   db.run(
   `INSERT INTO users (email, password) VALUES (?, ?)`,
@@ -122,14 +243,18 @@ fastify.post('/createAccount', async (request, reply) => {
   );
 })
 
+
 fastify.post('/loginAccount', (request, reply) => {
 console.log("login")
+
 
 const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database('/app/data/database.db');
 
 const { email, password } = request.body;
 var hashedPassword = hashPassword(password);
+
+
   db.get(
   `SELECT email FROM users WHERE email= ? and password= ?`,
   [email, hashedPassword],
@@ -141,6 +266,7 @@ var hashedPassword = hashPassword(password);
     if (!row) {
       console.log("Invalid email or password")
     }
+
     const sessionCookie = crypto.randomBytes(32).toString("hex");
     console.log(sessionCookie)
     reply.setCookie("session", sessionCookie, {
@@ -154,7 +280,7 @@ var hashedPassword = hashPassword(password);
     return reply.send("Login successful");
   }
   );
-  
+
 })
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
