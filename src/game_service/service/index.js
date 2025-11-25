@@ -1,5 +1,3 @@
-// Require the framework and instantiate it
-// CommonJs
 const fastify = require('fastify')({
   logger: true
 })
@@ -17,7 +15,7 @@ fastify.get('/', function (request, reply) {
 let ballSpeedX = 4, ballSpeedY = 4;
 
 fastify.post('//game', function (request, reply) {
-  console.log("route / test")
+  // console.log("route / test")
   // console.log(request.body)
   canvasheight = request.body.canvasheight
   canvaswidth = request.body.canvaswidth
@@ -31,20 +29,25 @@ fastify.post('//game', function (request, reply) {
   ballX += ballSpeedX;
   ballY += ballSpeedY;
 
-  if(ballY > canvasheight || ballY < 0)
+  // Wall collision (Top/Bottom)
+  if(ballY + ballSize > canvasheight || ballY - ballSize < 0)
   {
     ballSpeedY = -ballSpeedY;
   }
 
-  ///work on condition
-  if (ballX + ballSize <= 0 + paddleWidth && ballY + ballSize >= leftPaddleY && ballY - ballSize <= leftPaddleY + paddleHeight) 
+  // Paddle Collision
+  // Left Paddle
+  if (ballX - ballSize <= paddleWidth && ballY + ballSize >= leftPaddleY && ballY - ballSize <= leftPaddleY + paddleHeight) 
   {
-    ballSpeedX = -ballSpeedX; // Abprallen
+    ballSpeedX = Math.abs(ballSpeedX); // Force move right
   }
-  if (ballX + ballSize >= canvaswidth - paddleWidth && ballY + ballSize >= rightPaddleY || ballY - ballSize <= rightPaddleY + paddleHeight) 
+  
+  // Right Paddle
+  if (ballX + ballSize >= canvaswidth - paddleWidth && ballY + ballSize >= rightPaddleY && ballY - ballSize <= rightPaddleY + paddleHeight) 
   {
-    ballSpeedX = -ballSpeedX; // Abprallen
+    ballSpeedX = -Math.abs(ballSpeedX); // Force move left
   }
+
   if(request.body.upPressed == true)
   {
     rightPaddleY -= paddleSpeed;
@@ -61,6 +64,10 @@ fastify.post('//game', function (request, reply) {
   {
     leftPaddleY += paddleSpeed;
   }
+
+  // Constrain paddles to canvas
+  leftPaddleY = Math.max(0, Math.min(canvasheight - paddleHeight, leftPaddleY));
+  rightPaddleY = Math.max(0, Math.min(canvasheight - paddleHeight, rightPaddleY));
 
   reply.send({
     leftPaddleY,
