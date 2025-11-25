@@ -51,6 +51,7 @@ fastify.post('//game', function (request, reply) {
   }
 
   // Scoring
+  let winner = null;
   if (ballX < 0) {
     scoreRight++;
     ballX = canvaswidth / 2;
@@ -61,6 +62,16 @@ fastify.post('//game', function (request, reply) {
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
     ballSpeedX = -4; // Reset speed direction
+  }
+
+  if (scoreLeft >= 11) {
+    winner = "Player 1";
+    scoreLeft = 0;
+    scoreRight = 0;
+  } else if (scoreRight >= 11) {
+    winner = "Player 2";
+    scoreLeft = 0;
+    scoreRight = 0;
   }
 
   if(request.body.upPressed == true)
@@ -90,7 +101,8 @@ fastify.post('//game', function (request, reply) {
     ballX,
     ballY,
     scoreLeft,
-    scoreRight
+    scoreRight,
+    winner
   });
 })
 

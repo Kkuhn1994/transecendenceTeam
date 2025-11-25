@@ -104,6 +104,9 @@
             ballY = response.ballY;
             if (response.scoreLeft !== undefined) scoreLeft = response.scoreLeft;
             if (response.scoreRight !== undefined) scoreRight = response.scoreRight;
+            if (response.winner) {
+                alert(`Game Over! ${response.winner} wins!`);
+            }
         })
         .catch(err => {
             console.error('Fehler bei der Anfrage:', err);
