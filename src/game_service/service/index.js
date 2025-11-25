@@ -13,6 +13,8 @@ fastify.get('/', function (request, reply) {
 })
 
 let ballSpeedX = 4, ballSpeedY = 4;
+let scoreLeft = 0;
+let scoreRight = 0;
 
 fastify.post('//game', function (request, reply) {
   // console.log("route / test")
@@ -48,6 +50,19 @@ fastify.post('//game', function (request, reply) {
     ballSpeedX = -Math.abs(ballSpeedX); // Force move left
   }
 
+  // Scoring
+  if (ballX < 0) {
+    scoreRight++;
+    ballX = canvaswidth / 2;
+    ballY = canvasheight / 2;
+    ballSpeedX = 4; // Reset speed direction
+  } else if (ballX > canvaswidth) {
+    scoreLeft++;
+    ballX = canvaswidth / 2;
+    ballY = canvasheight / 2;
+    ballSpeedX = -4; // Reset speed direction
+  }
+
   if(request.body.upPressed == true)
   {
     rightPaddleY -= paddleSpeed;
@@ -74,6 +89,8 @@ fastify.post('//game', function (request, reply) {
     rightPaddleY,
     ballX,
     ballY,
+    scoreLeft,
+    scoreRight
   });
 })
 

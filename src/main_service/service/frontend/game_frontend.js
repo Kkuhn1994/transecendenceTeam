@@ -12,6 +12,8 @@
     let rightPaddleY = canvas.height / 2;
     let ballX = canvas.width / 2;
     let ballY = canvas.height / 2;
+    let scoreLeft = 0;
+    let scoreRight = 0;
 
     // Tasten für Steuerung
     let upPressed = false, downPressed = false;
@@ -59,6 +61,12 @@
         ctx.fill();
         ctx.closePath();
 
+        // Score zeichnen
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "#000";
+        ctx.fillText(scoreLeft, canvas.width / 4, 50);
+        ctx.fillText(scoreRight, 3 * canvas.width / 4, 50);
+
         requestAnimationFrame(draw);
     }
 
@@ -94,6 +102,8 @@
             rightPaddleY = response.rightPaddleY;
             ballX = response.ballX;
             ballY = response.ballY;
+            if (response.scoreLeft !== undefined) scoreLeft = response.scoreLeft;
+            if (response.scoreRight !== undefined) scoreRight = response.scoreRight;
         })
         .catch(err => {
             console.error('Fehler bei der Anfrage:', err);
