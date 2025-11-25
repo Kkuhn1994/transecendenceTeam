@@ -1,4 +1,4 @@
-const fastify = require('fastify')({ logger: false });
+const fastify = require('fastify')({ logger: true });
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
 const fastifyCookie = require('@fastify/cookie')
@@ -26,11 +26,6 @@ fastify.get('/', (req, reply) => {
   });
   reply.sendFile('index.html'); // HTML über HTTP ausliefern
 });
-
-fastify.get('/gamestart', (req, reply) => {
-  reply.sendFile('game.html'); // HTML über HTTP ausliefern
-});
-
 
 // fastify.post('/login',  async (req, reply) => {
 //   console.log(`login buttton clicked`)
@@ -60,5 +55,5 @@ fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
     process.exit(1)
   }
   // Server is now listening on ${address}
-  //  fastify.log.info(`Server running at ${address}`)
+   fastify.log.info(`Server running at ${address}`)
 })
