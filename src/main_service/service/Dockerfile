@@ -7,22 +7,14 @@ COPY json/package.json package.json
 
 COPY json/tsconfig.json tsconfig.json
 
-# TypeScript und Typen installieren
-RUN npm install --save-dev typescript @types/node
-
-# Fastify installieren
-RUN npm install fastify @fastify/static
-
-RUN npm install @fastify/cookie
+# Install dependencies (including devDependencies for build)
+RUN npm install
 
 # Quellcode kopieren
 COPY . .
 
-# public-Verzeichnis erstellen
-RUN mkdir -p public
-
-# TypeScript kompilieren
-RUN npx tsc frontend/login.ts --outDir ./frontend --lib "ES2015,DOM"
+# Build frontend
+RUN npm run build
 
 # Startbefehl
 CMD ["node", "index.js"]

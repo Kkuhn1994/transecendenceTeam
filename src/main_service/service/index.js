@@ -5,7 +5,7 @@ const fastifyCookie = require('@fastify/cookie')
 
 // Statisches Verzeichnis registrieren
 fastify.register(fastifyStatic, {
-  root: path.join(__dirname), // index.html muss hier liegen
+  root: path.join(__dirname, 'dist'), // Serve from dist folder
   prefix: '/', // optional, URL-Präfix
 });
 
@@ -24,11 +24,11 @@ fastify.get('/', (req, reply) => {
         path: "/",  
         maxAge: 60 * 60 * 24   // 1 Tag in Sekunden
   });
-  reply.sendFile('frontend/index.html'); // HTML über HTTP ausliefern
+  reply.sendFile('index.html'); // HTML über HTTP ausliefern
 });
 
 fastify.get('/gamestart', (req, reply) => {
-  reply.sendFile('frontend/game.html'); // HTML über HTTP ausliefern
+  reply.sendFile('game.html'); // HTML über HTTP ausliefern
 });
 
 
