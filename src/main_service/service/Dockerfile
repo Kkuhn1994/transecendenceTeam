@@ -3,9 +3,9 @@ FROM node:18
 WORKDIR /service
 
 # package.json kopieren
-COPY json/package.json package.json
+COPY package.json package.json
 
-COPY json/tsconfig.json tsconfig.json
+COPY tsconfig.json tsconfig.json
 
 # Install dependencies (including devDependencies for build)
 RUN npm install
