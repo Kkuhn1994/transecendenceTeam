@@ -113,8 +113,8 @@ fastify.post('//game', async (request, reply) => {
   }
   else {
     console.log("old game");
-    leftPaddleY = game.leftPaddleY;
-    rightPaddleY = game.rightPaddleY;
+    leftPaddleY = game.paddleLeftY;
+    rightPaddleY = game.paddleRightY;
     ballX =  game.ballX; 
     ballY =  game.ballY;
     if(ballX < 0 || ballX > canvaswidth)
