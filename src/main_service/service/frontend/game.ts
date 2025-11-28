@@ -77,10 +77,10 @@ async function getGameState(): Promise<void> {
         sPressed,
         canvasHeight: canvas.height,
         canvasWidth:  canvas.width,
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
+        // leftPaddleY,
+        // rightPaddleY,
+        // ballX,
+        // ballY,
     };
 
     try {
@@ -110,4 +110,4 @@ async function getGameState(): Promise<void> {
 
 // --- Spielschleife -----------------------------------------------------------
 requestAnimationFrame(draw);               // Startet das ständige Neuzeichnen
-setInterval(getGameState, 10);             // 100 FPS Abfrage an den Server (kann je nach Bedarf angepasst werden)
+setInterval(getGameState, 100);             // 100 FPS Abfrage an den Server (kann je nach Bedarf angepasst werden)
