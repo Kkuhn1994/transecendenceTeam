@@ -54,8 +54,8 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
       throw new Error(`Server responded with status ${response.status}`);
     }
     alert(response);
-    const data: LoginResponse = await response.json();
-    return data;
+    // const data: LoginResponse = await response.json();
+    // return data;
 
   } catch (err) {
     console.error('Login failed:', err);

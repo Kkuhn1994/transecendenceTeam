@@ -23,6 +23,7 @@ RUN mkdir -p public
 
 # TypeScript kompilieren
 RUN npx tsc frontend/login.ts --outDir ./frontend --lib "ES2015,DOM"
+RUN npx tsc frontend/game.ts --outDir ./frontend --lib "ES2015,DOM"
 
 # Startbefehl
 CMD ["node", "index.js"]
