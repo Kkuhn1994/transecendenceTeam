@@ -53,7 +53,7 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
       // Server hat einen Fehlerstatus zurückgegeben
       throw new Error(`Server responded with status ${response.status}`);
     }
-
+    alert(response);
     const data: LoginResponse = await response.json();
     return data;
 
