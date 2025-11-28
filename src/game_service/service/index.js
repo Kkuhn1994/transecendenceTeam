@@ -3,6 +3,13 @@
 const fastify = require('fastify')({
   logger: false
 })
+
+fastify.register(require('@fastify/cookie'), {
+  // optional: secret für signierte Cookies (empfohlen!)
+  secret: "mein-geheimes-cookie-signier-secret-12345", // mind. 32 Zeichen in Prod!
+  parseOptions: {}     // oder z.B. { httpOnly: true, sameSite: 'lax' }
+})
+
 const fs = require('fs')
 const path = require('path')
 const sqlite3 = require('sqlite3');
@@ -39,40 +46,65 @@ function createGamesTableIfNotExists() {
 }
 
 
-function searchGame(cookie) {
-console.log("game search");
- let game = db.prepare(`
-        SELECT ballX, ballY,
-               paddleLeftY, paddleRightY
-        FROM games 
-        WHERE session_id = ?
-    `).get(cookie);
-console.log("game search3");
-  return game;
+async function searchGame(cookie) {
+    return new Promise((resolve) => {
+        console.log("test1 – Suche Spielstand für:", JSON.stringify(cookie));
+
+        const stmt = db.prepare(`
+            SELECT ballX, ballY, paddleLeftY, paddleRightY
+            FROM games
+            WHERE session_id = ?
+        `);
+
+        stmt.get(cookie, (err, row) => {
+            if (err) {
+            
+                resolve(null);
+            } else {
+                 // ← hier siehst du endlich die Wahrheit!
+                resolve(row);// row ist entweder das Objekt oder undefined
+            }
+        });
+
+        stmt.finalize(); // sauber
+        console.log(stmt);
+    });
 }
 
-function writeNewPositionsToDB(cookie) {
-
-  db.prepare(`
-      INSERT INTO games (session_id,
-                        ballX, ballY,
-                        paddleLeftY, paddleRightY)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(session_id) DO UPDATE SET
-  `).run(cookie, ballX, ballY, leftPaddleY, leftPaddleX);
-
+async function writeNewPositionsToDB(cookie) {
+    return new Promise((resolve, reject) => {
+        console.log("position new");
+        db.prepare(`
+            INSERT INTO games (session_id, ballX, ballY, paddleLeftY, paddleRightY)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                ballX = excluded.ballX,
+                ballY = excluded.ballY,
+                paddleLeftY = excluded.paddleLeftY,
+                paddleRightY = excluded.paddleRightY
+        `).run(cookie, ballX, ballY, leftPaddleY, rightPaddleY, function(err) {
+            if (err) {
+                console.error("DB Schreibfehler:", err);
+                reject(err);
+            } else {
+                console.log("position new2 – erfolgreich gespeichert!");
+                resolve();
+            }
+        });
+    });
 }
-
-fastify.post('//game', function (request, reply) {
-  console.log("game");
+fastify.post('//game', async (request, reply) => {
+ 
   createGamesTableIfNotExists();
-  console.log("table created");
+ 
   const canvasheight = request.body.canvasheight
   const canvaswidth = request.body.canvaswidth
-  const sessionCookie = req.cookies.session;
-  game = searchGame(sessionCookie);
-  console.log("game search");
-  if(!game) {
+   const sessionCookie = request.cookies.session;
+  console.log(sessionCookie);
+  game = await searchGame(sessionCookie);
+   console.log("game");
+  console.log(game);
+  if(!game || Object.keys(game).length == 0) {
     console.log("new game");
     leftPaddleY = canvasheight / 2;
     rightPaddleY = canvasheight / 2;
@@ -80,31 +112,21 @@ fastify.post('//game', function (request, reply) {
     ballY =  canvasheight / 2;
   }
   else {
-    console.log("game search");
-     console.log("old game");
+    console.log("old game");
     leftPaddleY = game.leftPaddleY;
     rightPaddleY = game.rightPaddleY;
     ballX =  game.ballX; 
     ballY =  game.ballY;
+    if(ballX < 0 || ballX > canvaswidth)
+    {
+      ballX = canvaswidth / 2;
+    }
   }
 
   console.log("t")
   // console.log(request.body)
   
-//  db.get(
-//   `SELECT email FROM games WHERE game_session`,
-//   [email, hashedPassword],
-//   (err, row) => {
-//     if (err) {
-//       console.log("Database error")
-//     }
-//     if (!row) {
-//       console.log("Invalid")
-//     }
 
-//     console.log("login successful")
-//   }
-//   );
   ballX += ballSpeedX;
   ballY += ballSpeedY;
 
@@ -136,8 +158,12 @@ fastify.post('//game', function (request, reply) {
   {
     leftPaddleY += paddleSpeed;
   }
-
-  writeNewPositionsToDB(sessionCookie);
+  if(!sessionCookie)
+  {
+    console.log('no cookie'); 
+    return;
+  }
+  await writeNewPositionsToDB(sessionCookie);
 
   reply.send({
     leftPaddleY,

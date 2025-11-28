@@ -110,4 +110,4 @@ async function getGameState(): Promise<void> {
 
 // --- Spielschleife -----------------------------------------------------------
 requestAnimationFrame(draw);               // Startet das ständige Neuzeichnen
-setInterval(getGameState, 100);             // 100 FPS Abfrage an den Server (kann je nach Bedarf angepasst werden)
+setInterval(getGameState, 20);             // 100 FPS Abfrage an den Server (kann je nach Bedarf angepasst werden)

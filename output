@@ -1,0 +1,2429 @@
+#0 building with "default" instance using docker driver
+
+#1 [main_service internal] load build definition from Dockerfile
+#1 transferring dockerfile: 640B done
+#1 DONE 0.0s
+
+#2 [game_service internal] load build definition from Dockerfile
+#2 transferring dockerfile: 249B done
+#2 DONE 0.0s
+
+#3 [database internal] load build definition from Dockerfile
+#3 transferring dockerfile: 818B done
+#3 DONE 0.0s
+
+#4 [login_service internal] load build definition from Dockerfile
+#4 transferring dockerfile: 368B done
+#4 DONE 0.1s
+
+#5 [login_service internal] load metadata for docker.io/library/node:18
+#5 DONE 0.4s
+
+#6 [main_service internal] load .dockerignore
+#6 transferring context: 2B done
+#6 DONE 0.0s
+
+#7 [login_service  1/11] FROM docker.io/library/node:18@sha256:c6ae79e38498325db67193d391e6ec1d224d96c693a8a4d943498556716d3783
+#7 DONE 0.0s
+
+#8 [game_service internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#9 [login_service internal] load .dockerignore
+#9 transferring context: 2B done
+#9 DONE 0.0s
+
+#10 [main_service internal] load build context
+#10 transferring context: 13.48kB done
+#10 DONE 0.0s
+
+#11 [game_service internal] load build context
+#11 transferring context: 10.12kB done
+#11 DONE 0.0s
+
+#12 [login_service internal] load build context
+#12 transferring context: 60B done
+#12 DONE 0.0s
+
+#13 [main_service  3/11] COPY json/package.json package.json
+#13 CACHED
+
+#14 [main_service  8/11] COPY . .
+#14 CACHED
+
+#15 [main_service  9/11] RUN mkdir -p public
+#15 CACHED
+
+#16 [main_service  5/11] RUN npm install --save-dev typescript @types/node
+#16 CACHED
+
+#17 [main_service  7/11] RUN npm install @fastify/cookie
+#17 CACHED
+
+#18 [main_service  6/11] RUN npm install fastify @fastify/static
+#18 CACHED
+
+#19 [main_service  4/11] COPY json/tsconfig.json tsconfig.json
+#19 CACHED
+
+#20 [main_service 10/11] RUN npx tsc frontend/login.ts --outDir ./frontend --lib "ES2015,DOM"
+#20 CACHED
+
+#21 [main_service 11/11] RUN npx tsc frontend/game.ts --outDir ./frontend --lib "ES2015,DOM"
+#21 CACHED
+
+#22 [login_service 4/9] RUN apt-get update && apt-get install -y sqlite3
+#22 CACHED
+
+#23 [login_service 7/9] RUN npm install sqlite3
+#23 CACHED
+
+#24 [login_service 5/9] RUN npm -y init
+#24 CACHED
+
+#25 [login_service 6/9] RUN npm install
+#25 CACHED
+
+#26 [login_service 3/9] COPY . .
+#26 CACHED
+
+#27 [login_service 8/9] RUN npm install fastify
+#27 CACHED
+
+#28 [login_service 9/9] RUN npm install @fastify/cookie
+#28 CACHED
+
+#29 [main_service  2/11] WORKDIR /service
+#29 CACHED
+
+#30 [main_service] exporting to image
+#30 exporting layers done
+#30 writing image sha256:bc38babcd0b55893bc040d24de246f352fe47a3651c35ecab1fb0868fca95f43 done
+#30 naming to docker.io/library/tt-main_service done
+#30 DONE 0.0s
+
+#31 [login_service] exporting to image
+#31 exporting layers done
+#31 writing image sha256:78598616f3f0621d357037c09856c396fdefe5bd2d2d2606ed041ce4a42ac31c done
+#31 naming to docker.io/library/tt-login_service done
+#31 DONE 0.0s
+
+#32 [game_service 3/7] COPY . .
+#32 DONE 0.0s
+
+#33 [database internal] load metadata for docker.io/library/debian:bullseye-slim
+#33 ...
+
+#34 [login_service] resolving provenance for metadata file
+#34 DONE 0.0s
+
+#35 [main_service] resolving provenance for metadata file
+#35 DONE 0.0s
+
+#33 [database internal] load metadata for docker.io/library/debian:bullseye-slim
+#33 DONE 0.8s
+
+#36 [game_service 4/7] RUN npm -y init
+#36 ...
+
+#37 [database internal] load .dockerignore
+#37 transferring context: 2B done
+#37 DONE 0.0s
+
+#38 [database 1/7] FROM docker.io/library/debian:bullseye-slim@sha256:530a3348fc4b5734ffe1a137ddbcee6850154285251b53c3425c386ea8fac77b
+#38 DONE 0.0s
+
+#39 [database 4/7] RUN mkdir -p /app/data
+#39 CACHED
+
+#40 [database 5/7] RUN sqlite3 /app/data/database.db "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, email TEXT, password TEXT);"
+#40 CACHED
+
+#41 [database 6/7] RUN chown -R www-data:www-data /app/data && chmod -R 775 /app/data
+#41 CACHED
+
+#42 [database 3/7] RUN mkdir -p /app
+#42 CACHED
+
+#43 [database 2/7] RUN apt-get update && apt-get install -y sqlite3
+#43 CACHED
+
+#44 [database 7/7] WORKDIR /app
+#44 CACHED
+
+#45 [database] exporting to image
+#45 exporting layers done
+#45 writing image sha256:7715d5ab0386e9edadb5cc8617d88e22975a4a7393e033c64090e2d37a4f9a42 done
+#45 naming to docker.io/library/tt-database done
+#45 DONE 0.0s
+
+#46 [database] resolving provenance for metadata file
+#46 DONE 0.0s
+
+#36 [game_service 4/7] RUN npm -y init
+#36 0.505 Wrote to /service/package.json:
+#36 0.505 
+#36 0.505 {
+#36 0.505   "name": "service",
+#36 0.505   "version": "1.0.0",
+#36 0.505   "main": "index.js",
+#36 0.505   "scripts": {
+#36 0.505     "test": "echo \"Error: no test specified\" && exit 1"
+#36 0.505   },
+#36 0.505   "keywords": [],
+#36 0.505   "author": "",
+#36 0.505   "license": "ISC",
+#36 0.505   "description": ""
+#36 0.505 }
+#36 0.505 
+#36 0.505 
+#36 0.506 
+#36 DONE 0.6s
+
+#47 [game_service 5/7] RUN npm install
+#47 0.468 
+#47 0.468 up to date, audited 1 package in 269ms
+#47 0.469 
+#47 0.469 found 0 vulnerabilities
+#47 DONE 0.5s
+
+#48 [game_service 6/7] RUN npm install sqlite3
+#48 2.953 npm warn deprecated are-we-there-yet@3.0.1: This package is no longer supported.
+#48 2.986 npm warn deprecated gauge@4.0.4: This package is no longer supported.
+#48 3.029 npm warn deprecated @npmcli/move-file@1.1.2: This functionality has been moved to @npmcli/fs
+#48 3.067 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+#48 3.074 npm warn deprecated npmlog@6.0.2: This package is no longer supported.
+#48 3.075 npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+#48 3.076 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#48 4.158 
+#48 4.158 added 121 packages, and audited 122 packages in 4s
+#48 4.158 
+#48 4.158 12 packages are looking for funding
+#48 4.158   run `npm fund` for details
+#48 4.159 
+#48 4.159 found 0 vulnerabilities
+#48 DONE 4.3s
+
+#49 [game_service 7/7] RUN npm install fastify @fastify/cookie
+#49 2.819 
+#49 2.819 added 48 packages, and audited 170 packages in 3s
+#49 2.819 
+#49 2.819 31 packages are looking for funding
+#49 2.819   run `npm fund` for details
+#49 2.820 
+#49 2.820 found 0 vulnerabilities
+#49 DONE 2.9s
+
+#50 [game_service] exporting to image
+#50 exporting layers
+#50 exporting layers 1.1s done
+#50 writing image sha256:e4880187a93e9a5a5b0bec8dbe227815fa925979636a8a70067fdb1119bbdbb9 done
+#50 naming to docker.io/library/tt-game_service done
+#50 DONE 1.1s
+
+#51 [game_service] resolving provenance for metadata file
+#51 DONE 0.0s
+
+#52 [nginx internal] load build definition from Dockerfile
+#52 transferring dockerfile: 214B done
+#52 DONE 0.0s
+
+#53 [nginx internal] load metadata for docker.io/library/debian:latest
+#53 DONE 0.2s
+
+#54 [nginx internal] load .dockerignore
+#54 transferring context: 2B done
+#54 DONE 0.0s
+
+#55 [nginx 1/3] FROM docker.io/library/debian:latest@sha256:8f6a88feef3ed01a300dafb87f208977f39dccda1fd120e878129463f7fa3b8f
+#55 DONE 0.0s
+
+#56 [nginx internal] load build context
+#56 transferring context: 29B done
+#56 DONE 0.0s
+
+#57 [nginx 2/3] RUN apt-get update &&     apt-get install -y --no-install-recommends nginx
+#57 CACHED
+
+#58 [nginx 3/3] COPY default /etc/nginx/sites-available/.
+#58 CACHED
+
+#59 [nginx] exporting to image
+#59 exporting layers done
+#59 writing image sha256:65f2817a33ff3f36ad6d129b3717591cd8ebc6c6cbe4aeef214945fc2447647e done
+#59 naming to docker.io/library/tt-nginx done
+#59 DONE 0.0s
+
+#60 [nginx] resolving provenance for metadata file
+#60 DONE 0.0s
+Attaching to database, game_service, login_service, main_service, nginx
+login_service  | ✅ Fastify ready and listening on port 3000
+login_service  | └── /
+login_service  |     ├── createAccount (POST)
+login_service  |     └── loginAccount (POST)
+login_service  | 
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
+game_service   | 333333333333333333
+game_service   | Statement {}
+game_service   | new game
+game_service   | t
