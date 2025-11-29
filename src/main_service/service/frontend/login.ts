@@ -63,11 +63,9 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
   }
 }
 
-// Beispiel: Nutzung
-
-window.addEventListener('DOMContentLoaded', () => {
+export function loginReady() {
   alert('Script und DOM sind geladen!');
-
+console.log("login_start");
 
 const emailInput = document.getElementById('email') as HTMLInputElement;
 const passwordInput = document.getElementById('password') as HTMLInputElement;
@@ -97,7 +95,43 @@ loginButton.addEventListener('click', async (e) => {
   console.log('Server response:', result);
 });
 
-});
+}
+
+// Beispiel: Nutzung
+
+// window.addEventListener('DOMContentLoaded', () => {
+//   alert('Script und DOM sind geladen!');
+
+
+// const emailInput = document.getElementById('email') as HTMLInputElement;
+// const passwordInput = document.getElementById('password') as HTMLInputElement;
+// const form = document.querySelector('form') as HTMLFormElement;
+// const signUpButton = document.getElementById('signUp') as HTMLButtonElement;
+// const loginButton = document.getElementById('login') as HTMLButtonElement;
+
+// signUpButton.addEventListener('click', async (e) => {
+//   console.log('sbmit');
+//   e.preventDefault(); // verhindert normalen Form-Submit
+
+//   const email = emailInput.value;
+//   const password = passwordInput.value;
+
+//   const result = await createUser(email, password);
+//   console.log('Server response:', result);
+// });
+
+// loginButton.addEventListener('click', async (e) => {
+//   console.log('sbmit');
+//   e.preventDefault(); // verhindert normalen Form-Submit
+
+//   const email = emailInput.value;
+//   const password = passwordInput.value;
+
+//   const result = await loginUser(email, password);
+//   console.log('Server response:', result);
+// });
+
+// });
 
 
 

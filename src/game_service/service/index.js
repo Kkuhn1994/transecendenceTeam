@@ -1,5 +1,5 @@
 const fastify = require('fastify')({
-  logger: true
+  logger: false
 })
 const fs = require('fs')
 const path = require('path')

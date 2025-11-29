@@ -1,4 +1,4 @@
-const fastify = require('fastify')({ logger: true });
+const fastify = require('fastify')({ logger: false });
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
 const fastifyCookie = require('@fastify/cookie')

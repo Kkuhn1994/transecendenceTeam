@@ -5,6 +5,7 @@ declare global {
 }
 
 export function startGame() {
+    console.log("game_start");
     const canvas = document.getElementById('pongCanvas') as HTMLCanvasElement | null;
     if (!canvas) return; // Should not happen if loaded after DOM
     const ctx = canvas.getContext('2d');

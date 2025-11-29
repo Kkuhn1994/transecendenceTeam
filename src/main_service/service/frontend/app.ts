@@ -5,7 +5,7 @@ const app = document.getElementById("app");
 // Views (Seiten)
 const views: Record<string, string> = {
   "/": `
-    <h1>Home</h1>
+    <h1>Hoallo</h1>
     <p>Willkommen!</p>
   `,
 
@@ -57,6 +57,13 @@ async function loadGameScript() {
   module.startGame();
 }
 
+async function loadLoginScript() {
+  console.log("import start");
+  const module = await import('./login');
+  module.loginReady();
+  console.log("import ready");
+}
+
 // Router
 function router() {
   if (!app) return;
@@ -70,6 +77,7 @@ function router() {
     loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
   }
   if (route === "/login") {
+    loadLoginScript();
     document.getElementById("loginForm")?.addEventListener("submit", e => {
       e.preventDefault();
       alert("Login ausgeführt!");
