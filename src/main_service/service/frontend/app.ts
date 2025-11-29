@@ -4,12 +4,12 @@ const app = document.getElementById("app");
 
 // Views (Seiten)
 const views: Record<string, string> = {
-  "/": `
-    <h1>Hoallo</h1>
-    <p>Willkommen!</p>
-  `,
+  // "/": `
+  //   <h1>Hoallo</h1>
+  //   <p>Willkommen!</p>
+  // `,
 
-  "/login": `
+  "/": `
       <div class="login-container">
       <h3 class="text-center mb-4">Login</h3>
       <form novalidate>
@@ -45,6 +45,11 @@ const views: Record<string, string> = {
   `,
 
   "/game": `
+    <nav>
+    <a href="#/">Home</a> |
+    <a href="#/login">Login</a> |
+    <a href="#/game">Game</a>
+    </nav>
     <div class="container">
       <h1 class="text-center">👾 Pong Game</h1>
       <canvas id="pongCanvas" width="800" height="400"></canvas>
@@ -76,7 +81,8 @@ function router() {
   if (route === "/game") {
     loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
   }
-  if (route === "/login") {
+  if (route === "/") {
+    console.log("Current route:", route);
     loadLoginScript();
     document.getElementById("loginForm")?.addEventListener("submit", e => {
       e.preventDefault();
