@@ -5,11 +5,8 @@ const fs = require('fs')
 const path = require('path')
 
 // Declare a route
-fastify.get('/', function (request, reply) {
-  console.log("route / test")
-  const filePath = path.join(__dirname, 'index.html')
-  const fileStream = fs.createReadStream(filePath)
-  reply.type('text/html').send(fileStream)
+fastify.get('//tournament', function (request, reply) {
+
 })
 
 let ballSpeedX = 4, ballSpeedY = 4;

@@ -46,18 +46,10 @@ const views: Record<string, string> = {
     "/profile": `
       <div class="profile-container">
       <h3 class="text-center mb-4">start tournament</h3>
-      <form id="playerCountForm" novalidate>
-        <div class="mb-3">
-          <input
-            class="form-control"
-            id="playerCount"
-            name="playerCount"
-            placeholder="How many players will join the tournament"
-            required
-          />
-        </div>
-        <button type="submit" class="btn btn-primary w-100" id="player">Start Game</button>
-      </form>
+      <button type="button" class="btn btn-primary w-100" id="setupGame2">2 Player</button>
+      <button type="button" class="btn btn-primary w-100" id="setupGame4">4 Player</button>
+      <button type="button" class="btn btn-primary w-100" id="setupGame8">8 Player</button>
+      <button type="button" class="btn btn-primary w-100" id="setupGame16">16 Player</button>
       <div id="playerNamesContainer" class="mt-3"></div>
     </div>
   `,
@@ -72,8 +64,20 @@ const views: Record<string, string> = {
       <h1 class="text-center">👾 Pong Game</h1>
       <canvas id="pongCanvas" width="800" height="400"></canvas>
     </div>
+  `,
+
+  "/gameLobby": `
+    <div class="container">
+      <h1 class="text-center">👾 Gamelobby</h1>
+      <div id="lobbyContainer" class="mt-3"></div>
+    </div>
   `
 };
+
+async function loadLobby() {
+  const module = await import('./lobby');
+  module.setUpLobby();
+}
 
 async function loadGameScript() {
   const module = await import('./game_frontend');
@@ -116,6 +120,10 @@ async function router() {
   
   if (route === "/profile") {
     await loadGameSetup(); // Lädt das Spiel-Skript nur für die /game Route
+  }
+
+  if (route === "/gameLobby") {
+    await loadLobby(); // Lädt das Spiel-Skript nur für die /game Route
   }
 
   if (route === "/game") {
