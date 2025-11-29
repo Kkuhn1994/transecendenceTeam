@@ -43,6 +43,24 @@ const views: Record<string, string> = {
       </form>
     </div>
   `,
+    "/profile": `
+      <div class="profile-container">
+      <h3 class="text-center mb-4">start tournament</h3>
+      <form id="playerCountForm" novalidate>
+        <div class="mb-3">
+          <input
+            class="form-control"
+            id="playerCount"
+            name="playerCount"
+            placeholder="How many players will join the tournament"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-100" id="player">Start Game</button>
+      </form>
+      <div id="playerNamesContainer" class="mt-3"></div>
+    </div>
+  `,
 
   "/game": `
     <nav>
@@ -62,6 +80,11 @@ async function loadGameScript() {
   module.startGame();
 }
 
+async function loadGameSetup() {
+  const module = await import('./setup_game');
+  module.setupGameForm();
+}
+
 async function loadLoginScript() {
   console.log("import start");
   const module = await import('./login');
@@ -79,27 +102,28 @@ function getCookie(name: string) {
   return null;
 }
 
-const DEFAULT_SESSION = "here_will_be_the_session_key1234";
+// const DEFAULT_SESSION = "super_secret_key_32_chars";
 // Router
-function router() {
+async function router() {
   if (!app) return;
     
   const route = location.hash.replace("#", "") || "/"; // default to "/" if no hash
+  alert("new route");
+
   app.innerHTML = views[route] || "<h1>404 Not Found</h1>";
     console.log("Current route:", route);
   // Optional: Login form handler
-  const session = getCookie("sessionToken");
-  if (route == "/" && (session != DEFAULT_SESSION)) {
-    console.log("login reroute");
-    location.hash = "#/profile"; 
-    return;
+  
+  if (route === "/profile") {
+    await loadGameSetup(); // Lädt das Spiel-Skript nur für die /game Route
   }
+
   if (route === "/game") {
-    loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
+    await loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
   }
   if (route === "/") {
     console.log("Current route:", route);
-    loadLoginScript();
+    await loadLoginScript();
     document.getElementById("loginForm")?.addEventListener("submit", e => {
       e.preventDefault();
       alert("Login ausgeführt!");

@@ -18,13 +18,13 @@ fastify.register(fastifyCookie, {
 // Index-Route (optional, sendet index.html explizit)
 fastify.get('/', (req, reply) => {
   console.log("set cookie")
-  reply.setCookie("session", "here_will_be_the_session_key1234", {
-        httpOnly: true,
-        secure: false,
-        sameSite: "strict",
-        path: "/",  
-        maxAge: 60 * 60 * 24   // 1 Tag in Sekunden
-  });
+  // reply.setCookie("session", "here_will_be_the_session_key1234", {
+  //       httpOnly: true,
+  //       secure: false,
+  //       sameSite: "strict",
+  //       path: "/",  
+  //       maxAge: 60 * 60 * 24   // 1 Tag in Sekunden
+  // });
   reply.sendFile('index.html'); // HTML über HTTP ausliefern
 });
 
