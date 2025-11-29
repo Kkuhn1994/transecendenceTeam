@@ -1,3 +1,5 @@
+alert("login.ts!");
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -93,45 +95,9 @@ loginButton.addEventListener('click', async (e) => {
 
   const result = await loginUser(email, password);
   console.log('Server response:', result);
+  location.hash = "#/profile";
 });
 
 }
-
-// Beispiel: Nutzung
-
-// window.addEventListener('DOMContentLoaded', () => {
-//   alert('Script und DOM sind geladen!');
-
-
-// const emailInput = document.getElementById('email') as HTMLInputElement;
-// const passwordInput = document.getElementById('password') as HTMLInputElement;
-// const form = document.querySelector('form') as HTMLFormElement;
-// const signUpButton = document.getElementById('signUp') as HTMLButtonElement;
-// const loginButton = document.getElementById('login') as HTMLButtonElement;
-
-// signUpButton.addEventListener('click', async (e) => {
-//   console.log('sbmit');
-//   e.preventDefault(); // verhindert normalen Form-Submit
-
-//   const email = emailInput.value;
-//   const password = passwordInput.value;
-
-//   const result = await createUser(email, password);
-//   console.log('Server response:', result);
-// });
-
-// loginButton.addEventListener('click', async (e) => {
-//   console.log('sbmit');
-//   e.preventDefault(); // verhindert normalen Form-Submit
-
-//   const email = emailInput.value;
-//   const password = passwordInput.value;
-
-//   const result = await loginUser(email, password);
-//   console.log('Server response:', result);
-// });
-
-// });
-
 
 
