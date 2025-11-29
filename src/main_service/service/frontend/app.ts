@@ -69,6 +69,17 @@ async function loadLoginScript() {
   console.log("import ready");
 }
 
+function getCookie(name: string) {
+  const value = `; ${document.cookie}`;
+  console.log(value);
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()!.split(";")[0];
+  }
+  return null;
+}
+
+const DEFAULT_SESSION = "here_will_be_the_session_key1234";
 // Router
 function router() {
   if (!app) return;
@@ -77,7 +88,12 @@ function router() {
   app.innerHTML = views[route] || "<h1>404 Not Found</h1>";
     console.log("Current route:", route);
   // Optional: Login form handler
-
+  const session = getCookie("sessionToken");
+  if (route == "/" && (session != DEFAULT_SESSION)) {
+    console.log("login reroute");
+    location.hash = "#/profile"; 
+    return;
+  }
   if (route === "/game") {
     loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
   }

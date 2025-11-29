@@ -1,7 +1,8 @@
 const fastify = require('fastify')({ logger: false });
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
-const fastifyCookie = require('@fastify/cookie')
+const fastifyCookie = require('@fastify/cookie');
+const DEFAULT_SESSION = "here_will_be_the_session_key1234";
 
 // Statisches Verzeichnis registrieren
 fastify.register(fastifyStatic, {
