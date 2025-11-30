@@ -53,6 +53,25 @@ fastify.get('/', (req, reply) => {
 
 //    Creating a new game session, doesn't matter if for tournament or not, it will work both ways
 // even if for now I though the logic for a 1v1, but tournament is just an id to tie the games together
+
+async function setupGame(player1_id, player2_id)
+{
+    // 4) Insert the game session into the database
+    const db = new sqlite3.Database(DB_PATH);
+
+    const sessionId = await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO game_sessions (player1_id, player2_id)
+         VALUES (?, ?)`,
+        [player1_id, player2_id],
+        function (err) {
+          if (err) return reject(err);
+          return resolve(this.lastID);
+        }
+      );
+    }).finally(() => db.close());
+}
+
 fastify.post('/session/create', async (req, reply) => {
   console.log("hcreate session");
   try {
@@ -69,22 +88,27 @@ fastify.post('/session/create', async (req, reply) => {
     }
 
     const me = await authResponse.json();
-    const player1_id = me.user_id;
+    
+    //List with identgifiers
+    const playerIdentifiers = req.body 
+    ? Object.keys(req.body)
+        .filter(key => key.includes('playerIdentifier')) // Schlüsselnamen filtern
+        .map(key => req.body[key]) : []; // Falls kein req.body vorhanden ist, gib ein leeres Array zurück
 
-    // 2) Extract Player 2 identifier from frontend
-    const { opponentIdentifier } = req.body || {};
+    console.log(playerIdentifiers);
 
-    if (!opponentIdentifier) {
+
+    if (!playerIdentifier) {
       return reply
         .code(400)
-        .send({ error: 'opponentIdentifier (email or username) is required' });
+        .send({ error: 'playerIdentifier (email or username) is required' });
     }
-
+    playerIdentifiers.push(me.identifier);
     // 3) Resolve Player 2's ID via login_service
     const resolveResponse = await fetch('http://login_service:3000/players/resolve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: opponentIdentifier })
+      body: JSON.stringify({ identifier: playerIdentifier })
     });
 
     if (!resolveResponse.ok) {
@@ -93,25 +117,13 @@ fastify.post('/session/create', async (req, reply) => {
         .code(400)
         .send({ error: 'Could not resolve opponent user' });
     }
-
+    // resolveResponse will be a json of player1 player2 json --> nested
+    //so resolved will be a list of jsons
     const resolved = await resolveResponse.json();
-    const player2_id = resolved.user_id;
-
-    // 4) Insert the game session into the database
-    const db = new sqlite3.Database(DB_PATH);
-
-    const sessionId = await new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO game_sessions (player1_id, player2_id)
-         VALUES (?, ?)`,
-        [player1_id, player2_id],
-        function (err) {
-          if (err) return reject(err);
-          return resolve(this.lastID);
-        }
-      );
-    }).finally(() => db.close());
-
+    resolved.forEach(item => {
+      let { player1_id ,player2_id } = item;
+      setupGame(player1_id, player2_id);
+    });
     // 5) Return sessionId to frontend
     return reply.send({ sessionId });
 

@@ -1,5 +1,18 @@
 alert("setupgame.ts!");
 
+function getPlayerNames() {
+    const playerInputs = document.querySelectorAll("input[name^='playerName']"); // Selektiere alle Inputs, deren Name mit 'playerName' beginnt
+    let playerNames: { [key: string]: string } = {};
+    let playerNumber = 1
+    playerInputs.forEach(input => {
+        const inputElement = input as HTMLInputElement;
+        playerNames[`playerName${playerNumber}`] = inputElement.value;
+        playerNumber += 1;
+    });
+
+    console.log(playerNames);// Ausgabe der Player-Namen
+}
+
 function renderNameFields(playerCount: number)
 {
     const container = document.getElementById("playerNamesContainer") as HTMLDivElement;
@@ -20,7 +33,8 @@ function renderNameFields(playerCount: number)
     startBtn.textContent = "Start Tournament";
     container.appendChild(startBtn);
     startBtn.addEventListener("click", () => {    
-    location.hash = "#/gameLobby";
+    console.log("start clicked");
+      getPlayerNames();
     });
 }
 

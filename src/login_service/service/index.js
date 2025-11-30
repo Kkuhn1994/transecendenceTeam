@@ -43,6 +43,28 @@ console.log("create Account2");
   console.log("created Account");
 })
 
+fastify.post('/auth/me', (request, reply) => {
+  console.log("check login")
+
+  const sqlite3 = require('sqlite3');
+  const db = new sqlite3.Database('/app/data/database.db');
+  const { cookie } = request.body;
+   db.get(
+  `SELECT email FROM users WHERE session_cookie= ?`,
+  [cookie],
+  (err, row) => {
+    if (err) {
+      console.log("Database error")
+    }
+    if (!row) {
+      console.log("Invalid cookie")
+    }
+    reply.code(200).send({ email: row.email });
+  }
+  );
+
+})
+
 fastify.post('/loginAccount', (request, reply) => {
 console.log("login")
 
@@ -66,7 +88,19 @@ console.log("login3")
     }
     console.log("login4")
     const sessionCookie = crypto.randomBytes(32).toString("hex");
+
     console.log(sessionCookie)
+    db.run(
+      'UPDATE users SET session_cookie = ? WHERE email = ?',
+      [sessionCookie, email],
+      (err) => {
+        if (err) {
+          console.log('Error updating session cookie');
+        } else {
+          console.log('Session cookie updated successfully');
+        }
+      }
+    );
     reply.setCookie("session", sessionCookie, {
         httpOnly: true,
         secure: false,
@@ -78,7 +112,6 @@ console.log("login3")
     return reply.send("Login successful");
   }
   );
-  
 })
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
