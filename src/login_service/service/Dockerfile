@@ -10,15 +10,8 @@ RUN apt-get update && apt-get install -y sqlite3
 
 RUN npm -y init
 
-RUN npm install
+RUN npm install sqlite3 fastify @fastify/cookie
 
-
-# SQLite3-Modul installieren (für Node.js)
-RUN npm install sqlite3
-
-RUN npm install fastify
-
-RUN npm install @fastify/cookie
 
 
 CMD ["node", "index.js"]

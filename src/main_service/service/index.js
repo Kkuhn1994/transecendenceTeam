@@ -2,7 +2,6 @@ const fastify = require('fastify')({ logger: false });
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
 const fastifyCookie = require('@fastify/cookie');
-const fastifyCookie = require('@fastify/cookie');
 const sqlite3 = require('sqlite3');
 const DEFAULT_SESSION = "here_will_be_the_session_key1234";
 
@@ -55,6 +54,7 @@ fastify.get('/', (req, reply) => {
 //    Creating a new game session, doesn't matter if for tournament or not, it will work both ways
 // even if for now I though the logic for a 1v1, but tournament is just an id to tie the games together
 fastify.post('/session/create', async (req, reply) => {
+  console.log("hcreate session");
   try {
     // 1) Get Player 1 ID via the authentication cookie
     const authResponse = await fetch('http://login_service:3000/auth/me', {

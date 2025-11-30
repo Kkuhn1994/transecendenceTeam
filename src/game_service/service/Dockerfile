@@ -6,11 +6,7 @@ COPY . .
 
 RUN npm -y init
 
-RUN npm install
+RUN npm install sqlite3 fastify @fastify/cookie
 
-# SQLite3-Modul installieren (für Node.js)
-RUN npm install sqlite3
-
-RUN npm install fastify
 
 CMD ["node", "index.js"]
