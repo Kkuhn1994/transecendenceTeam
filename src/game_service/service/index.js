@@ -1,5 +1,13 @@
 const fastify = require('fastify')({
-  logger: true
+  logger: false
+})
+
+const fs = require('fs')
+const path = require('path')
+
+// Declare a route
+fastify.get('//tournament', function (request, reply) {
+
 })
 
 let currentSessionId = null;

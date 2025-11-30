@@ -4,12 +4,12 @@ const app = document.getElementById("app");
 
 // Views (Seiten)
 const views: Record<string, string> = {
-  "/": `
-    <h1>Home</h1>
-    <p>Willkommen!</p>
-  `,
+  // "/": `
+  //   <h1>Hoallo</h1>
+  //   <p>Willkommen!</p>
+  // `,
 
-  "/login": `
+  "/": `
       <div class="login-container">
       <h3 class="text-center mb-4">Login</h3>
       <form novalidate>
@@ -43,33 +43,95 @@ const views: Record<string, string> = {
       </form>
     </div>
   `,
+    "/profile": `
+      <div class="profile-container">
+      <h3 class="text-center mb-4">start tournament</h3>
+      <button type="button" class="btn btn-primary w-100" id="setupGame2">2 Player</button>
+      <button type="button" class="btn btn-primary w-100" id="setupGame4">4 Player</button>
+      <button type="button" class="btn btn-primary w-100" id="setupGame8">8 Player</button>
+      <button type="button" class="btn btn-primary w-100" id="setupGame16">16 Player</button>
+      <div id="playerNamesContainer" class="mt-3"></div>
+    </div>
+  `,
 
   "/game": `
+    <nav>
+    <a href="#/">Home</a> |
+    <a href="#/login">Login</a> |
+    <a href="#/game">Game</a>
+    </nav>
     <div class="container">
       <h1 class="text-center">👾 Pong Game</h1>
       <canvas id="pongCanvas" width="800" height="400"></canvas>
     </div>
+  `,
+
+  "/gameLobby": `
+    <div class="container">
+      <h1 class="text-center">👾 Gamelobby</h1>
+      <div id="lobbyContainer" class="mt-3"></div>
+    </div>
   `
 };
+
+async function loadLobby() {
+  const module = await import('./lobby');
+  module.setUpLobby();
+}
 
 async function loadGameScript() {
   const module = await import('./game_frontend');
   module.startGame();
 }
 
+async function loadGameSetup() {
+  const module = await import('./setup_game');
+  module.setupGameForm();
+}
+
+async function loadLoginScript() {
+  console.log("import start");
+  const module = await import('./login');
+  module.loginReady();
+  console.log("import ready");
+}
+
+function getCookie(name: string) {
+  const value = `; ${document.cookie}`;
+  console.log(value);
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()!.split(";")[0];
+  }
+  return null;
+}
+
+// const DEFAULT_SESSION = "super_secret_key_32_chars";
 // Router
-function router() {
+async function router() {
   if (!app) return;
     
   const route = location.hash.replace("#", "") || "/"; // default to "/" if no hash
+  alert("new route");
+
   app.innerHTML = views[route] || "<h1>404 Not Found</h1>";
     console.log("Current route:", route);
   // Optional: Login form handler
+  
+  if (route === "/profile") {
+    await loadGameSetup(); // Lädt das Spiel-Skript nur für die /game Route
+  }
+
+  if (route === "/gameLobby") {
+    await loadLobby(); // Lädt das Spiel-Skript nur für die /game Route
+  }
 
   if (route === "/game") {
-    loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
+    await loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
   }
-  if (route === "/login") {
+  if (route === "/") {
+    console.log("Current route:", route);
+    await loadLoginScript();
     document.getElementById("loginForm")?.addEventListener("submit", e => {
       e.preventDefault();
       alert("Login ausgeführt!");

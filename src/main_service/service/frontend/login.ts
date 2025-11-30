@@ -1,3 +1,5 @@
+alert("login.ts!");
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -63,11 +65,9 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
   }
 }
 
-// Beispiel: Nutzung
-
-window.addEventListener('DOMContentLoaded', () => {
+export function loginReady() {
   alert('Script und DOM sind geladen!');
-
+console.log("login_start");
 
 const emailInput = document.getElementById('email') as HTMLInputElement;
 const passwordInput = document.getElementById('password') as HTMLInputElement;
@@ -95,9 +95,9 @@ loginButton.addEventListener('click', async (e) => {
 
   const result = await loginUser(email, password);
   console.log('Server response:', result);
+  location.hash = "#/profile";
 });
 
-});
-
+}
 
 

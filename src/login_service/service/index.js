@@ -7,6 +7,7 @@ const fs = require('fs')
 const path = require('path')
 const crypto = require('crypto')
 const fastifyCookie = require('@fastify/cookie')
+const { hashPassword } = require('./hash.js')
 
 
 
@@ -21,14 +22,17 @@ fastify.post('/createAccount', async (request, reply) => {
   const sqlite3 = require('sqlite3');
  
  const db = new sqlite3.Database('/app/data/database.db');
-
+console.log("create Account2");
   fastify.log.info('📦 Request Body:', request.body)
+  console.log(request.body)
   const { email, password } = request.body;
   var hashedPassword = hashPassword(password);
+  console.log(hashedPassword)
   db.run(
   `INSERT INTO users (email, password) VALUES (?, ?)`,
   [email, hashedPassword],
   function (err) {
+    console.log("create Account3");
     if (err) {
       fastify.log.error('❌ DB Error:', err);
     } else {
@@ -36,6 +40,7 @@ fastify.post('/createAccount', async (request, reply) => {
     }
   }
   );
+  console.log("created Account");
 })
 
 fastify.post('/loginAccount', (request, reply) => {
@@ -43,13 +48,15 @@ console.log("login")
 
 const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database('/app/data/database.db');
-
+console.log("login2")
 const { email, password } = request.body;
 var hashedPassword = hashPassword(password);
+console.log("login3")
   db.get(
   `SELECT email FROM users WHERE email= ? and password= ?`,
   [email, hashedPassword],
   (err, row) => {
+    console.log("login3")
     if (err) {
       console.log("Database error")
     }
@@ -57,6 +64,7 @@ var hashedPassword = hashPassword(password);
     if (!row) {
       console.log("Invalid email or password")
     }
+    console.log("login4")
     const sessionCookie = crypto.randomBytes(32).toString("hex");
     console.log(sessionCookie)
     reply.setCookie("session", sessionCookie, {

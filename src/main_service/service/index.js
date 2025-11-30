@@ -1,9 +1,10 @@
-const fastify = require('fastify')({ logger: true });
+const fastify = require('fastify')({ logger: false });
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
 const fastifyCookie = require('@fastify/cookie');
 const fastifyCookie = require('@fastify/cookie');
 const sqlite3 = require('sqlite3');
+const DEFAULT_SESSION = "here_will_be_the_session_key1234";
 
 // Statisches Verzeichnis registrieren
 fastify.register(fastifyStatic, {
@@ -19,13 +20,13 @@ fastify.register(fastifyCookie, {
 // Index-Route (optional, sendet index.html explizit)
 fastify.get('/', (req, reply) => {
   console.log("set cookie")
-  reply.setCookie("session", "here_will_be_the_session_key1234", {
-        httpOnly: true,
-        secure: false,
-        sameSite: "strict",
-        path: "/",  
-        maxAge: 60 * 60 * 24   // 1 Tag in Sekunden
-  });
+  // reply.setCookie("session", "here_will_be_the_session_key1234", {
+  //       httpOnly: true,
+  //       secure: false,
+  //       sameSite: "strict",
+  //       path: "/",  
+  //       maxAge: 60 * 60 * 24   // 1 Tag in Sekunden
+  // });
   reply.sendFile('index.html'); // HTML über HTTP ausliefern
 });
 
