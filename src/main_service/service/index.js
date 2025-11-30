@@ -74,35 +74,34 @@ async function setupGame(player1_id, player2_id)
 
 fastify.post('/session/create', async (req, reply) => {
   console.log("hcreate session");
+  console.log(req.headers.cookie);
   try {
     // 1) Get Player 1 ID via the authentication cookie
     const authResponse = await fetch('http://login_service:3000/auth/me', {
+      method: 'POST', // Setze die Methode auf POST
       headers: {
-        cookie: req.headers.cookie || ''
-      }
+        'Content-Type': 'application/json', // Falls du JSON sendest
+        'Cookie': req.headers.cookie || '', // Cookie aus den Anfrage-Headern
+      },
+      body: JSON.stringify( req.headers.cookie ) // Falls du Daten im Body senden möchtest
     });
 
     if (!authResponse.ok) {
       fastify.log.error('auth/me failed with status', authResponse.status);
       return reply.code(401).send({ error: 'Not authenticated as Player 1' });
     }
-
+console.log("hcreate session3");
     const me = await authResponse.json();
-    
+    console.log(req.body);
     //List with identgifiers
-    const playerIdentifiers = req.body 
-    ? Object.keys(req.body)
-        .filter(key => key.includes('playerIdentifier')) // Schlüsselnamen filtern
-        .map(key => req.body[key]) : []; // Falls kein req.body vorhanden ist, gib ein leeres Array zurück
 
-    console.log(playerIdentifiers);
+const playerIdentifiers = req.body;  // Dein JSON-Objekt (z.B. { playerName1: '2' })
 
+// Füge einen neuen Schlüssel-Wert-Paar hinzu
+playerIdentifiers['playerLoggedIn'] = me.email;
 
-    if (!playerIdentifier) {
-      return reply
-        .code(400)
-        .send({ error: 'playerIdentifier (email or username) is required' });
-    }
+console.log(playerIdentifiers);
+
     playerIdentifiers.push(me.identifier);
     // 3) Resolve Player 2's ID via login_service
     const resolveResponse = await fetch('http://login_service:3000/players/resolve', {

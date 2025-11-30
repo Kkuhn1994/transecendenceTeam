@@ -86,6 +86,7 @@ async function loadGameScript() {
 
 async function loadGameSetup() {
   const module = await import('./setup_game');
+  alert("setup game");
   module.setupGameForm();
 }
 

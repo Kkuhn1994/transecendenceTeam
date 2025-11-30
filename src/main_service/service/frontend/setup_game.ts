@@ -1,6 +1,7 @@
 alert("setupgame.ts!");
 
-function getPlayerNames() {
+async function getPlayerNames() {
+    alert("Button clicked");
     const playerInputs = document.querySelectorAll("input[name^='playerName']"); // Selektiere alle Inputs, deren Name mit 'playerName' beginnt
     let playerNames: { [key: string]: string } = {};
     let playerNumber = 1
@@ -10,13 +11,23 @@ function getPlayerNames() {
         playerNumber += 1;
     });
 
-    console.log(playerNames);// Ausgabe der Player-Namen
+    alert(JSON.stringify(playerNames));
+      const response = await fetch('http://localhost:1080/session/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(playerNames),
+    });
+
+// Ausgabe der Player-Namen
 }
 
 function renderNameFields(playerCount: number)
 {
     const container = document.getElementById("playerNamesContainer") as HTMLDivElement;
 
+    alert("start button rendered");
     container.innerHTML = "";
     for (let i = 1; i <= playerCount - 1; i++) {
     const input = document.createElement("input");
@@ -32,8 +43,9 @@ function renderNameFields(playerCount: number)
     startBtn.className = "btn btn-success w-100 mt-3";
     startBtn.textContent = "Start Tournament";
     container.appendChild(startBtn);
+    console.log("start button rendered");
     startBtn.addEventListener("click", () => {    
-    console.log("start clicked");
+    alert("start clicked");
       getPlayerNames();
     });
 }

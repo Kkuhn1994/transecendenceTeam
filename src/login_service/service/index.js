@@ -48,20 +48,34 @@ fastify.post('/auth/me', (request, reply) => {
 
   const sqlite3 = require('sqlite3');
   const db = new sqlite3.Database('/app/data/database.db');
-  const { cookie } = request.body;
-   db.get(
-  `SELECT email FROM users WHERE session_cookie= ?`,
-  [cookie],
-  (err, row) => {
-    if (err) {
-      console.log("Database error")
-    }
-    if (!row) {
-      console.log("Invalid cookie")
-    }
-    reply.code(200).send({ email: row.email });
+  const cookieHeader = request.headers.cookie; // Cookie-Header als String
+  console.log(cookieHeader); // Zum Testen, um sicherzustellen, dass der Header korrekt übertragen wird
+
+  // Extrahiere den 'session' Cookie aus dem Cookie-Header
+  const sessionCookie = cookieHeader
+    ? cookieHeader.split(';').find(cookie => cookie.trim().startsWith('session='))
+        .split('=')[1]
+    : undefined;
+
+  console.log(sessionCookie); // Gibt den session-Wert oder 'undefined' aus
+
+  db.get('SELECT email FROM users WHERE session_cookie = ?', [sessionCookie], (err, row) => {
+  if (err) {
+    console.log("Database error");
+    reply.code(500).send("Internal Server Error");
+    return;
   }
-  );
+
+  if (!row) {
+    console.log("Invalid cookie");
+    reply.code(403).send("Invalid cookie");
+    return;
+  }
+
+  // Wenn row existiert, sende die Antwort mit der Email
+  reply.code(200).send({ email: row.email });
+});
+
 
 })
 
