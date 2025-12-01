@@ -16,6 +16,36 @@ fastify.register(fastifyCookie, {
 });
 
 
+fastify.post('/players/resolve', async (request, reply) => {
+
+ const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]]; // Tausche Elemente
+    }
+  };
+  const playersObject = request.body;  // Erwartet ein Objekt, nicht ein Array
+  const players = Object.values(playersObject); 
+  // Spieler zufällig mischen
+  shuffleArray(players);
+  console.log("player resolve1");
+  console.log(players);
+ 
+  const pairs = [];
+  console.log(players.length);
+  for (let i = 0; i < players.length; i += 2) {
+    const pair = { player1: players[i], player2: players[i + 1] };
+    pairs.push(pair);
+  }
+  console.log("player resolve3");
+
+  console.log('Spielerpaare:', pairs);
+
+  // Antwort mit den Spielerpaaren
+  reply.code(200).send(pairs);
+})
+
+
 fastify.post('/createAccount', async (request, reply) => {
 
   console.log("create Account");

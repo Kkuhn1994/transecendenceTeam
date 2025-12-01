@@ -101,25 +101,28 @@ const playerIdentifiers = req.body;  // Dein JSON-Objekt (z.B. { playerName1: '2
 playerIdentifiers['playerLoggedIn'] = me.email;
 
 console.log(playerIdentifiers);
-
-    playerIdentifiers.push(me.identifier);
+console.log("hcreate session4");
     // 3) Resolve Player 2's ID via login_service
-    const resolveResponse = await fetch('http://login_service:3000/players/resolve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: playerIdentifier })
-    });
+   try {
+  const resolveResponse = await fetch('http://login_service:3000/players/resolve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(playerIdentifiers) 
+  });
 
-    if (!resolveResponse.ok) {
-      fastify.log.error('players/resolve failed:', resolveResponse.status);
-      return reply
-        .code(400)
-        .send({ error: 'Could not resolve opponent user' });
-    }
+  if (!resolveResponse.ok) {
+    throw new Error('Failed to resolve player ID');
+  }
+
+  // const data = await resolveResponse.json();
+  // console.log('Player resolved:', data);
+} catch (error) {
+  console.error('Error resolving player:', error);
+}
+console.log("hcreate session5");
     // resolveResponse will be a json of player1 player2 json --> nested
     //so resolved will be a list of jsons
-    const resolved = await resolveResponse.json();
-    resolved.forEach(item => {
+    data.forEach(item => {
       let { player1_id ,player2_id } = item;
       setupGame(player1_id, player2_id);
     });
