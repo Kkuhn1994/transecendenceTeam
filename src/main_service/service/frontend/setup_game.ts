@@ -1,101 +1,44 @@
-alert("setupgame.ts!");
+export function init1v1Setup() {
+  const form = document.getElementById('player2Form') as HTMLFormElement | null;
+  const emailInput = document.getElementById('player2Email') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('player2Password') as HTMLInputElement | null;
+  const errorEl = document.getElementById('player2Error') as HTMLParagraphElement | null;
 
-async function getPlayerNames() {
-    alert("Button clicked");
-    const playerInputs = document.querySelectorAll("input[name^='playerName']"); // Selektiere alle Inputs, deren Name mit 'playerName' beginnt
-    let playerNames: { [key: string]: string } = {};
-    let playerNumber = 1
-    playerInputs.forEach(input => {
-        const inputElement = input as HTMLInputElement;
-        playerNames[`playerName${playerNumber}`] = inputElement.value;
-        playerNumber += 1;
-    });
+  if (!form || !emailInput || !passwordInput) return;
 
-    alert(JSON.stringify(playerNames));
-      const response = await fetch('http://localhost:1080/session/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(playerNames),
-    });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (errorEl) errorEl.textContent = '';
 
-// Ausgabe der Player-Namen
-}
+    const player2Email = emailInput.value.trim();
+    const player2Password = passwordInput.value;
 
-function renderNameFields(playerCount: number)
-{
-    const container = document.getElementById("playerNamesContainer") as HTMLDivElement;
+    try {
+      const response = await fetch('/session/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player2Email, player2Password }),
+      });
 
-    alert("start button rendered");
-    container.innerHTML = "";
-    for (let i = 1; i <= playerCount - 1; i++) {
-    const input = document.createElement("input");
-    input.type = "text";
-    input.name = `playerName${i + 1}`;
-    input.placeholder = `Player Name ${i + 1}`;
-    input.required = true;
-    input.className = "form-control mb-2";
-    container.appendChild(input);
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (errorEl) errorEl.textContent = data.error || 'Could not create session';
+        return;
+      }
+
+      if (!data.sessionId) {
+        if (errorEl) errorEl.textContent = 'No sessionId returned';
+        return;
+      }
+
+      (window as any).currentSessionId = data.sessionId;
+
+      // Go to game
+      location.hash = '#/game';
+    } catch (err) {
+      console.error('Error creating session:', err);
+      if (errorEl) errorEl.textContent = 'Network error while creating session';
     }
-    const startBtn = document.createElement("button");
-    startBtn.type = "button"; // type=button, damit kein Submit ausgelöst wird
-    startBtn.className = "btn btn-success w-100 mt-3";
-    startBtn.textContent = "Start Tournament";
-    container.appendChild(startBtn);
-    console.log("start button rendered");
-    startBtn.addEventListener("click", () => {    
-    alert("start clicked");
-      getPlayerNames();
-    });
-}
-
-export function setupGameForm() {
-    
-  const button2 = document.getElementById("setupGame2") as HTMLFormElement;
-  const button4 = document.getElementById("setupGame4") as HTMLFormElement;
-  const button8 = document.getElementById("setupGame8") as HTMLFormElement;
-  const button16 = document.getElementById("setupGame16") as HTMLFormElement;
- 
-
-button2.addEventListener("click", (e) => {
-    alert("count butto pressed");
-    e.preventDefault();
-    const countInput = document.getElementById("playerCount") as HTMLInputElement;
-    const playerCount = 2;
-    renderNameFields(playerCount);
-   
-});
-
-button4.addEventListener("click", (e) => {
-    alert("count butto pressed");
-    e.preventDefault();
-    const countInput = document.getElementById("playerCount") as HTMLInputElement;
-    const playerCount = 4;
-    renderNameFields(playerCount);
-   
-});
-
-button8.addEventListener("click", (e) => {
-    alert("count butto pressed");
-    e.preventDefault();
-    const countInput = document.getElementById("playerCount") as HTMLInputElement;
-    const playerCount = 8;
-    renderNameFields(playerCount);
-   
-});
-
-button16.addEventListener("click", (e) => {
-    alert("count butto pressed");
-    e.preventDefault();
-    const countInput = document.getElementById("playerCount") as HTMLInputElement;
-    const playerCount = 16;
-    renderNameFields(playerCount);
-   
-});
-
-
-
-
-
+  });
 }

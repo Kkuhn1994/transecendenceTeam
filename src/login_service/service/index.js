@@ -1,172 +1,218 @@
-// Require the framework and instantiate it
-// CommonJs
 const fastify = require('fastify')({
   logger: false
-})
-const fs = require('fs')
-const path = require('path')
-const crypto = require('crypto')
-const fastifyCookie = require('@fastify/cookie')
-const { hashPassword } = require('./hash.js')
-
-
-
-fastify.register(fastifyCookie, {
-  session: "super_secret_key_32_chars",
 });
-
-
-fastify.post('/players/resolve', async (request, reply) => {
-
- const shuffleArray = (array) => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]]; // Tausche Elemente
-    }
-  };
-  const playersObject = request.body;  // Erwartet ein Objekt, nicht ein Array
-  const players = Object.values(playersObject); 
-  // Spieler zufällig mischen
-  shuffleArray(players);
-  console.log("player resolve1");
-  console.log(players);
- 
-  const pairs = [];
-  console.log(players.length);
-  for (let i = 0; i < players.length; i += 2) {
-    const pair = { player1: players[i], player2: players[i + 1] };
-    pairs.push(pair);
-  }
-  console.log("player resolve3");
-
-  console.log('Spielerpaare:', pairs);
-
-  // Antwort mit den Spielerpaaren
-  reply.code(200).send(pairs);
-})
-
-
-fastify.post('/createAccount', async (request, reply) => {
-
-  console.log("create Account");
-  const sqlite3 = require('sqlite3');
- 
- const db = new sqlite3.Database('/app/data/database.db');
-console.log("create Account2");
-  fastify.log.info('📦 Request Body:', request.body)
-  console.log(request.body)
-  const { email, password } = request.body;
-  var hashedPassword = hashPassword(password);
-  console.log(hashedPassword)
-  db.run(
-  `INSERT INTO users (email, password) VALUES (?, ?)`,
-  [email, hashedPassword],
-  function (err) {
-    console.log("create Account3");
-    if (err) {
-      fastify.log.error('❌ DB Error:', err);
-    } else {
-      fastify.log.info(`✅ Inserted row with ID ${this.lastID}`);
-    }
-  }
-  );
-  console.log("created Account");
-})
-
-fastify.post('/auth/me', (request, reply) => {
-  console.log("check login")
-
-  const sqlite3 = require('sqlite3');
-  const db = new sqlite3.Database('/app/data/database.db');
-  const cookieHeader = request.headers.cookie; // Cookie-Header als String
-  console.log(cookieHeader); // Zum Testen, um sicherzustellen, dass der Header korrekt übertragen wird
-
-  // Extrahiere den 'session' Cookie aus dem Cookie-Header
-  const sessionCookie = cookieHeader
-    ? cookieHeader.split(';').find(cookie => cookie.trim().startsWith('session='))
-        .split('=')[1]
-    : undefined;
-
-  console.log(sessionCookie); // Gibt den session-Wert oder 'undefined' aus
-
-  db.get('SELECT email FROM users WHERE session_cookie = ?', [sessionCookie], (err, row) => {
-  if (err) {
-    console.log("Database error");
-    reply.code(500).send("Internal Server Error");
-    return;
-  }
-
-  if (!row) {
-    console.log("Invalid cookie");
-    reply.code(403).send("Invalid cookie");
-    return;
-  }
-
-  // Wenn row existiert, sende die Antwort mit der Email
-  reply.code(200).send({ email: row.email });
-});
-
-
-})
-
-fastify.post('/loginAccount', (request, reply) => {
-console.log("login")
 
 const sqlite3 = require('sqlite3');
-const db = new sqlite3.Database('/app/data/database.db');
-console.log("login2")
-const { email, password } = request.body;
-var hashedPassword = hashPassword(password);
-console.log("login3")
-  db.get(
-  `SELECT email FROM users WHERE email= ? and password= ?`,
-  [email, hashedPassword],
-  (err, row) => {
-    console.log("login3")
-    if (err) {
-      console.log("Database error")
-    }
+const crypto = require('crypto');
+const fastifyCookie = require('@fastify/cookie');
+const { hashPassword } = require('./hash.js');
 
-    if (!row) {
-      console.log("Invalid email or password")
-    }
-    console.log("login4")
-    const sessionCookie = crypto.randomBytes(32).toString("hex");
+const DB_PATH = '/app/data/database.db';
 
-    console.log(sessionCookie)
-    db.run(
-      'UPDATE users SET session_cookie = ? WHERE email = ?',
-      [sessionCookie, email],
-      (err) => {
-        if (err) {
-          console.log('Error updating session cookie');
-        } else {
-          console.log('Session cookie updated successfully');
-        }
+fastify.register(fastifyCookie, {
+  secret: "super_secret_key_32_chars",
+});
+
+/**
+ * Helper: open DB
+ */
+function openDb() {
+  return new sqlite3.Database(DB_PATH);
+}
+
+/**
+ * Helper: respond with JSON error
+ */
+function sendError(reply, statusCode, message) {
+  return reply.code(statusCode).send({ status: 'error', error: message });
+}
+
+/**
+ * Create account
+ * Body: { email, password }
+ */
+fastify.post('/createAccount', (request, reply) => {
+  const { email, password } = request.body || {};
+
+  if (!email || !password) {
+    return sendError(reply, 400, 'Email and password are required');
+  }
+
+  const db = openDb();
+  const hashed = hashPassword(password);
+
+  db.run(
+    `INSERT INTO users (email, password) VALUES (?, ?)`,
+    [email, hashed],
+    function (err) {
+      if (err) {
+        console.error('DB insert error:', err);
+        db.close();
+        return sendError(reply, 500, 'Database error (email may already exist)');
       }
-    );
-    reply.setCookie("session", sessionCookie, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "strict",
-        path: "/",  
-        maxAge: 60 * 60 * 24   // 1 Tag in Sekunden
-    });
-    console.log("login successful")
-    return reply.send("Login successful");
-  }
+      db.close();
+      return reply.send({ status: 'ok', userId: this.lastID, email });
+    }
   );
-})
+});
 
-fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
-  if (err) {
-    fastify.log.error(err)
-    process.exit(1)
+/**
+ * Login and set session cookie
+ * Body: { email, password }
+ */
+fastify.post('/loginAccount', (request, reply) => {
+  const { email, password } = request.body || {};
+
+  if (!email || !password) {
+    return sendError(reply, 400, 'Email and password are required');
   }
-})
 
-fastify.addHook('onReady', () => {
-  console.log('✅ Fastify ready and listening on port 3000');
-  console.log(fastify.printRoutes());
-  // reply.setCookie("secret", "super_secret_key_32_chars", { signed: true })
+  const db = openDb();
+  const hashed = hashPassword(password);
+
+  db.get(
+    `SELECT id, email FROM users WHERE email = ? AND password = ?`,
+    [email, hashed],
+    (err, row) => {
+      if (err) {
+        console.error('DB select error:', err);
+        db.close();
+        return sendError(reply, 500, 'Database error');
+      }
+
+      if (!row) {
+        db.close();
+        return sendError(reply, 401, 'Invalid email or password');
+      }
+
+      const sessionCookie = crypto.randomBytes(32).toString('hex');
+
+      db.run(
+        `UPDATE users SET session_cookie = ? WHERE id = ?`,
+        [sessionCookie, row.id],
+        (err2) => {
+          db.close();
+          if (err2) {
+            console.error('Error updating session cookie:', err2);
+            return sendError(reply, 500, 'Failed to update session');
+          }
+
+          reply.setCookie('session', sessionCookie, {
+            httpOnly: true,
+            secure: false, // set true if https
+            sameSite: 'strict',
+            path: '/',
+            maxAge: 60 * 60 * 24,
+          });
+
+          return reply.send({
+            status: 'ok',
+            email: row.email,
+            userId: row.id,
+          });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * Logout: invalidate session
+ */
+fastify.post('/logout', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  const db = openDb();
+
+  if (!sessionCookie) {
+    db.close();
+    reply.clearCookie('session', { path: '/' });
+    return reply.send({ status: 'ok' });
+  }
+
+  db.run(
+    `UPDATE users SET session_cookie = NULL WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err) => {
+      db.close();
+      if (err) {
+        console.error('Error clearing session cookie:', err);
+      }
+
+      reply.clearCookie('session', { path: '/' });
+      return reply.send({ status: 'ok' });
+    }
+  );
+});
+
+/**
+ * /auth/me — get current user from cookie
+ * Returns: { id, email }
+ */
+fastify.post('/auth/me', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'No session cookie');
+  }
+
+  const db = openDb();
+  db.get(
+    `SELECT id, email FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, row) => {
+      db.close();
+      if (err) {
+        console.error('DB error in auth/me:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      if (!row) {
+        return sendError(reply, 401, 'Invalid session');
+      }
+      return reply.send({ id: row.id, email: row.email });
+    }
+  );
+});
+
+/**
+ * /verifyCredentials — check email+password WITHOUT setting cookie
+ * Used for Player 2 in 1v1
+ * Body: { email, password }
+ * Returns: { status:"ok", id, email } or error
+ */
+fastify.post('/verifyCredentials', (request, reply) => {
+  const { email, password } = request.body || {};
+
+  if (!email || !password) {
+    return sendError(reply, 400, 'Email and password are required');
+  }
+
+  const db = openDb();
+  const hashed = hashPassword(password);
+
+  db.get(
+    `SELECT id, email FROM users WHERE email = ? AND password = ?`,
+    [email, hashed],
+    (err, row) => {
+      db.close();
+      if (err) {
+        console.error('DB error in verifyCredentials:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      if (!row) {
+        return sendError(reply, 401, 'Invalid email or password for Player 2');
+      }
+      return reply.send({ status: 'ok', id: row.id, email: row.email });
+    }
+  );
+});
+
+// (keep /players/resolve if you want it for tournaments later)
+// ...
+
+fastify.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {
+  if (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+  console.log('✅ Login service running at', address);
 });
