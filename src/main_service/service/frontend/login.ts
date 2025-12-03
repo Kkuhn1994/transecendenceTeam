@@ -1,5 +1,3 @@
-alert("login.ts!");
-
 interface LoginRequest {
   email: string;
   password: string;
@@ -8,6 +6,7 @@ interface LoginRequest {
 interface LoginResponse {
   status: string;
   email?: string;
+  userId?: number;
   error?: string;
 }
 
@@ -15,25 +14,16 @@ async function createUser(email: string, password: string): Promise<LoginRespons
   const body: LoginRequest = { email, password };
 
   try {
-    alert("request");
-    const response = await fetch('http://localhost:1080/login_service/createAccount', {
+    const response = await fetch('/login_service/createAccount', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      // Server hat einen Fehlerstatus zurückgegeben
-      throw new Error(`Server responded with status ${response.status}`);
-    }
-
-    const data: LoginResponse = await response.json();
+    const data = await response.json();
     return data;
-
   } catch (err) {
-    console.error('Login failed:', err);
+    console.error('Create user failed:', err);
     return { status: 'error', error: (err as Error).message };
   }
 }
@@ -42,62 +32,65 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
   const body: LoginRequest = { email, password };
 
   try {
-    alert("request");
-    const response = await fetch('http://localhost:1080/login_service/loginAccount', {
+    const response = await fetch('/login_service/loginAccount', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      // Server hat einen Fehlerstatus zurückgegeben
-      throw new Error(`Server responded with status ${response.status}`);
-    }
-
-    const data: LoginResponse = await response.json();
+    const data = await response.json();
     return data;
-
   } catch (err) {
     console.error('Login failed:', err);
     return { status: 'error', error: (err as Error).message };
   }
 }
 
-export function loginReady() {
-  alert('Script und DOM sind geladen!');
-console.log("login_start");
+export function initLoginAndRegister() {
+  const route = location.hash.replace('#', '') || '/';
 
-const emailInput = document.getElementById('email') as HTMLInputElement;
-const passwordInput = document.getElementById('password') as HTMLInputElement;
-const form = document.querySelector('form') as HTMLFormElement;
-const signUpButton = document.getElementById('signUp') as HTMLButtonElement;
-const loginButton = document.getElementById('login') as HTMLButtonElement;
+  if (route === '/') {
+    const form = document.getElementById('loginForm') as HTMLFormElement | null;
+    const emailInput = document.getElementById('loginEmail') as HTMLInputElement | null;
+    const passwordInput = document.getElementById('loginPassword') as HTMLInputElement | null;
 
-signUpButton.addEventListener('click', async (e) => {
-  console.log('sbmit');
-  e.preventDefault(); // verhindert normalen Form-Submit
+    if (!form || !emailInput || !passwordInput) return;
 
-  const email = emailInput.value;
-  const password = passwordInput.value;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
 
-  const result = await createUser(email, password);
-  console.log('Server response:', result);
-});
+      const res = await loginUser(email, password);
 
-loginButton.addEventListener('click', async (e) => {
-  console.log('sbmit');
-  e.preventDefault(); // verhindert normalen Form-Submit
+      if (res.status === 'ok') {
+        location.hash = '#/home';
+      } else {
+        alert(res.error || 'Login failed');
+      }
+    });
+  }
 
-  const email = emailInput.value;
-  const password = passwordInput.value;
+  if (route === '/register') {
+    const form = document.getElementById('registerForm') as HTMLFormElement | null;
+    const emailInput = document.getElementById('registerEmail') as HTMLInputElement | null;
+    const passwordInput = document.getElementById('registerPassword') as HTMLInputElement | null;
 
-  const result = await loginUser(email, password);
-  console.log('Server response:', result);
-  location.hash = "#/profile";
-});
+    if (!form || !emailInput || !passwordInput) return;
 
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      const res = await createUser(email, password);
+
+      if (res.status === 'ok') {
+        alert('Account created. You can log in now.');
+        location.hash = '#/';
+      } else {
+        alert(res.error || 'Registration failed');
+      }
+    });
+  }
 }
-
-

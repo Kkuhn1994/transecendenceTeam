@@ -19,7 +19,7 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    location /game_service {
+    location /game_service/ {
         proxy_pass http://game_service:3000/;  # Containername + Port, kein "localhost"!
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;

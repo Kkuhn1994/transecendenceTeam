@@ -1,152 +1,230 @@
-alert("app.ts!");
+const app = document.getElementById("app") as HTMLDivElement | null;
 
-const app = document.getElementById("app");
+type ViewMap = Record<string, string>;
 
-// Views (Seiten)
-const views: Record<string, string> = {
-  // "/": `
-  //   <h1>Hoallo</h1>
-  //   <p>Willkommen!</p>
-  // `,
-
+const views: ViewMap = {
   "/": `
-      <div class="login-container">
-      <h3 class="text-center mb-4">Login</h3>
-      <form novalidate>
-        <div class="mb-3">
-          <label for="email" class="form-label">Email address</label>
-          <input
-            type="email"
-            class="form-control"
-            id="email"
-            name="email"
-            placeholder="Enter your email"
-            required
-          />
-        </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="password"
-            name="password"
-            placeholder="Enter your password"
-            required
-          />
-        </div>
-        <button type="submit" class="btn btn-primary w-100" id="signUp">Create New Account</button>
-        <button type="submit" class="btn btn-primary w-100" id="login">Login</button>
-        <p class="text-center mt-3 mb-0">
-          <small>Don’t have an account? <a href="#">Register</a></small>
-        </p>
-      </form>
-    </div>
+    <h1>Login</h1>
+    <form id="loginForm">
+      <div>
+        <label>Email</label><br />
+        <input type="email" id="loginEmail" required />
+      </div>
+      <div>
+        <label>Password</label><br />
+        <input type="password" id="loginPassword" required />
+      </div>
+      <button type="submit">Login</button>
+    </form>
+    <p>
+      Not registered? <a href="#/register">Sign up</a>
+    </p>
   `,
-    "/profile": `
-      <div class="profile-container">
-      <h3 class="text-center mb-4">start tournament</h3>
-      <button type="button" class="btn btn-primary w-100" id="setupGame2">2 Player</button>
-      <button type="button" class="btn btn-primary w-100" id="setupGame4">4 Player</button>
-      <button type="button" class="btn btn-primary w-100" id="setupGame8">8 Player</button>
-      <button type="button" class="btn btn-primary w-100" id="setupGame16">16 Player</button>
-      <div id="playerNamesContainer" class="mt-3"></div>
+
+  "/register": `
+    <h1>Register</h1>
+    <form id="registerForm">
+      <div>
+        <label>Email</label><br />
+        <input type="email" id="registerEmail" required />
+      </div>
+      <div>
+        <label>Password</label><br />
+        <input type="password" id="registerPassword" required />
+      </div>
+      <button type="submit">Create account</button>
+    </form>
+    <p>
+      Already have an account? <a href="#/">Login</a>
+    </p>
+  `,
+
+  "/home": `
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
     </div>
+    <h1>Home</h1>
+    <p>Welcome! Choose what you want to do:</p>
+    <button id="goPlay">Play</button>
+    <button id="goProfile">Profile</button>
+  `,
+
+  "/play": `
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
+    </div>
+    <h1>Play</h1>
+    <button id="go1v1">1v1</button>
+    <button id="goTournament" disabled>Start Tournament (coming later)</button>
+  `,
+
+  "/1v1": `
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
+    </div>
+    <h1>1v1 Setup</h1>
+    <p>Player 1 is the currently logged in user.</p>
+    <p>Player 2 must log in here:</p>
+    <form id="player2Form">
+      <div>
+        <label>Player 2 Email</label><br />
+        <input type="email" id="player2Email" required />
+      </div>
+      <div>
+        <label>Player 2 Password</label><br />
+        <input type="password" id="player2Password" required />
+      </div>
+      <button type="submit">Start Match</button>
+    </form>
+    <p id="player2Error" style="color:red;"></p>
   `,
 
   "/game": `
-    <nav>
-    <a href="#/">Home</a> |
-    <a href="#/login">Login</a> |
-    <a href="#/game">Game</a>
-    </nav>
-    <div class="container">
-      <h1 class="text-center">👾 Pong Game</h1>
-      <canvas id="pongCanvas" width="800" height="400"></canvas>
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
     </div>
+    <h1>Pong Game</h1>
+    <canvas id="pongCanvas" width="800" height="400"></canvas>
   `,
 
-  "/gameLobby": `
-    <div class="container">
-      <h1 class="text-center">👾 Gamelobby</h1>
-      <div id="lobbyContainer" class="mt-3"></div>
+  "/profile": `
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
     </div>
-  `
+    <h1>Profile</h1>
+    <div id="profileInfo">Loading...</div>
+    <button id="viewHistory">Match History</button>
+  `,
+
+  "/history": `
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
+    </div>
+    <h1>Match History</h1>
+    <div id="historyContainer">Loading...</div>
+  `,
 };
 
-async function loadLobby() {
-  const module = await import('./lobby');
-  module.setUpLobby();
+declare global {
+  interface Window {
+    pongInterval: any;
+    currentSessionId?: number;
+  }
 }
 
-async function loadGameScript() {
+async function loadLoginModule() {
+  const module = await import('./login');
+  module.initLoginAndRegister();
+}
+
+async function loadGameFrontend() {
   const module = await import('./game_frontend');
   module.startGame();
 }
 
-async function loadGameSetup() {
+async function load1v1Module() {
   const module = await import('./setup_game');
-  alert("setup game");
-  module.setupGameForm();
+  module.init1v1Setup();
 }
 
-async function loadLoginScript() {
-  console.log("import start");
-  const module = await import('./login');
-  module.loginReady();
-  console.log("import ready");
+async function loadProfileModule() {
+  const module = await import('./profile');
+  module.initProfile();
 }
 
-function getCookie(name: string) {
-  const value = `; ${document.cookie}`;
-  console.log(value);
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()!.split(";")[0];
-  }
-  return null;
+async function loadHistoryModule() {
+  const module = await import('./profile');
+  module.initHistory();
 }
 
-// const DEFAULT_SESSION = "super_secret_key_32_chars";
-// Router
-async function router() {
-  if (!app) return;
-    
-  const route = location.hash.replace("#", "") || "/"; // default to "/" if no hash
-  alert("new route");
+async function handleNavButtons() {
+  const homeBtn = document.getElementById('navHome');
+  const playBtn = document.getElementById('navPlay');
+  const profileBtn = document.getElementById('navProfile');
+  const logoutBtn = document.getElementById('navLogout');
 
-  app.innerHTML = views[route] || "<h1>404 Not Found</h1>";
-    console.log("Current route:", route);
-  // Optional: Login form handler
-  
-  if (route === "/profile") {
-    await loadGameSetup(); // Lädt das Spiel-Skript nur für die /game Route
-  }
+  if (homeBtn) homeBtn.addEventListener('click', () => (location.hash = '#/home'));
+  if (playBtn) playBtn.addEventListener('click', () => (location.hash = '#/play'));
+  if (profileBtn) profileBtn.addEventListener('click', () => (location.hash = '#/profile'));
 
-  if (route === "/gameLobby") {
-    await loadLobby(); // Lädt das Spiel-Skript nur für die /game Route
-  }
-
-  if (route === "/game") {
-    await loadGameScript(); // Lädt das Spiel-Skript nur für die /game Route
-  }
-  if (route === "/") {
-    console.log("Current route:", route);
-    await loadLoginScript();
-    document.getElementById("loginForm")?.addEventListener("submit", e => {
-      e.preventDefault();
-      alert("Login ausgeführt!");
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/login_service/logout', { method: 'POST' });
+      window.currentSessionId = undefined;
+      location.hash = '#/';
     });
   }
 }
 
-// Initialize router on page load
-window.addEventListener("load", () => {
-alert("Page loaded!");
-  router(); // manually call router to render the initial page
+// Simple router
+async function router() {
+  if (!app) return;
+
+  const route = location.hash.replace('#', '') || '/';
+
+  app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
+
+  if (route === '/' || route === '/register') {
+    await loadLoginModule();
+  }
+
+  if (route === '/home') {
+    await handleNavButtons();
+    const playBtn = document.getElementById('goPlay');
+    const profileBtn = document.getElementById('goProfile');
+    playBtn?.addEventListener('click', () => (location.hash = '#/play'));
+    profileBtn?.addEventListener('click', () => (location.hash = '#/profile'));
+  }
+
+  if (route === '/play') {
+    await handleNavButtons();
+    const btn1v1 = document.getElementById('go1v1');
+    btn1v1?.addEventListener('click', () => (location.hash = '#/1v1'));
+  }
+
+  if (route === '/1v1') {
+    await handleNavButtons();
+    await load1v1Module();
+  }
+
+  if (route === '/game') {
+    await handleNavButtons();
+    await loadGameFrontend();
+  }
+
+  if (route === '/profile') {
+    await handleNavButtons();
+    await loadProfileModule();
+  }
+
+  if (route === '/history') {
+    await handleNavButtons();
+    await loadHistoryModule();
+  }
+}
+
+window.addEventListener('load', () => {
+  router();
 });
 
-window.addEventListener("hashchange", () => {
-  alert("Hash changed!");
+window.addEventListener('hashchange', () => {
   router();
 });
