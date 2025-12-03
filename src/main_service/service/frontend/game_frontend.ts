@@ -55,25 +55,82 @@ export function startGame() {
       return;
     }
 
-    const paddleWidth = 10, paddleHeight = 100, ballSize = 10;
-
-    ctx.fillStyle = '#f4f4f9';
+    const paddleWidth = 12, paddleHeight = 100, ballSize = 8;
+    
+    // Dark gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#0a0a0a');
+    gradient.addColorStop(0.5, '#1a1a1a');
+    gradient.addColorStop(1, '#0a0a0a');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, leftPaddleY, paddleWidth, paddleHeight);
-    ctx.fillRect(canvas.width - paddleWidth, rightPaddleY, paddleWidth, paddleHeight);
+    // Draw center line with subtle effect
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2, 0);
+    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.stroke();
+    ctx.restore();
 
+    // Draw paddles with subtle styling and light glow
+    function drawPaddle(x: number, y: number) {
+        ctx.save();
+        
+        // Add subtle glow
+        ctx.shadowColor = 'rgba(0, 255, 255, 0.4)';
+        ctx.shadowBlur = 6;
+        
+        // Simple paddle gradient
+        const paddleGrad = ctx.createLinearGradient(x, y, x + paddleWidth, y + paddleHeight);
+        paddleGrad.addColorStop(0, '#f0f0f0');
+        paddleGrad.addColorStop(0.5, '#d0d0d0');
+        paddleGrad.addColorStop(1, '#f0f0f0');
+        
+        ctx.fillStyle = paddleGrad;
+        ctx.fillRect(x, y, paddleWidth, paddleHeight);
+        
+        // Subtle paddle border
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, paddleWidth, paddleHeight);
+        ctx.restore();
+    }
+    
+    drawPaddle(0, leftPaddleY);
+    drawPaddle(canvas.width - paddleWidth, rightPaddleY);
+
+    // Draw ball with simple styling
+    ctx.save();
+    
+    // Simple ball gradient
+    const ballGrad = ctx.createRadialGradient(ballX, ballY, 0, ballX, ballY, ballSize);
+    ballGrad.addColorStop(0, '#ffffff');
+    ballGrad.addColorStop(1, '#e0e0e0');
+    
     ctx.beginPath();
     ctx.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = ballGrad;
     ctx.fill();
+    
+    // Subtle ball border
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.closePath();
+    ctx.restore();
 
-    ctx.font = '30px Arial';
-    ctx.fillStyle = '#000';
-    ctx.fillText(scoreLeft.toString(), canvas.width / 4, 50);
-    ctx.fillText(scoreRight.toString(), (3 * canvas.width) / 4, 50);
+    // Draw scores with subtle styling
+    ctx.save();
+    ctx.font = 'bold 48px "Courier New", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText(scoreLeft.toString(), canvas.width / 4, 60);
+    ctx.fillText(scoreRight.toString(), (3 * canvas.width) / 4, 60);
+    ctx.restore();
 
     requestAnimationFrame(draw);
   }

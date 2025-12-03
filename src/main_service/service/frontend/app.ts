@@ -4,122 +4,148 @@ type ViewMap = Record<string, string>;
 
 const views: ViewMap = {
   "/": `
-    <h1>Login</h1>
-    <form id="loginForm">
-      <div>
-        <label>Email</label><br />
-        <input type="email" id="loginEmail" required />
-      </div>
-      <div>
-        <label>Password</label><br />
-        <input type="password" id="loginPassword" required />
-      </div>
-      <button type="submit">Login</button>
-    </form>
-    <p>
-      Not registered? <a href="#/register">Sign up</a>
-    </p>
+    <div class="login-container">
+      <h1>Pong Login</h1>
+      <form id="loginForm">
+        <div class="mb-3">
+          <label for="loginEmail" class="form-label">Email</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email" required />
+        </div>
+        <div class="mb-3">
+          <label for="loginPassword" class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+      </form>
+      <p class="text-center mt-3">
+        Not registered? <a href="#/register">Sign up</a>
+      </p>
+    </div>
   `,
 
   "/register": `
-    <h1>Register</h1>
-    <form id="registerForm">
-      <div>
-        <label>Email</label><br />
-        <input type="email" id="registerEmail" required />
-      </div>
-      <div>
-        <label>Password</label><br />
-        <input type="password" id="registerPassword" required />
-      </div>
-      <button type="submit">Create account</button>
-    </form>
-    <p>
-      Already have an account? <a href="#/">Login</a>
-    </p>
+    <div class="login-container">
+      <h1>🎆 Create Account</h1>
+      <form id="registerForm">
+        <div class="mb-3">
+          <label for="registerEmail" class="form-label">Email</label>
+          <input type="email" id="registerEmail" class="form-control" placeholder="Enter your email" required />
+        </div>
+        <div class="mb-3">
+          <label for="registerPassword" class="form-label">Password</label>
+          <input type="password" id="registerPassword" class="form-control" placeholder="Create a password" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Create account</button>
+      </form>
+      <p class="text-center mt-3">
+        Already have an account? <a href="#/">Login</a>
+      </p>
+    </div>
   `,
 
   "/home": `
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1>🏠 Home</h1>
+      <p>Welcome to Pong! Choose what you want to do:</p>
+      <div class="d-flex gap-3 justify-content-center mt-4">
+        <button id="goPlay" class="btn btn-primary">🎮 Play Game</button>
+        <button id="goProfile" class="btn btn-primary">👤 Profile</button>
+      </div>
     </div>
-    <h1>Home</h1>
-    <p>Welcome! Choose what you want to do:</p>
-    <button id="goPlay">Play</button>
-    <button id="goProfile">Profile</button>
   `,
 
   "/play": `
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1>🎮 Play Game</h1>
+      <div class="d-flex gap-3 justify-content-center mt-4">
+        <button id="go1v1" class="btn btn-primary">⚔️ 1v1 Match</button>
+        <button id="goTournament" class="btn btn-secondary" disabled>🏆 Start Tournament (coming later)</button>
+      </div>
     </div>
-    <h1>Play</h1>
-    <button id="go1v1">1v1</button>
-    <button id="goTournament" disabled>Start Tournament (coming later)</button>
   `,
 
   "/1v1": `
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1>⚔️ 1v1 Match Setup</h1>
+      <p>Player 1 is the currently logged in user.</p>
+      <p>Player 2 must log in here:</p>
+      <form id="player2Form">
+        <div class="mb-3">
+          <label for="player2Email" class="form-label">Player 2 Email</label>
+          <input type="email" id="player2Email" class="form-control" placeholder="Enter Player 2's email" required />
+        </div>
+        <div class="mb-3">
+          <label for="player2Password" class="form-label">Player 2 Password</label>
+          <input type="password" id="player2Password" class="form-control" placeholder="Enter Player 2's password" required />
+        </div>
+        <button type="submit" class="btn btn-primary">🚀 Start Match</button>
+      </form>
+      <p id="player2Error" style="color:#ff6b6b;" class="mt-3"></p>
     </div>
-    <h1>1v1 Setup</h1>
-    <p>Player 1 is the currently logged in user.</p>
-    <p>Player 2 must log in here:</p>
-    <form id="player2Form">
-      <div>
-        <label>Player 2 Email</label><br />
-        <input type="email" id="player2Email" required />
-      </div>
-      <div>
-        <label>Player 2 Password</label><br />
-        <input type="password" id="player2Password" required />
-      </div>
-      <button type="submit">Start Match</button>
-    </form>
-    <p id="player2Error" style="color:red;"></p>
   `,
 
   "/game": `
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="game-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1 class="game-title">PONG</h1>
+      <canvas id="pongCanvas" width="800" height="400"></canvas>
+      <div class="game-controls">
+        <p>Player 1: W/S keys | Player 2: ↑/↓ arrow keys</p>
+        <p>First to 11 points wins!</p>
+      </div>
     </div>
-    <h1>Pong Game</h1>
-    <canvas id="pongCanvas" width="800" height="400"></canvas>
   `,
 
   "/profile": `
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1>👤 Your Profile</h1>
+      <div id="profileInfo" class="mb-4">Loading...</div>
+      <div class="text-center">
+        <button id="viewHistory" class="btn btn-primary">📊 Match History</button>
+      </div>
     </div>
-    <h1>Profile</h1>
-    <div id="profileInfo">Loading...</div>
-    <button id="viewHistory">Match History</button>
   `,
 
   "/history": `
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1>📊 Match History</h1>
+      <div id="historyContainer" class="mt-4">Loading...</div>
     </div>
-    <h1>Match History</h1>
-    <div id="historyContainer">Loading...</div>
   `,
 };
 
