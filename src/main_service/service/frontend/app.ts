@@ -1,3 +1,5 @@
+export {};
+
 const app = document.getElementById("app") as HTMLDivElement | null;
 
 type ViewMap = Record<string, string>;
