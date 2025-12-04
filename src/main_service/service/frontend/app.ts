@@ -8,14 +8,30 @@ const views: ViewMap = {
   "/": `
     <div class="login-container">
       <h1>Pong Login</h1>
-      <form id="loginForm">
+      <form id="loginForm" novalidate>
         <div class="mb-3">
           <label for="loginEmail" class="form-label">Email</label>
-          <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email" required />
+          <input 
+            type="email" 
+            id="loginEmail" 
+            class="form-control" 
+            placeholder="Enter your email" 
+            autocomplete="email"
+            maxlength="254"
+            required 
+          />
         </div>
         <div class="mb-3">
           <label for="loginPassword" class="form-label">Password</label>
-          <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required />
+          <input 
+            type="password" 
+            id="loginPassword" 
+            class="form-control" 
+            placeholder="Enter your password" 
+            autocomplete="current-password"
+            maxlength="128"
+            required 
+          />
         </div>
         <button type="submit" class="btn btn-primary">Login</button>
       </form>
@@ -28,14 +44,30 @@ const views: ViewMap = {
   "/register": `
     <div class="login-container">
       <h1>🎆 Create Account</h1>
-      <form id="registerForm">
+      <form id="registerForm" novalidate>
         <div class="mb-3">
           <label for="registerEmail" class="form-label">Email</label>
-          <input type="email" id="registerEmail" class="form-control" placeholder="Enter your email" required />
+          <input 
+            type="email" 
+            id="registerEmail" 
+            class="form-control" 
+            placeholder="Enter your email" 
+            autocomplete="email"
+            maxlength="254"
+            required 
+          />
         </div>
         <div class="mb-3">
           <label for="registerPassword" class="form-label">Password</label>
-          <input type="password" id="registerPassword" class="form-control" placeholder="Create a password" required />
+          <input 
+            type="password" 
+            id="registerPassword" 
+            class="form-control" 
+            placeholder="Create a password" 
+            autocomplete="new-password"
+            maxlength="128"
+            required 
+          />
         </div>
         <button type="submit" class="btn btn-primary">Create account</button>
       </form>

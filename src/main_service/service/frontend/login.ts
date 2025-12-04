@@ -1,3 +1,5 @@
+import { SecurityValidator, VALIDATION_RULES } from './security';
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -46,6 +48,92 @@ async function loginUser(email: string, password: string): Promise<LoginResponse
   }
 }
 
+// Utility functions for form error handling
+function addErrorDisplayElements(form: HTMLFormElement): void {
+  // Add general error display if not exists
+  if (!form.querySelector('.error-display')) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-display';
+    errorDiv.style.cssText = `
+      color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      display: none;
+      font-size: 14px;
+    `;
+    form.insertBefore(errorDiv, form.firstChild);
+  }
+
+  // Add success message display if not exists
+  if (!form.querySelector('.success-display')) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-display';
+    successDiv.style.cssText = `
+      color: #51cf66;
+      background: rgba(81, 207, 102, 0.1);
+      border: 1px solid rgba(81, 207, 102, 0.3);
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      display: none;
+      font-size: 14px;
+    `;
+    form.insertBefore(successDiv, form.firstChild);
+  }
+}
+
+function clearFormErrors(form: HTMLFormElement): void {
+  const errorDisplay = form.querySelector('.error-display') as HTMLElement;
+  const successDisplay = form.querySelector('.success-display') as HTMLElement;
+  
+  if (errorDisplay) {
+    errorDisplay.style.display = 'none';
+    errorDisplay.textContent = '';
+  }
+  
+  if (successDisplay) {
+    successDisplay.style.display = 'none';
+    successDisplay.textContent = '';
+  }
+
+  // Remove field-specific error styling
+  const inputs = form.querySelectorAll('input');
+  inputs.forEach(input => {
+    input.style.borderColor = '';
+  });
+}
+
+function displayFormErrors(form: HTMLFormElement, errors: Record<string, string>): void {
+  const errorDisplay = form.querySelector('.error-display') as HTMLElement;
+  
+  if (errorDisplay) {
+    const errorMessages = Object.entries(errors).map(([field, message]) => {
+      // Highlight the problematic input field
+      const input = form.querySelector(`#${form.id.replace('Form', '')}${field.charAt(0).toUpperCase() + field.slice(1)}`) as HTMLInputElement;
+      if (input && field !== 'general') {
+        input.style.borderColor = '#ff6b6b';
+      }
+      
+      return field === 'general' ? message : `${field}: ${message}`;
+    }).join('<br>');
+    
+    SecurityValidator.safeSetHTML(errorDisplay, errorMessages);
+    errorDisplay.style.display = 'block';
+  }
+}
+
+function displaySuccessMessage(form: HTMLFormElement, message: string): void {
+  const successDisplay = form.querySelector('.success-display') as HTMLElement;
+  
+  if (successDisplay) {
+    SecurityValidator.safeSetText(successDisplay, message);
+    successDisplay.style.display = 'block';
+  }
+}
+
 export function initLoginAndRegister() {
   const route = location.hash.replace('#', '') || '/';
 
@@ -56,17 +144,40 @@ export function initLoginAndRegister() {
 
     if (!form || !emailInput || !passwordInput) return;
 
+    // Add error display elements
+    addErrorDisplayElements(form);
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
+      
+      // Clear previous errors
+      clearFormErrors(form);
+      
+      // Get sanitized input values
+      const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
+      const password = passwordInput.value; // Don't sanitize passwords, just validate length
+      
+      // Validate form data
+      const errors = SecurityValidator.validateForm(
+        { email, password },
+        { 
+          email: VALIDATION_RULES.email,
+          password: VALIDATION_RULES.password
+        }
+      );
+      
+      if (Object.keys(errors).length > 0) {
+        displayFormErrors(form, errors);
+        return;
+      }
 
+      // Proceed with login
       const res = await loginUser(email, password);
 
       if (res.status === 'ok') {
         location.hash = '#/home';
       } else {
-        alert(res.error || 'Login failed');
+        displayFormErrors(form, { general: res.error || 'Login failed' });
       }
     });
   }
@@ -78,18 +189,43 @@ export function initLoginAndRegister() {
 
     if (!form || !emailInput || !passwordInput) return;
 
+    // Add error display elements
+    addErrorDisplayElements(form);
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = emailInput.value.trim();
+      
+      // Clear previous errors
+      clearFormErrors(form);
+      
+      // Get sanitized input values
+      const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
       const password = passwordInput.value;
+      
+      // Validate form data
+      const errors = SecurityValidator.validateForm(
+        { email, password },
+        { 
+          email: VALIDATION_RULES.email,
+          password: VALIDATION_RULES.password
+        }
+      );
+      
+      if (Object.keys(errors).length > 0) {
+        displayFormErrors(form, errors);
+        return;
+      }
 
+      // Proceed with registration
       const res = await createUser(email, password);
 
       if (res.status === 'ok') {
-        alert('Account created. You can log in now.');
-        location.hash = '#/';
+        displaySuccessMessage(form, 'Account created successfully! You can now log in.');
+        setTimeout(() => {
+          location.hash = '#/';
+        }, 2000);
       } else {
-        alert(res.error || 'Registration failed');
+        displayFormErrors(form, { general: res.error || 'Registration failed' });
       }
     });
   }
