@@ -1,8 +1,4 @@
 /**
- * Backend Security Validation Utilities
- */
-
-/**
  * Sanitize string input to prevent injection attacks
  * @param {string} input - The input to sanitize
  * @returns {string} - Sanitized input
@@ -13,11 +9,11 @@ function sanitizeInput(input) {
   }
   
   return input
-    .replace(/[<>]/g, '') // Remove < and > to prevent HTML injection
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers like onclick=
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
     .trim()
-    .substring(0, 1000); // Limit length as failsafe
+    .substring(0, 1000);
 }
 
 /**
@@ -36,7 +32,6 @@ function validateEmail(email) {
     return { isValid: false, error: 'Email is too long (max 254 characters)' };
   }
 
-  // Simple email validation - just needs @ and . 
   if (!sanitized.includes('@') || !sanitized.includes('.')) {
     return { isValid: false, error: 'Invalid email format' };
   }
@@ -45,7 +40,7 @@ function validateEmail(email) {
 }
 
 /**
- * Validate password - basic validation only per subject requirements
+ * Validate password
  * @param {string} password - Password to validate
  * @returns {object} - {isValid: boolean, error?: string}
  */
@@ -66,10 +61,6 @@ function validatePassword(password) {
 }
 
 /**
- * Rate limiting utility - simple in-memory store
- */
-
-/**
  * Validate request body for login/registration
  * @param {object} body - Request body
  * @returns {object} - {isValid: boolean, sanitizedData?: object, errors?: string[]}
@@ -78,7 +69,6 @@ function validateAuthRequest(body) {
   const errors = [];
   const sanitizedData = {};
 
-  // Validate email
   const emailValidation = validateEmail(body?.email);
   if (!emailValidation.isValid) {
     errors.push(emailValidation.error);
@@ -86,12 +76,11 @@ function validateAuthRequest(body) {
     sanitizedData.email = emailValidation.sanitized;
   }
 
-  // Validate password - basic validation only
   const passwordValidation = validatePassword(body?.password);
   if (!passwordValidation.isValid) {
     errors.push(passwordValidation.error);
   } else {
-    sanitizedData.password = body.password; // Don't sanitize passwords
+    sanitizedData.password = body.password;
   }
 
   return {
