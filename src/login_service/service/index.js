@@ -6,6 +6,7 @@ const sqlite3 = require('sqlite3');
 const crypto = require('crypto');
 const fastifyCookie = require('@fastify/cookie');
 const { hashPassword } = require('./hash.js');
+const { validateAuthRequest } = require('./security.js');
 
 const DB_PATH = '/app/data/database.db';
 
@@ -32,12 +33,14 @@ function sendError(reply, statusCode, message) {
  * Body: { email, password }
  */
 fastify.post('/createAccount', (request, reply) => {
-  const { email, password } = request.body || {};
-
-  if (!email || !password) {
-    return sendError(reply, 400, 'Email and password are required');
+  // Validate and sanitize input
+  const validation = validateAuthRequest(request.body);
+  
+  if (!validation.isValid) {
+    return sendError(reply, 400, validation.errors.join(', '));
   }
 
+  const { email, password } = validation.sanitizedData;
   const db = openDb();
   const hashed = hashPassword(password);
 
@@ -48,7 +51,10 @@ fastify.post('/createAccount', (request, reply) => {
       if (err) {
         console.error('DB insert error:', err);
         db.close();
-        return sendError(reply, 500, 'Database error (email may already exist)');
+        if (err.code === 'SQLITE_CONSTRAINT') {
+          return sendError(reply, 409, 'Email already exists');
+        }
+        return sendError(reply, 500, 'Database error');
       }
       db.close();
       return reply.send({ status: 'ok', userId: this.lastID, email });
@@ -61,12 +67,14 @@ fastify.post('/createAccount', (request, reply) => {
  * Body: { email, password }
  */
 fastify.post('/loginAccount', (request, reply) => {
-  const { email, password } = request.body || {};
-
-  if (!email || !password) {
-    return sendError(reply, 400, 'Email and password are required');
+  // Validate and sanitize input  
+  const validation = validateAuthRequest(request.body);
+  
+  if (!validation.isValid) {
+    return sendError(reply, 400, validation.errors.join(', '));
   }
 
+  const { email, password } = validation.sanitizedData;
   const db = openDb();
   const hashed = hashPassword(password);
 

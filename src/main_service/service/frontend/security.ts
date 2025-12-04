@@ -93,7 +93,6 @@ export class SecurityValidator {
   // Safe HTML output - very limited, only for known safe content
   static safeSetHTML(element: HTMLElement, html: string): void {
     // Only allow very basic formatting
-    const allowedTags = /<\/?[bi]>/g;
     const cleanHTML = html
       .replace(/<(?!\/?[bi]>)[^>]*>/g, '') // Remove all tags except <b>, <i>, </b>, </i>
       .replace(/javascript:/gi, '')

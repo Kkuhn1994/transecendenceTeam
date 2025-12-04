@@ -110,17 +110,18 @@ function displayFormErrors(form: HTMLFormElement, errors: Record<string, string>
   const errorDisplay = form.querySelector('.error-display') as HTMLElement;
   
   if (errorDisplay) {
-    const errorMessages = Object.entries(errors).map(([field, message]) => {
-      // Highlight the problematic input field
-      const input = form.querySelector(`#${form.id.replace('Form', '')}${field.charAt(0).toUpperCase() + field.slice(1)}`) as HTMLInputElement;
-      if (input && field !== 'general') {
-        input.style.borderColor = '#ff6b6b';
-      }
-      
-      return field === 'general' ? message : `${field}: ${message}`;
-    }).join('<br>');
+    // Get the first error only
+    const [firstField, firstMessage] = Object.entries(errors)[0];
     
-    SecurityValidator.safeSetHTML(errorDisplay, errorMessages);
+    // Highlight the problematic input field
+    const input = form.querySelector(`#${form.id.replace('Form', '')}${firstField.charAt(0).toUpperCase() + firstField.slice(1)}`) as HTMLInputElement;
+    if (input && firstField !== 'general') {
+      input.style.borderColor = '#ff6b6b';
+    }
+    
+    // Display only the first error message
+    const displayMessage = firstField === 'general' ? firstMessage : firstMessage;
+    SecurityValidator.safeSetText(errorDisplay, displayMessage);
     errorDisplay.style.display = 'block';
   }
 }
