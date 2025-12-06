@@ -310,6 +310,170 @@ fastify.get('/user/profile', (request, reply) => {
   );
 });
 
+/**
+ * Get friends list for current user
+ * Returns array of friend profiles with online status
+ */
+fastify.get('/user/friends', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+
+  const db = openDb();
+  
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      db.all(
+        `SELECT u.id, u.email, u.nickname, u.avatar, u.is_active, u.last_login, f.created_at as friendship_date
+         FROM friends f
+         JOIN users u ON f.friend_id = u.id
+         WHERE f.user_id = ?
+         ORDER BY u.is_active DESC, u.nickname ASC`,
+        [user.id],
+        (err, rows) => {
+          db.close();
+          if (err) {
+            console.error('Error fetching friends:', err);
+            return sendError(reply, 500, 'Database error');
+          }
+          return reply.send({ friends: rows || [] });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * Add a friend
+ * Body: { friendId } or { friendEmail }
+ */
+fastify.post('/user/friends/add', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  const { friendId, friendEmail } = request.body || {};
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+  
+  if (!friendId && !friendEmail) {
+    return sendError(reply, 400, 'friendId or friendEmail required');
+  }
+
+  const db = openDb();
+  
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      const addFriendById = (targetFriendId) => {
+        if (user.id === parseInt(targetFriendId)) {
+          db.close();
+          return sendError(reply, 400, 'Cannot add yourself as friend');
+        }
+
+        db.run(
+          `INSERT INTO friends (user_id, friend_id) VALUES (?, ?)`,
+          [user.id, targetFriendId],
+          function(err) {
+            db.close();
+            if (err) {
+              if (err.code === 'SQLITE_CONSTRAINT') {
+                return sendError(reply, 409, 'Already friends');
+              }
+              console.error('Error adding friend:', err);
+              return sendError(reply, 500, 'Failed to add friend');
+            }
+            return reply.send({ status: 'ok', friendshipId: this.lastID });
+          }
+        );
+      };
+
+      if (friendEmail) {
+        db.get(
+          `SELECT id FROM users WHERE email = ?`,
+          [friendEmail],
+          (err, friend) => {
+            if (err || !friend) {
+              db.close();
+              return sendError(reply, 404, 'User with that email not found');
+            }
+            addFriendById(friend.id);
+          }
+        );
+      } else {
+        db.get(
+          `SELECT id FROM users WHERE id = ?`,
+          [friendId],
+          (err, friend) => {
+            if (err || !friend) {
+              db.close();
+              return sendError(reply, 404, 'User not found');
+            }
+            addFriendById(friend.id);
+          }
+        );
+      }
+    }
+  );
+});
+
+/**
+ * Remove a friend
+ * Body: { friendId }
+ */
+fastify.post('/user/friends/remove', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  const { friendId } = request.body || {};
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+  
+  if (!friendId) {
+    return sendError(reply, 400, 'friendId required');
+  }
+
+  const db = openDb();
+  
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      db.run(
+        `DELETE FROM friends WHERE user_id = ? AND friend_id = ?`,
+        [user.id, friendId],
+        function(err) {
+          db.close();
+          if (err) {
+            console.error('Error removing friend:', err);
+            return sendError(reply, 500, 'Failed to remove friend');
+          }
+          return reply.send({ status: 'ok', removed: this.changes });
+        }
+      );
+    }
+  );
+});
+
 // (keep /players/resolve if you want it for tournaments later)
 // ...
 
