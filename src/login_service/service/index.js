@@ -96,7 +96,7 @@ fastify.post('/loginAccount', (request, reply) => {
       const sessionCookie = crypto.randomBytes(32).toString('hex');
 
       db.run(
-        `UPDATE users SET session_cookie = ? WHERE id = ?`,
+        `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
         [sessionCookie, row.id],
         (err2) => {
           db.close();
@@ -138,7 +138,7 @@ fastify.post('/logout', (request, reply) => {
   }
 
   db.run(
-    `UPDATE users SET session_cookie = NULL WHERE session_cookie = ?`,
+    `UPDATE users SET session_cookie = NULL, is_active = 0 WHERE session_cookie = ?`,
     [sessionCookie],
     (err) => {
       db.close();
@@ -165,7 +165,7 @@ fastify.post('/auth/me', (request, reply) => {
 
   const db = openDb();
   db.get(
-    `SELECT id, email FROM users WHERE session_cookie = ?`,
+    `SELECT id, email, nickname, avatar, is_active FROM users WHERE session_cookie = ?`,
     [sessionCookie],
     (err, row) => {
       db.close();
@@ -176,7 +176,13 @@ fastify.post('/auth/me', (request, reply) => {
       if (!row) {
         return sendError(reply, 401, 'Invalid session');
       }
-      return reply.send({ id: row.id, email: row.email });
+      return reply.send({ 
+        id: row.id, 
+        email: row.email,
+        nickname: row.nickname,
+        avatar: row.avatar,
+        is_active: row.is_active
+      });
     }
   );
 });
@@ -210,6 +216,96 @@ fastify.post('/verifyCredentials', (request, reply) => {
         return sendError(reply, 401, 'Invalid email or password for Player 2');
       }
       return reply.send({ status: 'ok', id: row.id, email: row.email });
+    }
+  );
+});
+
+/**
+ * Update user profile
+ * Body: { nickname?, avatar? }
+ * Requires authentication via session cookie
+ */
+fastify.post('/user/update', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+
+  const { nickname, avatar } = request.body || {};
+  
+  if (!nickname && !avatar) {
+    return sendError(reply, 400, 'Nickname or avatar required');
+  }
+
+  const db = openDb();
+  
+  // First verify session
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      // Build dynamic update query
+      const updates = [];
+      const values = [];
+      
+      if (nickname) {
+        updates.push('nickname = ?');
+        values.push(nickname);
+      }
+      if (avatar) {
+        updates.push('avatar = ?');
+        values.push(avatar);
+      }
+      
+      values.push(user.id);
+      
+      db.run(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+        values,
+        function(err) {
+          db.close();
+          if (err) {
+            console.error('Error updating profile:', err);
+            return sendError(reply, 500, 'Failed to update profile');
+          }
+          return reply.send({ status: 'ok', updated: this.changes });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * Get user profile by ID
+ * Query: ?userId=123
+ */
+fastify.get('/user/profile', (request, reply) => {
+  const userId = request.query.userId;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'userId required');
+  }
+
+  const db = openDb();
+  db.get(
+    `SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?`,
+    [userId],
+    (err, row) => {
+      db.close();
+      if (err) {
+        console.error('DB error in user/profile:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      if (!row) {
+        return sendError(reply, 404, 'User not found');
+      }
+      return reply.send(row);
     }
   );
 });
