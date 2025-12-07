@@ -474,6 +474,79 @@ fastify.post('/user/friends/remove', (request, reply) => {
   );
 });
 
+/**
+ * Get user stats (wins/losses)
+ * Query: ?userId=123
+ */
+fastify.get('/user/stats', (request, reply) => {
+  const userId = request.query.userId;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'userId required');
+  }
+
+  const db = openDb();
+  
+  db.all(
+    `SELECT 
+      COUNT(*) as total_games,
+      SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) as wins,
+      SUM(CASE WHEN winner_id != ? AND winner_id IS NOT NULL THEN 1 ELSE 0 END) as losses
+     FROM game_sessions
+     WHERE player1_id = ? OR player2_id = ?`,
+    [userId, userId, userId, userId],
+    (err, rows) => {
+      db.close();
+      if (err) {
+        console.error('Error fetching stats:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      
+      const stats = rows[0] || { total_games: 0, wins: 0, losses: 0 };
+      return reply.send(stats);
+    }
+  );
+});
+
+/**
+ * Get match history for user
+ * Query: ?userId=123&limit=10
+ */
+fastify.get('/user/matches', (request, reply) => {
+  const userId = request.query.userId;
+  const limit = parseInt(request.query.limit) || 10;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'userId required');
+  }
+
+  const db = openDb();
+  
+  db.all(
+    `SELECT 
+      gs.*,
+      u1.nickname as player1_nickname,
+      u1.avatar as player1_avatar,
+      u2.nickname as player2_nickname,
+      u2.avatar as player2_avatar
+     FROM game_sessions gs
+     JOIN users u1 ON gs.player1_id = u1.id
+     JOIN users u2 ON gs.player2_id = u2.id
+     WHERE gs.player1_id = ? OR gs.player2_id = ?
+     ORDER BY gs.started_at DESC
+     LIMIT ?`,
+    [userId, userId, limit],
+    (err, rows) => {
+      db.close();
+      if (err) {
+        console.error('Error fetching match history:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      return reply.send({ matches: rows || [] });
+    }
+  );
+});
+
 // (keep /players/resolve if you want it for tournaments later)
 // ...
 
