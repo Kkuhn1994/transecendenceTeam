@@ -96,7 +96,7 @@ fastify.post('/loginAccount', (request, reply) => {
       const sessionCookie = crypto.randomBytes(32).toString('hex');
 
       db.run(
-        `UPDATE users SET session_cookie = ? WHERE id = ?`,
+        `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
         [sessionCookie, row.id],
         (err2) => {
           db.close();
@@ -138,7 +138,7 @@ fastify.post('/logout', (request, reply) => {
   }
 
   db.run(
-    `UPDATE users SET session_cookie = NULL WHERE session_cookie = ?`,
+    `UPDATE users SET session_cookie = NULL, is_active = 0 WHERE session_cookie = ?`,
     [sessionCookie],
     (err) => {
       db.close();
@@ -165,7 +165,7 @@ fastify.post('/auth/me', (request, reply) => {
 
   const db = openDb();
   db.get(
-    `SELECT id, email FROM users WHERE session_cookie = ?`,
+    `SELECT id, email, nickname, avatar, is_active FROM users WHERE session_cookie = ?`,
     [sessionCookie],
     (err, row) => {
       db.close();
@@ -176,7 +176,13 @@ fastify.post('/auth/me', (request, reply) => {
       if (!row) {
         return sendError(reply, 401, 'Invalid session');
       }
-      return reply.send({ id: row.id, email: row.email });
+      return reply.send({ 
+        id: row.id, 
+        email: row.email,
+        nickname: row.nickname,
+        avatar: row.avatar,
+        is_active: row.is_active
+      });
     }
   );
 });
@@ -210,6 +216,339 @@ fastify.post('/verifyCredentials', (request, reply) => {
         return sendError(reply, 401, 'Invalid email or password for Player 2');
       }
       return reply.send({ status: 'ok', id: row.id, email: row.email });
+    }
+  );
+});
+
+/**
+ * Update user profile
+ * Body: { nickname?, avatar? }
+ * Requires authentication via session cookie
+ */
+fastify.post('/user/update', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+
+  const { nickname, avatar } = request.body || {};
+  
+  if (!nickname && !avatar) {
+    return sendError(reply, 400, 'Nickname or avatar required');
+  }
+
+  const db = openDb();
+  
+  // First verify session
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      // Build dynamic update query
+      const updates = [];
+      const values = [];
+      
+      if (nickname) {
+        updates.push('nickname = ?');
+        values.push(nickname);
+      }
+      if (avatar) {
+        updates.push('avatar = ?');
+        values.push(avatar);
+      }
+      
+      values.push(user.id);
+      
+      db.run(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+        values,
+        function(err) {
+          db.close();
+          if (err) {
+            console.error('Error updating profile:', err);
+            return sendError(reply, 500, 'Failed to update profile');
+          }
+          return reply.send({ status: 'ok', updated: this.changes });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * Get user profile by ID
+ * Query: ?userId=123
+ */
+fastify.get('/user/profile', (request, reply) => {
+  const userId = request.query.userId;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'userId required');
+  }
+
+  const db = openDb();
+  db.get(
+    `SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?`,
+    [userId],
+    (err, row) => {
+      db.close();
+      if (err) {
+        console.error('DB error in user/profile:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      if (!row) {
+        return sendError(reply, 404, 'User not found');
+      }
+      return reply.send(row);
+    }
+  );
+});
+
+/**
+ * Get friends list for current user
+ * Returns array of friend profiles with online status
+ */
+fastify.get('/user/friends', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+
+  const db = openDb();
+  
+  // First get current user ID
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      // Get friends with their profiles
+      db.all(
+        `SELECT u.id, u.email, u.nickname, u.avatar, u.is_active, u.last_login, f.created_at as friendship_date
+         FROM friends f
+         JOIN users u ON f.friend_id = u.id
+         WHERE f.user_id = ?
+         ORDER BY u.is_active DESC, u.nickname ASC`,
+        [user.id],
+        (err, rows) => {
+          db.close();
+          if (err) {
+            console.error('Error fetching friends:', err);
+            return sendError(reply, 500, 'Database error');
+          }
+          return reply.send({ friends: rows || [] });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * Add a friend
+ * Body: { friendId } or { friendEmail }
+ */
+fastify.post('/user/friends/add', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  const { friendId, friendEmail } = request.body || {};
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+  
+  if (!friendId && !friendEmail) {
+    return sendError(reply, 400, 'friendId or friendEmail required');
+  }
+
+  const db = openDb();
+  
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      // Function to add friend once we have their ID
+      const addFriendById = (targetFriendId) => {
+        if (user.id === parseInt(targetFriendId)) {
+          db.close();
+          return sendError(reply, 400, 'Cannot add yourself as friend');
+        }
+
+        // Add friendship
+        db.run(
+          `INSERT INTO friends (user_id, friend_id) VALUES (?, ?)`,
+          [user.id, targetFriendId],
+          function(err) {
+            db.close();
+            if (err) {
+              if (err.code === 'SQLITE_CONSTRAINT') {
+                return sendError(reply, 409, 'Already friends');
+              }
+              console.error('Error adding friend:', err);
+              return sendError(reply, 500, 'Failed to add friend');
+            }
+            return reply.send({ status: 'ok', friendshipId: this.lastID });
+          }
+        );
+      };
+
+      // If friendEmail provided, look up user ID first
+      if (friendEmail) {
+        db.get(
+          `SELECT id, email FROM users WHERE email = ?`,
+          [friendEmail],
+          (err, friend) => {
+            if (err || !friend) {
+              db.close();
+              return sendError(reply, 404, 'User with that email not found');
+            }
+            addFriendById(friend.id);
+          }
+        );
+      } else {
+        // friendId provided directly
+        db.get(
+          `SELECT id FROM users WHERE id = ?`,
+          [friendId],
+          (err, friend) => {
+            if (err || !friend) {
+              db.close();
+              return sendError(reply, 404, 'User not found');
+            }
+            addFriendById(friend.id);
+          }
+        );
+      }
+    }
+  );
+});
+
+/**
+ * Remove a friend
+ * Body: { friendId }
+ */
+fastify.post('/user/friends/remove', (request, reply) => {
+  const sessionCookie = request.cookies.session;
+  const { friendId } = request.body || {};
+  
+  if (!sessionCookie) {
+    return sendError(reply, 401, 'Authentication required');
+  }
+  
+  if (!friendId) {
+    return sendError(reply, 400, 'friendId required');
+  }
+
+  const db = openDb();
+  
+  db.get(
+    `SELECT id FROM users WHERE session_cookie = ?`,
+    [sessionCookie],
+    (err, user) => {
+      if (err || !user) {
+        db.close();
+        return sendError(reply, 401, 'Invalid session');
+      }
+
+      db.run(
+        `DELETE FROM friends WHERE user_id = ? AND friend_id = ?`,
+        [user.id, friendId],
+        function(err) {
+          db.close();
+          if (err) {
+            console.error('Error removing friend:', err);
+            return sendError(reply, 500, 'Failed to remove friend');
+          }
+          return reply.send({ status: 'ok', removed: this.changes });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * Get user stats (wins/losses)
+ * Query: ?userId=123
+ */
+fastify.get('/user/stats', (request, reply) => {
+  const userId = request.query.userId;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'userId required');
+  }
+
+  const db = openDb();
+  
+  db.all(
+    `SELECT 
+      COUNT(*) as total_games,
+      SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) as wins,
+      SUM(CASE WHEN winner_id != ? AND winner_id IS NOT NULL THEN 1 ELSE 0 END) as losses
+     FROM game_sessions
+     WHERE player1_id = ? OR player2_id = ?`,
+    [userId, userId, userId, userId],
+    (err, rows) => {
+      db.close();
+      if (err) {
+        console.error('Error fetching stats:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      
+      const stats = rows[0] || { total_games: 0, wins: 0, losses: 0 };
+      return reply.send(stats);
+    }
+  );
+});
+
+/**
+ * Get match history for user
+ * Query: ?userId=123&limit=10
+ */
+fastify.get('/user/matches', (request, reply) => {
+  const userId = request.query.userId;
+  const limit = parseInt(request.query.limit) || 10;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'userId required');
+  }
+
+  const db = openDb();
+  
+  db.all(
+    `SELECT 
+      gs.*,
+      u1.nickname as player1_nickname,
+      u1.avatar as player1_avatar,
+      u2.nickname as player2_nickname,
+      u2.avatar as player2_avatar
+     FROM game_sessions gs
+     JOIN users u1 ON gs.player1_id = u1.id
+     JOIN users u2 ON gs.player2_id = u2.id
+     WHERE gs.player1_id = ? OR gs.player2_id = ?
+     ORDER BY gs.started_at DESC
+     LIMIT ?`,
+    [userId, userId, limit],
+    (err, rows) => {
+      db.close();
+      if (err) {
+        console.error('Error fetching match history:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      return reply.send({ matches: rows || [] });
     }
   );
 });
