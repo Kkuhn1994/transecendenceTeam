@@ -78,46 +78,67 @@ fastify.post('/loginAccount', (request, reply) => {
   const db = openDb();
   const hashed = hashPassword(password);
 
+  // First check if email exists
   db.get(
-    `SELECT id, email FROM users WHERE email = ? AND password = ?`,
-    [email, hashed],
-    (err, row) => {
+    `SELECT id, email FROM users WHERE email = ?`,
+    [email],
+    (err, userRow) => {
       if (err) {
         console.error('DB select error:', err);
         db.close();
         return sendError(reply, 500, 'Database error');
       }
 
-      if (!row) {
+      // Email doesn't exist
+      if (!userRow) {
         db.close();
-        return sendError(reply, 401, 'Invalid email or password');
+        return sendError(reply, 401, 'Email is not registered');
       }
 
-      const sessionCookie = crypto.randomBytes(32).toString('hex');
-
-      db.run(
-        `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
-        [sessionCookie, row.id],
-        (err2) => {
-          db.close();
-          if (err2) {
-            console.error('Error updating session cookie:', err2);
-            return sendError(reply, 500, 'Failed to update session');
+      // Email exists, check password
+      db.get(
+        `SELECT id, email FROM users WHERE email = ? AND password = ?`,
+        [email, hashed],
+        (err, row) => {
+          if (err) {
+            console.error('DB select error:', err);
+            db.close();
+            return sendError(reply, 500, 'Database error');
           }
 
-          reply.setCookie('session', sessionCookie, {
-            httpOnly: true,
-            secure: false, // set true if https
-            sameSite: 'strict',
-            path: '/',
-            maxAge: 60 * 60 * 24,
-          });
+          // Password is wrong
+          if (!row) {
+            db.close();
+            return sendError(reply, 401, 'Incorrect password');
+          }
 
-          return reply.send({
-            status: 'ok',
-            email: row.email,
-            userId: row.id,
-          });
+          const sessionCookie = crypto.randomBytes(32).toString('hex');
+
+          db.run(
+            `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
+            [sessionCookie, row.id],
+            (err2) => {
+              db.close();
+              if (err2) {
+                console.error('Error updating session cookie:', err2);
+                return sendError(reply, 500, 'Failed to update session');
+              }
+
+              reply.setCookie('session', sessionCookie, {
+                httpOnly: true,
+                secure: false, // set true if https
+                sameSite: 'strict',
+                path: '/',
+                maxAge: 60 * 60 * 24,
+              });
+
+              return reply.send({
+                status: 'ok',
+                email: row.email,
+                userId: row.id,
+              });
+            }
+          );
         }
       );
     }
