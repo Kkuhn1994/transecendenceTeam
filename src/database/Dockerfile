@@ -10,6 +10,9 @@ RUN mkdir -p /app
 # Erstelle das Verzeichnis für die Datenbankdatei
 RUN mkdir -p /app/data
 
+# Erstelle das Verzeichnis für Avatare
+RUN mkdir -p /app/data/avatars
+
 # Erstelle eine SQLite-Datenbank-Datei und eine Beispiel-Tabelle
 # Erstelle die Datenbank und beide Tabellen in einem einzigen RUN-Befehl
 RUN sqlite3 /app/data/database.db " \
@@ -19,7 +22,7 @@ RUN sqlite3 /app/data/database.db " \
         password TEXT, \
         session_cookie TEXT, \
         nickname TEXT, \
-        avatar TEXT DEFAULT '/avatars/default.png', \
+        avatar TEXT DEFAULT '/avatars/default.jpg', \
         is_active BOOLEAN DEFAULT 0, \
         last_login DATETIME, \
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP \
@@ -49,6 +52,9 @@ RUN sqlite3 /app/data/database.db " \
 "
 
 
+
+# Copy default avatar from assets (relative to src/ context)
+COPY assets/avatars/default.jpg /app/data/avatars/default.jpg
 
 # Ändere die Berechtigungen für das Verzeichnis und die Datenbankdatei
 RUN chown -R www-data:www-data /app/data && chmod -R 775 /app/data

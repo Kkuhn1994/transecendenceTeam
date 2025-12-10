@@ -1,7 +1,9 @@
 
 services:
   database:
-    build: src/database/.
+    build:
+      context: src/
+      dockerfile: database/Dockerfile
     container_name: database
     volumes:
       - sqlite-data:/app/data
