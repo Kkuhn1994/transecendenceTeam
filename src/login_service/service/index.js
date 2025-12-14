@@ -332,6 +332,40 @@ fastify.get('/user/profile', (request, reply) => {
 });
 
 /**
+ * Get user profile by ID (public endpoint for viewing other users)
+ * Path: /users/:id
+ */
+fastify.get('/users/:id', (request, reply) => {
+  const userId = request.params.id;
+  
+  if (!userId) {
+    return sendError(reply, 400, 'User ID required');
+  }
+
+  const db = openDb();
+  db.get(
+    `SELECT id, email, avatar FROM users WHERE id = ?`,
+    [userId],
+    (err, row) => {
+      db.close();
+      if (err) {
+        console.error('DB error in users/:id:', err);
+        return sendError(reply, 500, 'Database error');
+      }
+      if (!row) {
+        return sendError(reply, 404, 'User not found');
+      }
+      // Only return public information
+      return reply.send({
+        id: row.id,
+        email: row.email,
+        avatar: row.avatar
+      });
+    }
+  );
+});
+
+/**
  * Get friends list for current user
  * Returns array of friend profiles with online status
  */
@@ -344,6 +378,7 @@ fastify.get('/user/friends', (request, reply) => {
 
   const db = openDb();
   
+  // First get current user ID
   db.get(
     `SELECT id FROM users WHERE session_cookie = ?`,
     [sessionCookie],
@@ -353,13 +388,14 @@ fastify.get('/user/friends', (request, reply) => {
         return sendError(reply, 401, 'Invalid session');
       }
 
+      // Get friends with their profiles (bidirectional friendship)
       db.all(
-        `SELECT u.id, u.email, u.nickname, u.avatar, u.is_active, u.last_login, f.created_at as friendship_date
+        `SELECT DISTINCT u.id, u.email, u.nickname, u.avatar, u.is_active, u.last_login, f.created_at as friendship_date
          FROM friends f
-         JOIN users u ON f.friend_id = u.id
-         WHERE f.user_id = ?
+         JOIN users u ON (f.friend_id = u.id OR f.user_id = u.id)
+         WHERE (f.user_id = ? OR f.friend_id = ?) AND u.id != ?
          ORDER BY u.is_active DESC, u.nickname ASC`,
-        [user.id],
+        [user.id, user.id, user.id],
         (err, rows) => {
           db.close();
           if (err) {
@@ -400,32 +436,65 @@ fastify.post('/user/friends/add', (request, reply) => {
         return sendError(reply, 401, 'Invalid session');
       }
 
+      // Function to add friend once we have their ID
       const addFriendById = (targetFriendId) => {
         if (user.id === parseInt(targetFriendId)) {
           db.close();
           return sendError(reply, 400, 'Cannot add yourself as friend');
         }
 
-        db.run(
-          `INSERT INTO friends (user_id, friend_id) VALUES (?, ?)`,
-          [user.id, targetFriendId],
-          function(err) {
-            db.close();
+        // Check if friendship already exists (bidirectional)
+        db.get(
+          `SELECT id FROM friends WHERE 
+           (user_id = ? AND friend_id = ?) OR 
+           (user_id = ? AND friend_id = ?)`,
+          [user.id, targetFriendId, targetFriendId, user.id],
+          (err, existingFriend) => {
             if (err) {
-              if (err.code === 'SQLITE_CONSTRAINT') {
-                return sendError(reply, 409, 'Already friends');
-              }
-              console.error('Error adding friend:', err);
-              return sendError(reply, 500, 'Failed to add friend');
+              db.close();
+              console.error('Error checking friendship:', err);
+              return sendError(reply, 500, 'Database error');
             }
-            return reply.send({ status: 'ok', friendshipId: this.lastID });
+            
+            if (existingFriend) {
+              db.close();
+              return sendError(reply, 409, 'Already friends');
+            }
+
+            // Add bidirectional friendship
+            db.run(
+              `INSERT INTO friends (user_id, friend_id) VALUES (?, ?)`,
+              [user.id, targetFriendId],
+              function(err1) {
+                if (err1) {
+                  db.close();
+                  console.error('Error adding friend relationship 1:', err1);
+                  return sendError(reply, 500, 'Failed to add friend');
+                }
+                
+                // Add the reverse relationship
+                db.run(
+                  `INSERT INTO friends (user_id, friend_id) VALUES (?, ?)`,
+                  [targetFriendId, user.id],
+                  function(err2) {
+                    db.close();
+                    if (err2) {
+                      console.error('Error adding friend relationship 2:', err2);
+                      return sendError(reply, 500, 'Failed to add friend');
+                    }
+                    return reply.send({ status: 'ok', friendshipId: this.lastID });
+                  }
+                );
+              }
+            );
           }
         );
       };
 
+      // If friendEmail provided, look up user ID first
       if (friendEmail) {
         db.get(
-          `SELECT id FROM users WHERE email = ?`,
+          `SELECT id, email FROM users WHERE email = ?`,
           [friendEmail],
           (err, friend) => {
             if (err || !friend) {
@@ -436,6 +505,7 @@ fastify.post('/user/friends/add', (request, reply) => {
           }
         );
       } else {
+        // friendId provided directly
         db.get(
           `SELECT id FROM users WHERE id = ?`,
           [friendId],
@@ -479,9 +549,12 @@ fastify.post('/user/friends/remove', (request, reply) => {
         return sendError(reply, 401, 'Invalid session');
       }
 
+      // Remove bidirectional friendship
       db.run(
-        `DELETE FROM friends WHERE user_id = ? AND friend_id = ?`,
-        [user.id, friendId],
+        `DELETE FROM friends WHERE 
+         (user_id = ? AND friend_id = ?) OR 
+         (user_id = ? AND friend_id = ?)`,
+        [user.id, friendId, friendId, user.id],
         function(err) {
           db.close();
           if (err) {

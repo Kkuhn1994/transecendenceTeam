@@ -9,7 +9,7 @@ COPY package.json package.json
 COPY tsconfig.json tsconfig.json
 
 # Install dependencies (including devDependencies for build)
-RUN npm install sqlite3 fastify @fastify/cookie
+RUN npm install sqlite3 fastify @fastify/cookie @fastify/multipart
 
 
 # Quellcode kopieren

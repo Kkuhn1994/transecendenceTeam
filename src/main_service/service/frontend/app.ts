@@ -43,7 +43,7 @@ const views: ViewMap = {
 
   "/register": `
     <div class="login-container">
-      <h1>🎆 Create Account</h1>
+      <h1>Create Account</h1>
       <form id="registerForm" novalidate>
         <div class="mb-3">
           <label for="registerEmail" class="form-label">Email</label>
@@ -164,6 +164,23 @@ const views: ViewMap = {
       </div>
       <h1>👤 Your Profile</h1>
       <div id="profileInfo" class="mb-4">Loading...</div>
+      
+      <div class="avatar-section mb-4">
+        <h3>Avatar</h3>
+        <div id="avatarDisplay" class="mb-3">
+          <img id="currentAvatar" src="/avatars/default.jpg" alt="Current Avatar" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #00ffff;">
+        </div>
+        <form id="avatarForm" enctype="multipart/form-data">
+          <div class="mb-3">
+            <input type="file" id="avatarFile" class="form-control" accept="image/*" required>
+            <small class="form-text">Supported formats: JPEG, PNG, GIF, WebP (max 2MB)</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Upload Avatar</button>
+        </form>
+        <div id="avatarError" style="color: #ff6b6b; margin-top: 10px; display: none;"></div>
+        <div id="avatarSuccess" style="color: #51cf66; margin-top: 10px; display: none;"></div>
+      </div>
+      
       <div class="text-center">
         <button id="viewHistory" class="btn btn-primary">📊 Match History</button>
       </div>

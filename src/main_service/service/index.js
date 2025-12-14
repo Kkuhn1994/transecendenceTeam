@@ -1,10 +1,28 @@
 const fastify = require('fastify')({ logger: false });
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
 const fastifyStatic = require('@fastify/static');
 const fastifyCookie = require('@fastify/cookie');
+const fastifyMultipart = require('@fastify/multipart');
 const sqlite3 = require('sqlite3');
 
 const DB_PATH = '/app/data/database.db';
+const AVATARS_PATH = '/app/data/avatars';
+const pump = promisify(pipeline);
+
+// Ensure avatars directory exists
+if (!fs.existsSync(AVATARS_PATH)) {
+  fs.mkdirSync(AVATARS_PATH, { recursive: true });
+}
+
+// Ensure default avatar exists
+const defaultAvatarPath = path.join(AVATARS_PATH, 'default.jpg');
+if (!fs.existsSync(defaultAvatarPath)) {
+  console.log('Default avatar not found at:', defaultAvatarPath);
+}
 
 // Static files from dist
 fastify.register(fastifyStatic, {
@@ -12,8 +30,21 @@ fastify.register(fastifyStatic, {
   prefix: '/',
 });
 
+// Serve avatar files
+fastify.register(fastifyStatic, {
+  root: AVATARS_PATH,
+  prefix: '/avatars/',
+  decorateReply: false
+});
+
 fastify.register(fastifyCookie, {
   secret: 'super_secret_key_32_chars',
+});
+
+fastify.register(fastifyMultipart, {
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit
+  }
 });
 
 // Index: serve SPA
@@ -164,6 +195,63 @@ fastify.post('/session/finish', async (req, reply) => {
 });
 
 /**
+ * Upload avatar for current user
+ * POST /profile/avatar
+ */
+fastify.post('/profile/avatar', async (req, reply) => {
+  try {
+    const me = await getCurrentUser(req);
+    if (!me) return reply.code(401).send({ error: 'Not authenticated' });
+
+    // Get the uploaded file
+    const data = await req.file();
+    
+    if (!data) {
+      return reply.code(400).send({ error: 'No file uploaded' });
+    }
+
+    // Basic file type validation
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(data.mimetype)) {
+      return reply.code(400).send({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' });
+    }
+
+    // Generate safe filename
+    const fileExtension = data.mimetype.split('/')[1] === 'jpeg' ? 'jpg' : data.mimetype.split('/')[1];
+    const filename = `${me.id}-${Date.now()}.${fileExtension}`;
+    const filepath = path.join(AVATARS_PATH, filename);
+
+    // Save file
+    await pump(data.file, fs.createWriteStream(filepath));
+
+    // Update user's avatar in database via login_service
+    const updateRes = await fetch('http://login_service:3000/user/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: req.headers.cookie || '',
+      },
+      body: JSON.stringify({ avatar: `/avatars/${filename}` }),
+    });
+
+    if (!updateRes.ok) {
+      // Clean up uploaded file if database update fails
+      fs.unlinkSync(filepath);
+      const errorData = await updateRes.json().catch(() => ({}));
+      return reply.code(500).send({ error: errorData.error || 'Failed to update avatar' });
+    }
+
+    return reply.send({ 
+      success: true, 
+      avatar: `/avatars/${filename}` 
+    });
+  } catch (err) {
+    console.error('Error uploading avatar:', err);
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+});
+
+/**
  * Profile stats for current user
  * GET /profile/me
  */
@@ -243,6 +331,51 @@ fastify.get('/profile/history', async (req, reply) => {
     return reply.send({ matches: rows });
   } catch (err) {
     console.error('Error in /profile/history:', err);
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Get user statistics by ID (for viewing other users' profiles)
+ * GET /profile/stats/:id
+ */
+fastify.get('/profile/stats/:id', async (req, reply) => {
+  try {
+    const userId = req.params.id;
+    
+    if (!userId) {
+      return reply.code(400).send({ error: 'User ID required' });
+    }
+
+    const db = openDb();
+    
+    // Get basic stats
+    const totalGames = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT COUNT(*) as count FROM game_sessions 
+         WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NOT NULL`,
+        [userId, userId],
+        (err, row) => (err ? reject(err) : resolve(row?.count || 0))
+      );
+    });
+
+    const wins = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT COUNT(*) as count FROM game_sessions WHERE winner_id = ?`,
+        [userId],
+        (err, row) => (err ? reject(err) : resolve(row?.count || 0))
+      );
+    }).finally(() => db.close());
+
+    const winrate = totalGames > 0 ? wins / totalGames : 0;
+
+    return reply.send({
+      gamesPlayed: totalGames,
+      wins: wins,
+      winrate: winrate
+    });
+  } catch (err) {
+    console.error('Error in /profile/stats/:id:', err);
     return reply.code(500).send({ error: 'Internal server error' });
   }
 });

@@ -97,32 +97,57 @@ export async function initFriends(): Promise<void> {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="friends-container" style="max-width: 800px; margin: 0 auto; padding: 20px;">
-      <h1>Friends List</h1>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+      <h1>👥 Friends List</h1>
       
-      <div class="add-friend" style="margin: 20px 0;">
-        <input type="email" id="friendEmailInput" placeholder="Enter friend's email" style="padding: 8px; margin-right: 10px; width: 250px;">
-        <button id="addFriendBtn" style="padding: 8px 16px;">Add Friend</button>
+      <div class="add-friend mb-4">
+        <div class="mb-3">
+          <label for="friendEmailInput" class="form-label">Add Friend</label>
+          <input type="email" id="friendEmailInput" class="form-control" placeholder="Enter friend's email" required>
+        </div>
+        <button id="addFriendBtn" class="btn btn-primary">Add Friend</button>
       </div>
 
       <div class="friends-list">
         ${friends.length === 0 ? '<p>No friends yet. Add some!</p>' : friends.map(f => `
-          <div class="friend-item" style="display: flex; align-items: center; padding: 15px; border: 1px solid #333; margin: 10px 0; border-radius: 8px;">
-            <img src="${f.avatar}" alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 15px;">
+          <div class="friend-item" style="display: flex; align-items: center; padding: 15px; border: 1px solid rgba(0, 255, 255, 0.3); margin: 10px 0; border-radius: 8px; background: rgba(26, 26, 46, 0.5);">
+            <img src="${f.avatar || '/avatars/default.jpg'}" alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 1px solid #00ffff;">
             <div class="friend-info" style="flex: 1;">
-              <h3 style="margin: 0;">${f.nickname || f.email}</h3>
-              <p style="margin: 5px 0; color: #888;">${f.is_active ? '🟢 Online' : `⚫ Last seen ${f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'}`}</p>
+              <h3 style="margin: 0; color: #ffffff;">
+                <a href="#/user/${f.id}" style="color: #00ffff; text-decoration: none; cursor: pointer;">${f.nickname || f.email}</a>
+              </h3>
+              <p style="margin: 5px 0; color: #cccccc;">${f.is_active ? '🟢 Online' : `⚫ Last seen ${f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'}`}</p>
             </div>
-            <button class="remove-friend-btn" data-friend-id="${f.id}" style="padding: 6px 12px; background: #d9534f; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
+            <button class="remove-friend-btn btn btn-secondary" data-friend-id="${f.id}">Remove</button>
           </div>
         `).join('')}
       </div>
-
-      <div style="margin-top: 20px;">
-        <button onclick="location.hash='#/home'" style="padding: 10px 20px;">Back to Home</button>
-      </div>
     </div>
   `;
+
+  // Navigation handlers
+  const homeBtn = document.getElementById('navHome');
+  const playBtn = document.getElementById('navPlay');
+  const profileBtn = document.getElementById('navProfile');
+  const logoutBtn = document.getElementById('navLogout');
+
+  if (homeBtn) homeBtn.addEventListener('click', () => (location.hash = '#/home'));
+  if (playBtn) playBtn.addEventListener('click', () => (location.hash = '#/play'));
+  if (profileBtn) profileBtn.addEventListener('click', () => (location.hash = '#/profile'));
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/login_service/logout', { method: 'POST' });
+      (window as any).currentSessionId = undefined;
+      location.hash = '#/';
+    });
+  }
 
   // Add friend handler
   const addBtn = document.getElementById('addFriendBtn');
