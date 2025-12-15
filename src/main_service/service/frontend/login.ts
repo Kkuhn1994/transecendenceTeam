@@ -23,6 +23,14 @@ async function createUser(email: string, password: string): Promise<LoginRespons
     });
 
     const data = await response.json();
+    if (data.qr) {
+      const img = document.createElement('img');
+      img.src = data.qr;
+      img.alt = '2FA QR Code';
+      img.style.width = '200px';
+
+      document.getElementById('qr-container')!.appendChild(img);
+    }
     return data;
   } catch (err) {
     console.error('Create user failed:', err);
@@ -221,10 +229,10 @@ export function initLoginAndRegister() {
       const res = await createUser(email, password);
 
       if (res.status === 'ok') {
-        displaySuccessMessage(form, 'Account created successfully! You can now log in.');
-        setTimeout(() => {
-          location.hash = '#/';
-        }, 2000);
+        displaySuccessMessage(form, 'Account created successfully! Pls scan the QR-Code for 2-FA then you can log in');
+        // setTimeout(() => {
+        //   location.hash = '#/';
+        // }, 2000);
       } else {
         displayFormErrors(form, { general: res.error || 'Registration failed' });
       }

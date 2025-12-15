@@ -6,6 +6,8 @@ const sqlite3 = require('sqlite3');
 const crypto = require('crypto');
 const fastifyCookie = require('@fastify/cookie');
 const { hashPassword } = require('./hash.js');
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
 const { validateAuthRequest } = require('./security.js');
 
 const DB_PATH = '/app/data/database.db';
@@ -28,11 +30,20 @@ function sendError(reply, statusCode, message) {
   return reply.code(statusCode).send({ status: 'error', error: message });
 }
 
+function runAsync(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve(this); // this.lastID verfügbar
+    });
+  });
+}
+
 /**
  * Create account
  * Body: { email, password }
  */
-fastify.post('/createAccount', (request, reply) => {
+fastify.post('/createAccount', async (request, reply) => {
   // Validate and sanitize input
   const validation = validateAuthRequest(request.body);
   
@@ -43,23 +54,41 @@ fastify.post('/createAccount', (request, reply) => {
   const { email, password } = validation.sanitizedData;
   const db = openDb();
   const hashed = hashPassword(password);
+  const secret = speakeasy.generateSecret({
+    length: 20, // 160 Bit (Standard)
+    name: "Pong",        // App-Name
+    issuer: "PongHUB"       // Optional, aber empfohlen
+  });
 
-  db.run(
-    `INSERT INTO users (email, password) VALUES (?, ?)`,
-    [email, hashed],
-    function (err) {
-      if (err) {
-        console.error('DB insert error:', err);
-        db.close();
-        if (err.code === 'SQLITE_CONSTRAINT') {
-          return sendError(reply, 409, 'Email already exists');
-        }
-        return sendError(reply, 500, 'Database error');
-      }
-      db.close();
-      return reply.send({ status: 'ok', userId: this.lastID, email });
+    try {
+    const result = await runAsync(
+      db,
+      `INSERT INTO users (email, password, secret) VALUES (?, ?, ?)`,
+      [email, hashed, secret.base32] // ❗ Base32 speichern, NICHT das ganze Objekt
+    );
+
+    const otpAuthUrl = secret.otpauth_url;
+    const qr = await qrcode.toDataURL(otpAuthUrl);
+
+    return reply.send({
+      status: 'ok',
+      userId: result.lastID,
+      email,
+      qr,
+      otpAuthUrl
+    });
+
+  } catch (err) {
+    console.error('DB insert error:', err);
+
+    if (err.code === 'SQLITE_CONSTRAINT') {
+      return sendError(reply, 409, 'Email already exists');
     }
-  );
+
+    return sendError(reply, 500, 'Database error');
+  } finally {
+    db.close();
+  }
 });
 
 /**
