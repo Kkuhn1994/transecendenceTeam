@@ -5,4 +5,6 @@ RUN apt-get update && \
 
 COPY default /etc/nginx/sites-available/.
 
+COPY certs/. /etc/nginx/certs/.
+
 CMD ["nginx", "-g", "daemon off;"]

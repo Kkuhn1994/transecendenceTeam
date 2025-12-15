@@ -1,5 +1,9 @@
 server {
-    listen 1080;
+    listen 1080 ssl;
+
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
 
     # Security headers (keeping the security improvements)
     add_header X-Frame-Options "SAMEORIGIN" always;
