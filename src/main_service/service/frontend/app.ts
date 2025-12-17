@@ -90,6 +90,7 @@ const views: ViewMap = {
       <div class="d-flex gap-3 justify-content-center mt-4">
         <button id="goPlay" class="btn btn-primary">🎮 Play Game</button>
         <button id="goProfile" class="btn btn-primary">👤 Profile</button>
+        <button id="goFriends" class="btn btn-primary">👥 Friends</button>
       </div>
     </div>
   `,
@@ -215,6 +216,11 @@ async function loadHistoryModule() {
   module.initHistory();
 }
 
+async function loadFriendsModule() {
+  const module = await import('./friends');
+  module.initFriends();
+}
+
 async function handleNavButtons() {
   const homeBtn = document.getElementById('navHome');
   const playBtn = document.getElementById('navPlay');
@@ -250,8 +256,10 @@ async function router() {
     await handleNavButtons();
     const playBtn = document.getElementById('goPlay');
     const profileBtn = document.getElementById('goProfile');
+    const friendsBtn = document.getElementById('goFriends');
     playBtn?.addEventListener('click', () => (location.hash = '#/play'));
     profileBtn?.addEventListener('click', () => (location.hash = '#/profile'));
+    friendsBtn?.addEventListener('click', () => (location.hash = '#/friends'));
   }
 
   if (route === '/play') {
@@ -278,6 +286,11 @@ async function router() {
   if (route === '/history') {
     await handleNavButtons();
     await loadHistoryModule();
+  }
+
+  if (route === '/friends') {
+    await handleNavButtons();
+    await loadFriendsModule();
   }
 }
 
