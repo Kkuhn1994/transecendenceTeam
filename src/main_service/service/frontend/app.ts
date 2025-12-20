@@ -33,6 +33,16 @@ const views: ViewMap = {
             required 
           />
         </div>
+         <div class="mb-3">
+          <label for="otp" class="form-label">OTP</label>
+          <input 
+            id="otp" 
+            class="form-control" 
+            placeholder="Enter your OTP" 
+            maxlength="6"
+            required 
+          />
+        </div>
         <button type="submit" class="btn btn-primary">Login</button>
       </form>
       <p class="text-center mt-3">
@@ -74,6 +84,10 @@ const views: ViewMap = {
       <p class="text-center mt-3">
         Already have an account? <a href="#/">Login</a>
       </p>
+      <div class="col-md-4 d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="mb-3" id="qr-container"></div>
+      </div>
+
     </div>
   `,
 

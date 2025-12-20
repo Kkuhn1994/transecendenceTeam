@@ -13,17 +13,20 @@ RUN mkdir -p /app/data
 # Erstelle eine SQLite-Datenbank-Datei und eine Beispiel-Tabelle
 # Erstelle die Datenbank und beide Tabellen in einem einzigen RUN-Befehl
 RUN sqlite3 /app/data/database.db " \
+
     CREATE TABLE IF NOT EXISTS users ( \
         id INTEGER PRIMARY KEY, \
         email TEXT UNIQUE, \
         password TEXT, \
-        session_cookie TEXT, \
+        session_cookie TEXT,\
+        secret TEXT, \
         nickname TEXT, \
         avatar TEXT DEFAULT '/avatars/default.png', \
         is_active BOOLEAN DEFAULT 0, \
         last_login DATETIME, \
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP \
     ); \
+
     CREATE TABLE IF NOT EXISTS game_sessions ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT, \
         player1_id INTEGER NOT NULL, \

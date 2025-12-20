@@ -6,7 +6,10 @@ const sqlite3 = require('sqlite3');
 const crypto = require('crypto');
 const fastifyCookie = require('@fastify/cookie');
 const { hashPassword } = require('./hash.js');
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
 const { validateAuthRequest } = require('./security.js');
+const base32 = require("thirty-two");
 
 const DB_PATH = '/app/data/database.db';
 
@@ -28,11 +31,20 @@ function sendError(reply, statusCode, message) {
   return reply.code(statusCode).send({ status: 'error', error: message });
 }
 
+function runAsync(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve(this); // this.lastID verfügbar
+    });
+  });
+}
+
 /**
  * Create account
  * Body: { email, password }
  */
-fastify.post('/createAccount', (request, reply) => {
+fastify.post('/createAccount', async (request, reply) => {
   // Validate and sanitize input
   const validation = validateAuthRequest(request.body);
   
@@ -43,29 +55,104 @@ fastify.post('/createAccount', (request, reply) => {
   const { email, password } = validation.sanitizedData;
   const db = openDb();
   const hashed = hashPassword(password);
+  const secret = speakeasy.generateSecret({
+    length: 20, // 160 Bit (Standard)
+    name: "Pong",        // App-Name
+    issuer: "PongHUB"       // Optional, aber empfohlen
+  });
 
-  db.run(
-    `INSERT INTO users (email, password) VALUES (?, ?)`,
-    [email, hashed],
-    function (err) {
-      if (err) {
-        console.error('DB insert error:', err);
-        db.close();
-        if (err.code === 'SQLITE_CONSTRAINT') {
-          return sendError(reply, 409, 'Email already exists');
-        }
-        return sendError(reply, 500, 'Database error');
-      }
-      db.close();
-      return reply.send({ status: 'ok', userId: this.lastID, email });
+    try {
+    const result = await runAsync(
+      db,
+      `INSERT INTO users (email, password, secret) VALUES (?, ?, ?)`,
+      [email, hashed, secret.base32] // ❗ Base32 speichern, NICHT das ganze Objekt
+    );
+
+    const otpAuthUrl = secret.otpauth_url;
+    const qr = await qrcode.toDataURL(otpAuthUrl);
+
+    return reply.send({
+      status: 'ok',
+      userId: result.lastID,
+      email,
+      qr,
+      otpAuthUrl
+    });
+
+  } catch (err) {
+    console.error('DB insert error:', err);
+
+    if (err.code === 'SQLITE_CONSTRAINT') {
+      return sendError(reply, 409, 'Email already exists');
     }
-  );
+
+    return sendError(reply, 500, 'Database error');
+  } finally {
+    db.close();
+  }
 });
 
 /**
  * Login and set session cookie
  * Body: { email, password }
  */
+
+function getBinaryString(time_counter)
+{
+  let binary_string = "";
+  while (time_counter > 0)
+  {
+    binary_part = (time_counter % 2);
+    asciiString = binary_part.toString();
+    time_counter = Math.floor(time_counter / 2);
+    binary_string = asciiString + binary_string;
+  }
+  return binary_string;
+}
+
+function getTimeBytes(counter) {
+  const buffer = Buffer.alloc(8);       // 8 Bytes = 64 Bit
+  buffer.writeUInt32BE(0, 0);           // obere 4 Bytes = 0
+  buffer.writeUInt32BE(counter, 4);     // untere 4 Bytes = counter
+  return buffer;
+}
+
+function generateTOTP(secret, time)  {
+  let time_counter = Math.floor(time / 30);
+  console.log("time_counter:" + time_counter);
+  let timeBytes = getTimeBytes(time_counter);
+  console.log("time_bytes:" + timeBytes);
+  let key = base32.decode(secret);
+  const hmac = crypto
+    .createHmac("sha1", key)
+    .update(timeBytes)
+    .digest();
+    //offset ist 0 - 15 because of the masking
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const hashPart = hmac.slice(offset, offset + 4);
+  let value = hashPart.readUInt32BE(0);
+ // removes sign
+  value = value & 0x7fffffff;
+  let nrDigits = 6;
+  const code = value % (Math.pow(10, nrDigits));
+  return code.toString().padStart(nrDigits, "0");
+}
+
+function verifyTOTP(secret, otp, window = 1, period = 30) {
+  const currentTime = Math.floor(Date.now() / 1000);
+
+  for (let i = -window; i <= window; i++) {
+    const testTime = currentTime + i * period;
+    const generatedOtp = generateTOTP(secret, testTime);
+    console.log(generatedOtp);
+    console.log(otp);
+    if (generatedOtp === otp) {
+      return true;
+    }
+  }
+  return false;
+}
+
 fastify.post('/loginAccount', (request, reply) => {
   // Validate and sanitize input  
   const validation = validateAuthRequest(request.body);
@@ -73,16 +160,18 @@ fastify.post('/loginAccount', (request, reply) => {
   if (!validation.isValid) {
     return sendError(reply, 400, validation.errors.join(', '));
   }
-
+  console.log(request.body);
   const { email, password } = validation.sanitizedData;
+  const otp = request.body.otp;
   const db = openDb();
   const hashed = hashPassword(password);
 
   // First check if email exists
   db.get(
-    `SELECT id, email FROM users WHERE email = ?`,
-    [email],
-    (err, userRow) => {
+
+    `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
+    [email, hashed],
+    (err, row) => {
       if (err) {
         console.error('DB select error:', err);
         db.close();
@@ -94,17 +183,12 @@ fastify.post('/loginAccount', (request, reply) => {
         db.close();
         return sendError(reply, 401, 'Email is not registered');
       }
-
-      // Email exists, check password
-      db.get(
-        `SELECT id, email FROM users WHERE email = ? AND password = ?`,
-        [email, hashed],
-        (err, row) => {
-          if (err) {
-            console.error('DB select error:', err);
-            db.close();
-            return sendError(reply, 500, 'Database error');
-          }
+      const secret = row.secret;
+      if(!verifyTOTP(secret, otp))
+      {
+        return sendError(reply, 401, 'Invalid OTP');
+      }
+      const sessionCookie = crypto.randomBytes(32).toString('hex');
 
           // Password is wrong
           if (!row) {
