@@ -3,6 +3,7 @@ import { SecurityValidator, VALIDATION_RULES } from './security';
 interface LoginRequest {
   email: string;
   password: string;
+  otp?: string;
 }
 
 interface LoginResponse {
@@ -38,8 +39,8 @@ async function createUser(email: string, password: string): Promise<LoginRespons
   }
 }
 
-async function loginUser(email: string, password: string): Promise<LoginResponse> {
-  const body: LoginRequest = { email, password };
+async function loginUser(email: string, password: string, otp: string): Promise<LoginResponse> {
+  const body: LoginRequest = { email, password, otp };
 
   try {
     const response = await fetch('/login_service/loginAccount', {
@@ -150,6 +151,7 @@ export function initLoginAndRegister() {
     const form = document.getElementById('loginForm') as HTMLFormElement | null;
     const emailInput = document.getElementById('loginEmail') as HTMLInputElement | null;
     const passwordInput = document.getElementById('loginPassword') as HTMLInputElement | null;
+    const otpInput = document.getElementById('otp') as HTMLInputElement | null;
 
     if (!form || !emailInput || !passwordInput) return;
 
@@ -165,13 +167,15 @@ export function initLoginAndRegister() {
       // Get sanitized input values
       const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
       const password = passwordInput.value; // Don't sanitize passwords, just validate length
+      const otp = otpInput!.value;
       
       // Validate form data
       const errors = SecurityValidator.validateForm(
-        { email, password },
+        { email, password, otp },
         { 
           email: VALIDATION_RULES.email,
-          password: VALIDATION_RULES.password
+          password: VALIDATION_RULES.password,
+          otp : VALIDATION_RULES.password
         }
       );
       
@@ -181,7 +185,7 @@ export function initLoginAndRegister() {
       }
 
       // Proceed with login
-      const res = await loginUser(email, password);
+      const res = await loginUser(email, password, otp);
 
       if (res.status === 'ok') {
         location.hash = '#/home';
