@@ -2,9 +2,10 @@ export function init1v1Setup() {
   const form = document.getElementById('player2Form') as HTMLFormElement | null;
   const emailInput = document.getElementById('player2Email') as HTMLInputElement | null;
   const passwordInput = document.getElementById('player2Password') as HTMLInputElement | null;
+  const otpInput = document.getElementById('otp') as HTMLInputElement | null;
   const errorEl = document.getElementById('player2Error') as HTMLParagraphElement | null;
 
-  if (!form || !emailInput || !passwordInput) return;
+  if (!form || !emailInput || !passwordInput || !otpInput) return;
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -12,12 +13,14 @@ export function init1v1Setup() {
 
     const player2Email = emailInput.value.trim();
     const player2Password = passwordInput.value;
+    const otp = otpInput!.value;
+
 
     try {
       const response = await fetch('/session/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player2Email, player2Password }),
+        body: JSON.stringify({ player2Email, player2Password, otp }),
       });
 
       const data = await response.json();

@@ -156,7 +156,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
 fastify.post('/loginAccount', (request, reply) => {
   // Validate and sanitize input  
   const validation = validateAuthRequest(request.body);
-  
+  console.log("login");
   if (!validation.isValid) {
     return sendError(reply, 400, validation.errors.join(', '));
   }
@@ -179,10 +179,12 @@ fastify.post('/loginAccount', (request, reply) => {
       }
 
       // Email doesn't exist
-      if (!userRow) {
+      if (!row) {
         db.close();
-        return sendError(reply, 401, 'Email is not registered');
+        return sendError(reply, 401, 'Wrong User Credentials');
       }
+      console.log("row:", row);
+      console.log("row.id:", row?.id);
       const secret = row.secret;
       if(!verifyTOTP(secret, otp))
       {
@@ -190,13 +192,6 @@ fastify.post('/loginAccount', (request, reply) => {
       }
       const sessionCookie = crypto.randomBytes(32).toString('hex');
 
-          // Password is wrong
-          if (!row) {
-            db.close();
-            return sendError(reply, 401, 'Incorrect password');
-          }
-
-          const sessionCookie = crypto.randomBytes(32).toString('hex');
 
           db.run(
             `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -227,7 +222,6 @@ fastify.post('/loginAccount', (request, reply) => {
       );
     }
   );
-});
 
 /**
  * Logout: invalidate session
@@ -299,8 +293,8 @@ fastify.post('/auth/me', (request, reply) => {
  * Returns: { status:"ok", id, email } or error
  */
 fastify.post('/verifyCredentials', (request, reply) => {
-  const { email, password } = request.body || {};
-
+  const { email, password, otp } = request.body || {};
+  console.log("verify");
   if (!email || !password) {
     return sendError(reply, 400, 'Email and password are required');
   }
@@ -309,7 +303,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
   const hashed = hashPassword(password);
 
   db.get(
-    `SELECT id, email FROM users WHERE email = ? AND password = ?`,
+    `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
     [email, hashed],
     (err, row) => {
       db.close();
@@ -319,6 +313,12 @@ fastify.post('/verifyCredentials', (request, reply) => {
       }
       if (!row) {
         return sendError(reply, 401, 'Invalid email or password for Player 2');
+      }
+      const secret = row.secret;
+      console.log("OPT:", otp);
+      if(!verifyTOTP(secret, otp))
+      {
+        return sendError(reply, 401, 'Invalid OTP');
       }
       return reply.send({ status: 'ok', id: row.id, email: row.email });
     }

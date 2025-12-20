@@ -56,19 +56,19 @@ fastify.post('/session/create', async (req, reply) => {
     if (!me) {
       return reply.code(401).send({ error: 'Not authenticated as Player 1' });
     }
-
-    const { player2Email, player2Password } = req.body || {};
-    if (!player2Email || !player2Password) {
+    console.log(req.body)
+    const { player2Email, player2Password, otp } = req.body || {};
+    if (!player2Email || !player2Password || !otp) {
       return reply
         .code(400)
         .send({ error: 'Player 2 email and password are required' });
     }
-
+    console.log("otp_main ", otp);
     // 2) Verify Player 2 credentials via login_service
     const verifyRes = await fetch('http://login_service:3000/verifyCredentials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: player2Email, password: player2Password }),
+      body: JSON.stringify({ email: player2Email, password: player2Password , otp: otp}),
     });
 
     if (!verifyRes.ok) {

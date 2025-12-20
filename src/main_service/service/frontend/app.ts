@@ -145,6 +145,10 @@ const views: ViewMap = {
           <label for="player2Password" class="form-label">Player 2 Password</label>
           <input type="password" id="player2Password" class="form-control" placeholder="Enter Player 2's password" required />
         </div>
+        <div class="mb-3">
+          <label for="playerOTP" class="form-label">OTP</label>
+          <input id="otp" class="form-control" placeholder="Enter Player 2's OTP" required />
+        </div>
         <button type="submit" class="btn btn-primary">🚀 Start Match</button>
       </form>
       <p id="player2Error" style="color:#ff6b6b;" class="mt-3"></p>
