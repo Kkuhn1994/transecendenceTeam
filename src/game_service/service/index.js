@@ -3,6 +3,10 @@ const fastify = require('fastify')({
 });
 const DB_PATH = '/app/data/database.db';
 const sqlite3 = require('sqlite3');
+const { PongAI } = require('./opponent_ai.js');
+
+// Game session storage
+const gameSessions = new Map();
 
 function openDb() {
   return new sqlite3.Database(DB_PATH);
@@ -25,55 +29,231 @@ async function getCurrentUser(req) {
 // -------------------- GAME LOOP --------------------
 
 async function setup_newgame(sessionId, body, db) {
-  console.log(sessionId);
+  console.log('Setting up session:', sessionId);
   const canvasheight = body.canvasheight;
   const canvaswidth = body.canvaswidth;
-  const ballX = body.canvaswidth / 2;
-  const ballY = body.canvasheight / 2;
-  const leftPaddleY = body.canvasheight / 2;
-  const rightPaddleY = body.canvasheight / 2;
-  await db.run(
-    `INSERT INTO game_data \
-    (sessionId, \
-    scoreLeft, \
-    scoreRight, \
-    ballSpeedx, \
-    ballSpeedY, \
-    canvaswidth, \
-    canvasheight, \
-    leftPaddleY, \
-    rightPaddleY,\
-    ballX, \
-    ballY) VALUES (?, 0, 0, 4, 4, ?, ?, ? ,? ,?, ?)`,
-    [
-      sessionId,
-      canvaswidth,
-      canvasheight,
-      leftPaddleY,
-      rightPaddleY,
-      ballX,
-      ballY,
-    ],
-    function (err) {
-      if (err) {
-        db.close();
-        console.error('Error updating profile:', err);
-        return;
-      }
-    },
-  );
-  console.log('new game added');
-  await db.get(
-    `SELECT * FROM game_data WHERE sessionId = ?`,
-    [sessionId],
-    (err, row) => {
-      if (err) {
-        return;
-      }
-      // console.log(row);
-      return row;
-    },
-  );
+  const isAI = body.isAI || false;
+  
+  // Initialize or get existing session
+  if (!gameSessions.has(sessionId)) {
+    console.log('Creating new game session');
+    // Set initial speed to achieve magnitude 6
+    const componentSpeed = 6 / Math.sqrt(2); // ≈ 4.24
+    const gameSession = {
+      currentSessionId: sessionId,
+      ballSpeedX: componentSpeed,
+      ballSpeedY: componentSpeed,
+      scoreLeft: 0,
+      scoreRight: 0,
+      ballX: canvaswidth / 2,
+      ballY: canvasheight / 2,
+      leftPaddleY: canvasheight / 2,
+      rightPaddleY: canvasheight / 2,
+      isAI: isAI,
+      ai: isAI ? new PongAI() : null,
+      aiUpdateCounter: 0, // Limit AI calculations
+      totalPointsPlayed: 0, // Track total points for speed progression
+      baseSpeed: 6, // Starting speed that increases over time
+      rallyTouches: 0 // Track paddle hits in current rally
+    };
+    gameSessions.set(sessionId, gameSession);
+  } else {
+    console.log('Using existing game session');
+  }
+  
+  return gameSessions.get(sessionId);
+}
+
+async function game_logic_session(sessionId, gameSession, body, db) {
+  let {
+    ballSpeedX,
+    ballSpeedY,
+    scoreLeft,
+    scoreRight,
+    ballX,
+    ballY,
+    leftPaddleY,
+    rightPaddleY
+  } = gameSession;
+  
+  const { canvasheight, canvaswidth } = body;
+  let { upPressed, downPressed, wPressed, sPressed } = body;
+  
+  // limit calculations to every 5 frames
+  if (gameSession.isAI && gameSession.ai) {
+    gameSession.aiUpdateCounter++;
+    
+    if (gameSession.aiUpdateCounter % 5 === 0) { // Only update AI every 5
+      const aiGameState = {
+        ballX,
+        ballY,
+        ballSpeedX,
+        ballSpeedY,
+        rightPaddleY,
+        canvasWidth: canvaswidth,
+        canvasHeight: canvasheight,
+        paddleHeight: 100,
+        paddleWidth: 10
+      };
+      
+      gameSession.ai.update(aiGameState);
+    }
+    
+    // Set AI input flags based on AI decision
+    upPressed = gameSession.ai.shouldMoveUp(rightPaddleY, 100);
+    downPressed = gameSession.ai.shouldMoveDown(rightPaddleY, 100);
+  }
+  
+  const paddleWidth = 10,
+    paddleHeight = 100,
+    paddleSpeed = 4,
+    ballSize = 10;
+
+  // Paddle movement
+  if (wPressed) leftPaddleY -= paddleSpeed;
+  if (sPressed) leftPaddleY += paddleSpeed;
+  if (upPressed) rightPaddleY -= paddleSpeed;
+  if (downPressed) rightPaddleY += paddleSpeed;
+
+  leftPaddleY = Math.max(0, Math.min(canvasheight - paddleHeight, leftPaddleY));
+  rightPaddleY = Math.max(0, Math.min(canvasheight - paddleHeight, rightPaddleY));
+
+  // Ball movement
+  // Ball movement
+  ballX += ballSpeedX;
+  ballY += ballSpeedY;
+
+  // Top/Bottom collision
+  if (ballY <= 0 || ballY + ballSize >= canvasheight) {
+    ballSpeedY *= -1;
+  }
+
+  // Paddle collisions
+  if (
+    ballX <= paddleWidth &&
+    ballY + ballSize >= leftPaddleY &&
+    ballY <= leftPaddleY + paddleHeight
+  ) {
+    ballSpeedX *= -1;
+    ballX = paddleWidth;
+    
+    // Add 0.5 to the displayed speed
+    const currentMagnitude = Math.sqrt(ballSpeedX * ballSpeedX + ballSpeedY * ballSpeedY);
+    const newMagnitude = Math.min(currentMagnitude + 0.5, 15); // Cap at 15
+    const scale = newMagnitude / currentMagnitude;
+    ballSpeedX *= scale;
+    ballSpeedY *= scale;
+  }
+
+  if (
+    ballX + ballSize >= canvaswidth - paddleWidth &&
+    ballY + ballSize >= rightPaddleY &&
+    ballY <= rightPaddleY + paddleHeight
+  ) {
+    ballSpeedX *= -1;
+    ballX = canvaswidth - paddleWidth - ballSize;
+    const currentMagnitude = Math.sqrt(ballSpeedX * ballSpeedX + ballSpeedY * ballSpeedY);
+    const newMagnitude = Math.min(currentMagnitude + 0.5, 15); // Cap at 15
+    const scale = newMagnitude / currentMagnitude;
+    ballSpeedX *= scale;
+    ballSpeedY *= scale;
+  }
+
+  let winnerIndex = null;
+
+  // Scoring
+  if (ballX < 0) {
+    scoreRight++;
+    gameSession.totalPointsPlayed++;
+    
+    // Base magnitude of 6 + 0.5 per point scored
+    const baseMagnitude = 6 + (gameSession.totalPointsPlayed * 0.5);
+    
+    ballX = canvaswidth / 2;
+    ballY = canvasheight / 2;
+    // Set speed to achieve target magnitude (45-degree angle)
+    const componentSpeed = baseMagnitude / Math.sqrt(2);
+    ballSpeedX = componentSpeed;
+    ballSpeedY = componentSpeed * (Math.random() > 0.5 ? 1 : -1);
+    gameSession.rallyTouches = 0; // Reset rally touches
+  } else if (ballX > canvaswidth) {
+    scoreLeft++;
+    gameSession.totalPointsPlayed++;
+    
+    // Base magnitude of 6 + 0.5 per point scored
+    const baseMagnitude = 6 + (gameSession.totalPointsPlayed * 0.5);
+    
+    ballX = canvaswidth / 2;
+    ballY = canvasheight / 2;
+    // Set speed to achieve target magnitude (45-degree angle)
+    const componentSpeed = baseMagnitude / Math.sqrt(2);
+    ballSpeedX = -componentSpeed;
+    ballSpeedY = componentSpeed * (Math.random() > 0.5 ? 1 : -1);
+    gameSession.rallyTouches = 0; // Reset rally touches
+  }
+
+  // Win condition
+  if (scoreLeft >= 11) {
+    winnerIndex = 1;
+  } else if (scoreRight >= 11) {
+    winnerIndex = 2;
+  }
+
+  // Update session data
+  gameSession.ballSpeedX = ballSpeedX;
+  gameSession.ballSpeedY = ballSpeedY;
+  gameSession.scoreLeft = scoreLeft;
+  gameSession.scoreRight = scoreRight;
+  gameSession.ballX = ballX;
+  gameSession.ballY = ballY;
+  gameSession.leftPaddleY = leftPaddleY;
+  gameSession.rightPaddleY = rightPaddleY;
+
+  // Report to main_service when match ends
+  if (winnerIndex) {
+    try {
+      await fetch('http://main_service:3000/session/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          scoreLeft,
+          scoreRight,
+          winnerIndex,
+        }),
+      });
+    } catch (err) {
+      console.error('Error calling /session/finish:', err);
+    }
+
+    // Reset for next match
+    gameSession.scoreLeft = 0;
+    gameSession.scoreRight = 0;
+    
+    // Start next match with progressive base magnitude (+0.3 per point)
+    const baseMagnitude = 6 + (gameSession.totalPointsPlayed * 0.3);
+    const componentSpeed = baseMagnitude / Math.sqrt(2);
+    gameSession.ballSpeedX = componentSpeed;
+    gameSession.ballSpeedY = componentSpeed;
+    gameSession.ballX = canvaswidth / 2;
+    gameSession.ballY = canvasheight / 2;
+    gameSession.rallyTouches = 0;
+    // Keep totalPointsPlayed to maintain game progression across matches
+  }
+
+  // Calculate current ball speed for display
+  const currentBallSpeed = Math.sqrt(ballSpeedX * ballSpeedX + ballSpeedY * ballSpeedY);
+
+  return {
+    leftPaddleY: gameSession.leftPaddleY,
+    rightPaddleY: gameSession.rightPaddleY,
+    ballX: gameSession.ballX,
+    ballY: gameSession.ballY,
+    scoreLeft: gameSession.scoreLeft,
+    scoreRight: gameSession.scoreRight,
+    ballSpeed: Math.round(currentBallSpeed * 10) / 10, // Round to 1 decimal place
+    winnerIndex,
+  };
 }
 
 function runAsync(db, sql, params = []) {
@@ -109,6 +289,40 @@ async function game_actions(sessionId, row, body, db) {
     scoreRight,
   } = row;
   let { upPressed, downPressed, wPressed, sPressed } = body;
+  
+  // AI Logic - use the same paddle movement system as human players
+  const gameSession = gameSessions.get(sessionId);
+  if (gameSession && gameSession.isAI && gameSession.ai) {
+    const aiGameState = {
+      ballX,
+      ballY,
+      ballSpeedX,
+      ballSpeedY,
+      rightPaddleY,
+      canvasWidth: canvaswidth,
+      canvasHeight: canvasheight,
+      paddleHeight: paddleHeight,
+      paddleWidth: paddleWidth
+    };
+    
+    const targetY = gameSession.ai.update(aiGameState);
+    const currentCenter = rightPaddleY + paddleHeight / 2;
+    const targetCenter = targetY + paddleHeight / 2;
+    const diff = targetCenter - currentCenter;
+    
+    // Set AI input flags to use same movement logic as human players
+    if (diff < -2) {
+      upPressed = true;
+      downPressed = false;
+    } else if (diff > 2) {
+      upPressed = false;
+      downPressed = true;
+    } else {
+      upPressed = false;
+      downPressed = false;
+    }
+  }
+  
   const paddleWidth = 10,
     paddleHeight = 100,
     paddleSpeed = 4,
@@ -275,56 +489,18 @@ fastify.post('/game', async function (request, reply) {
       return reply.code(400).send({ error: 'sessionId is required' });
     }
 
-    const row = await getAsync(
-      db,
-      `SELECT * FROM game_data WHERE sessionId = ?`,
-      [sessionId],
-    );
-
-    if (!row) {
+    // Use session-based approach instead of database
+    let gameSession = gameSessions.get(sessionId);
+    if (!gameSession) {
       console.log('new game');
-      const row = await setup_newgame(sessionId, body, db);
-      // console.log(row);
-      const {
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft,
-        scoreRight,
-        winnerIndex,
-      } = await game_actions(sessionId, row, body, db);
-      return reply.send({
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft: scoreLeft,
-        scoreRight: scoreRight,
-        winnerIndex,
-      });
+      gameSession = await setup_newgame(sessionId, body, db);
     } else {
-      console.log('old game');
-
-      const {
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft,
-        scoreRight,
-        winnerIndex,
-      } = await game_actions(sessionId, row, body, db);
-      return reply.send({
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft: scoreLeft,
-        scoreRight: scoreRight,
-        winnerIndex,
-      });
+      console.log('continuing game');
     }
+
+    // Run game logic with session data
+    const result = await game_logic_session(sessionId, gameSession, body, db);
+    return reply.send(result);
   } catch (err) {
     console.log('error in game route');
     fastify.log.error('Error in /game route:', err);
