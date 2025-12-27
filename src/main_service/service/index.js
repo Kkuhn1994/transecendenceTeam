@@ -88,6 +88,38 @@ fastify.post('/session/create', async (req, reply) => {
   }
 });
 
+// AI session creation endpoint
+fastify.post('/session/create_ai', async (req, reply) => {
+  try {
+    const me = await getCurrentUser(req);
+    if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+
+    const db = openDb();
+    const sessionId = await new Promise((resolve, reject) => {
+      // Use player2_id = 0 to indicate AI opponent
+      db.run(
+        `INSERT INTO game_sessions (player1_id, player2_id)
+         VALUES (?, 0)`,
+        [me.id],
+        function (err) {
+          if (err) return reject(err);
+          resolve(this.lastID);
+        }
+      );
+    }).finally(() => db.close());
+
+    return reply.send({
+      sessionId,
+      player1: { id: me.id, email: me.email },
+      ai: { type: 'basic' },
+      isAI: true
+    });
+  } catch (err) {
+    console.error('Error in /session/create_ai:', err);
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+});
+
 fastify.post('/session/finish', async (req, reply) => {
   const { sessionId, scoreLeft, scoreRight, winnerIndex } = req.body || {};
   if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });

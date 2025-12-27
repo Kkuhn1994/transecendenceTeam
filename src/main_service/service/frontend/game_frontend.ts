@@ -178,6 +178,7 @@ export function startGame() {
   let ballY = LOGICAL_H / 2;
   let scoreLeft = 0;
   let scoreRight = 0;
+  let ballSpeed = 0; // Track ball speed for display
 
   let upPressed = false, downPressed = false;
   let wPressed = false, sPressed = false;
@@ -303,6 +304,12 @@ export function startGame() {
     ctx.textAlign = 'center';
     ctx.fillText(scoreLeft.toString(), LOGICAL_W / 4, 60);
     ctx.fillText(scoreRight.toString(), (3 * LOGICAL_W) / 4, 60);
+    
+    // ball speed display
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.fillStyle = '#00ff88';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Speed: ${ballSpeed}`, LOGICAL_W / 2, LOGICAL_H + 30);
     ctx.restore();
 
     rafId = requestAnimationFrame(draw);
@@ -409,6 +416,7 @@ export function startGame() {
       ballX,
       ballY,
       sessionId,
+      isAI: window.currentSessionIsAI || false
     };
 
     try {
@@ -431,6 +439,7 @@ export function startGame() {
 
       if (response.scoreLeft !== undefined) scoreLeft = response.scoreLeft;
       if (response.scoreRight !== undefined) scoreRight = response.scoreRight;
+      if (response.ballSpeed !== undefined) ballSpeed = response.ballSpeed;
 
       const winnerIndex = response.winnerIndex;
 

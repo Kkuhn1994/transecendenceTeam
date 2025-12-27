@@ -100,23 +100,46 @@ const views: ViewMap = {
       </div>
       <h1>⚔️ 1v1 Match Setup</h1>
       <p>Player 1 is the currently logged in user.</p>
-      <p>Player 2 must log in here:</p>
-      <form id="player2Form">
-        <div class="mb-3">
-          <label for="player2Email" class="form-label">Player 2 username</label>
-          <input id="player2Email" class="form-control" placeholder="Enter Player 2's username" required />
+      
+      <div class="match-type-selector mb-4">
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="matchType" id="humanMatch" value="human" checked>
+          <label class="btn btn-outline-primary" for="humanMatch">👤 vs Human</label>
+          
+          <input type="radio" class="btn-check" name="matchType" id="aiMatch" value="ai">
+          <label class="btn btn-outline-primary" for="aiMatch">🤖 vs AI</label>
         </div>
-        <div class="mb-3">
-          <label for="player2Password" class="form-label">Player 2 Password</label>
-          <input type="password" id="player2Password" class="form-control" placeholder="Enter Player 2's password" required />
+      </div>
+
+      <div id="humanMatchSection">
+        <p>Player 2 must log in here:</p>
+        <form id="player2Form">
+          <div class="mb-3">
+            <label for="player2Email" class="form-label">Player 2 username</label>
+            <input id="player2Email" class="form-control" placeholder="Enter Player 2's username" required />
+          </div>
+          <div class="mb-3">
+            <label for="player2Password" class="form-label">Player 2 Password</label>
+            <input type="password" id="player2Password" class="form-control" placeholder="Enter Player 2's password" required />
+          </div>
+          <div class="mb-3">
+            <label for="playerOTP" class="form-label">OTP</label>
+            <input id="otp" class="form-control" placeholder="Enter Player 2's OTP" required />
+          </div>
+          <button type="submit" class="btn btn-primary">🚀 Start Match</button>
+        </form>
+        <p id="player2Error" style="color:#ff6b6b;" class="mt-3"></p>
+      </div>
+
+      <div id="aiMatchSection" style="display: none;">
+        <div class="ai-selection mb-4">
+          <h4>AI Opponent:</h4>
+          <div class="ai-description mb-3">
+            <p>The AI will start tracking the ball when it crosses the middle line and predict where it will hit the paddle.</p>
+          </div>
+          <button id="startAiMatch" class="btn btn-success btn-lg">🤖 Start AI Match</button>
         </div>
-        <div class="mb-3">
-          <label for="playerOTP" class="form-label">OTP</label>
-          <input id="otp" class="form-control" placeholder="Enter Player 2's OTP" required />
-        </div>
-        <button type="submit" class="btn btn-primary">🚀 Start Match</button>
-      </form>
-      <p id="player2Error" style="color:#ff6b6b;" class="mt-3"></p>
+      </div>
     </div>
   `,
 
