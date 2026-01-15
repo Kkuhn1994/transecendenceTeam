@@ -6,6 +6,7 @@ Use a backend framework (1 Point)
 - User Management:
 Standard user management (2 Points)
 Game statistics and match history (1 Point)
+2FA (1 Point)
 
 - Gaming and user experience:
 Complete web-based game (2 Points)
@@ -15,9 +16,13 @@ Backend as microservices (2 Points)
 
 Work In Progress:
 
-2FA (1 Point)
 Tournament system (1 Point)
+Opponent AI (2 Points)
 
+Possible Modules:
+Game Customization Options (1 Point)
+Support for multiple languages (at least 3 languages) (1 Point)
+JWT (2 Points)
 
-TOTAL: 8/14 Points for 100% 
+Current TOTAL: 9/14 Points for 100% 
 
