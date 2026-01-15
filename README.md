@@ -12,12 +12,12 @@ Complete web-based game (2 Points)
 
 - Devops:
 Backend as microservices (2 Points)
+2FA (1 Point)
 
 Work In Progress:
 
-2FA (1 Point)
 Tournament system (1 Point)
-
+Pong Opponent AI (2 Points)
 
 TOTAL: 8/14 Points for 100% 
 
