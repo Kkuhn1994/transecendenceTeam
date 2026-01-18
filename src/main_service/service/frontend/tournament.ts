@@ -189,7 +189,9 @@ export async function initTournamentUI() {
       }
 
       if (data.bye) {
-        alert('Bye round: one player advances automatically.');
+        const adv = data.advancedPlayerId as number | undefined;
+        const advName = adv != null ? nameOf(adv) : 'One player';
+        alert(`Bye round: ${advName} advances automatically! Lucky you :)`);
         return;
       }
 

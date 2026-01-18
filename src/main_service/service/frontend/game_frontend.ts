@@ -41,8 +41,8 @@ export function startGame() {
   }
 
   let matchEnding = false;
-  let endHandled = false;   // winner flow should run once
-  let inFlight = false;     // avoid overlapping /game calls
+  let endHandled = false; // winner flow should run once
+  let inFlight = false;   // avoid overlapping /game calls
 
   // local state
   let leftPaddleY = canvas.height / 2;
@@ -180,6 +180,64 @@ export function startGame() {
     rafId = requestAnimationFrame(draw);
   }
 
+  function announceByes(byes: any) {
+    if (!Array.isArray(byes) || byes.length === 0) return;
+    for (const pid of byes) {
+      const id = Number(pid);
+      const n = Number.isFinite(id) ? nameOf(id) : 'One player';
+      alert(`Bye round: ${n} advances automatically.`);
+    }
+  }
+
+  async function requestNextMatchOrFinish(): Promise<any> {
+    const res = await fetch('/game_service/tournament/start-match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournamentId: window.currentTournamentId }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: data.error || 'start-match failed', status: res.status };
+    }
+    return data;
+  }
+
+  function isTournamentMode(): boolean {
+    // IMPORTANT: do not key off tournamentId alone, because it may be leftover from old runs.
+    // Tournament mode only when BOTH match players are known.
+    return (
+      window.currentTournamentId != null &&
+      window.currentMatchPlayer1Id != null &&
+      window.currentMatchPlayer2Id != null
+    );
+  }
+
+  async function handle1v1End(winnerIndex: number) {
+    const winner = winnerIndex === 1 ? 'Left Player' : 'Right Player';
+    const msg =
+      `🏁 Game finished!\n` +
+      `Final score: ${scoreLeft} - ${scoreRight}\n` +
+      `Winner: ${winner}\n\n` +
+      `OK = Play again\nCancel = Lobby`;
+
+    const playAgain = confirm(msg);
+
+    if (playAgain) {
+      // restart same session + same players
+      resetLocalStateForNewMatch();
+
+      // Restart polling. Animation loop is already running via RAF.
+      window.pongInterval = setInterval(getGameState, 20);
+      return;
+    }
+
+    // go back to lobby/menu
+    window.currentSessionId = undefined;
+    cleanup();
+    location.hash = '#/play';
+  }
+
   async function getGameState() {
     if (!document.body.contains(canvas)) {
       cleanup();
@@ -189,9 +247,7 @@ export function startGame() {
     if (inFlight) return;
 
     const sessionId = window.currentSessionId;
-    if (!sessionId) {
-      return;
-    }
+    if (!sessionId) return;
 
     inFlight = true;
 
@@ -217,7 +273,6 @@ export function startGame() {
       });
 
       const response = await res.json().catch(() => ({}));
-
       if (!res.ok) {
         console.error('game_service/game error:', response);
         return;
@@ -231,22 +286,26 @@ export function startGame() {
       if (response.scoreLeft !== undefined) scoreLeft = response.scoreLeft;
       if (response.scoreRight !== undefined) scoreRight = response.scoreRight;
 
-      if (response.winnerIndex !== undefined && response.winnerIndex !== null) {
+      const winnerIndex = response.winnerIndex;
+
+      if (winnerIndex !== undefined && winnerIndex !== null) {
         matchEnding = true;
         endHandled = true;
 
+        // stop polling immediately
         if (window.pongInterval) {
           clearInterval(window.pongInterval);
           window.pongInterval = null;
         }
 
-        const p1Id = window.currentMatchPlayer1Id;
-        const p2Id = window.currentMatchPlayer2Id;
-        const p1Name = (p1Id != null) ? nameOf(p1Id) : 'Player 1';
-        const p2Name = (p2Id != null) ? nameOf(p2Id) : 'Player 2';
-        const winnerName = response.winnerIndex === 1 ? p1Name : p2Name;
+        // TOURNAMENT FLOW (robust detection)
+        if (isTournamentMode()) {
+          const p1Id = window.currentMatchPlayer1Id!;
+          const p2Id = window.currentMatchPlayer2Id!;
+          const p1Name = nameOf(p1Id);
+          const p2Name = nameOf(p2Id);
+          const winnerName = winnerIndex === 1 ? p1Name : p2Name;
 
-        if (window.currentTournamentId) {
           alert(
             `✅ Match finished!\n${p1Name} vs ${p2Name}\nFinal score: ${scoreLeft} - ${scoreRight}\n🏅 Winner: ${winnerName}`
           );
@@ -256,7 +315,7 @@ export function startGame() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               sessionId: window.currentSessionId,
-              winnerIndex: response.winnerIndex,
+              winnerIndex,
             }),
           });
 
@@ -268,39 +327,63 @@ export function startGame() {
           }
 
           if (finishData.tournamentFinished) {
-            alert(`🏆 Tournament finished!\nWinner: ${winnerName}`);
+            const winId = finishData.winnerId;
+            const winName = (winId != null) ? nameOf(winId) : winnerName;
+            alert(`🏆 Tournament finished!\nWinner: ${winName}`);
+
             window.currentTournamentId = undefined;
             window.currentSessionId = undefined;
+            window.currentMatchPlayer1Id = undefined;
+            window.currentMatchPlayer2Id = undefined;
+
             cleanup();
             location.hash = '#/tournament';
             return;
           }
 
-          const nextRes = await fetch('/game_service/tournament/start-match', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tournamentId: window.currentTournamentId }),
-          });
+          const nextData = await requestNextMatchOrFinish();
 
-          const nextData = await nextRes.json().catch(() => ({}));
-          if (!nextRes.ok) {
-            alert(nextData.error || `start-match failed (${nextRes.status})`);
+          if (nextData.error) {
+            alert(`${nextData.error} (${nextData.status ?? ''})`);
+
+            // fail safe: leave tournament mode cleanly
+            window.currentSessionId = undefined;
+            window.currentMatchPlayer1Id = undefined;
+            window.currentMatchPlayer2Id = undefined;
+
             cleanup();
+            location.hash = '#/tournament';
             return;
           }
 
-          if (nextData.bye) {
-            alert('Bye round: one player advances automatically.');
-            // resume polling for next real match attempt
-            matchEnding = false;
-            endHandled = false;
-            window.pongInterval = setInterval(getGameState, 20);
+          announceByes(nextData.byes);
+
+          if (nextData.tournamentFinished) {
+            const winId = nextData.winnerId;
+            const winName = (winId != null) ? nameOf(winId) : winnerName;
+            alert(`🏆 Tournament finished!\nWinner: ${winName}`);
+
+            window.currentTournamentId = undefined;
+            window.currentSessionId = undefined;
+            window.currentMatchPlayer1Id = undefined;
+            window.currentMatchPlayer2Id = undefined;
+
+            cleanup();
+            location.hash = '#/tournament';
             return;
           }
 
-          window.currentSessionId = nextData.sessionId;
-          window.currentMatchPlayer1Id = nextData.player1Id;
-          window.currentMatchPlayer2Id = nextData.player2Id;
+          if (!nextData.sessionId || !nextData.player1Id || !nextData.player2Id) {
+            alert('No match to play (tournament state is not ready).');
+
+            window.currentSessionId = undefined;
+            window.currentMatchPlayer1Id = undefined;
+            window.currentMatchPlayer2Id = undefined;
+
+            cleanup();
+            location.hash = '#/tournament';
+            return;
+          }
 
           const nextP1 = nameOf(nextData.player1Id);
           const nextP2 = nameOf(nextData.player2Id);
@@ -312,17 +395,20 @@ export function startGame() {
             return;
           }
 
-          resetLocalStateForNewMatch();
+          window.currentSessionId = nextData.sessionId;
+          window.currentMatchPlayer1Id = nextData.player1Id;
+          window.currentMatchPlayer2Id = nextData.player2Id;
 
+          resetLocalStateForNewMatch();
           window.pongInterval = setInterval(getGameState, 20);
+
           alert(`🏓 Match starting!\n${nextP1} vs ${nextP2}`);
           return;
         }
 
-        alert(`Game Over! WinnerIndex=${response.winnerIndex}`);
-        window.currentSessionId = undefined;
-        cleanup();
-        return;
+        // 1v1 FLOW (no tournament side effects)
+        // Defensive: if some tournament global leaked, ignore it here.
+        await handle1v1End(Number(winnerIndex));
       }
     } catch (err) {
       console.error('Error in game fetch:', err);
