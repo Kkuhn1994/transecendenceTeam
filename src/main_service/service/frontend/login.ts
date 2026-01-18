@@ -39,7 +39,7 @@ async function createUser(email: string, password: string): Promise<LoginRespons
   }
 }
 
-async function loginUser(email: string, password: string, otp: string): Promise<LoginResponse> {
+export async function loginUser(email: string, password: string, otp: string): Promise<LoginResponse> {
   const body: LoginRequest = { email, password, otp };
 
   try {

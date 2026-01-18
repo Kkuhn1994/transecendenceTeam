@@ -49,6 +49,13 @@ RUN sqlite3 /app/data/database.db " \
         FOREIGN KEY (friend_id) REFERENCES users(id), \
         UNIQUE(user_id, friend_id) \
     ); \
+    CREATE TABLE IF NOT EXISTS tournaments ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT, \
+        name TEXT, \
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, \
+        winner_id INTEGER, \
+        FOREIGN KEY (winner_id) REFERENCES users(id) \
+    ); \
 "
 
 

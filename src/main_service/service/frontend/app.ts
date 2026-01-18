@@ -1,4 +1,5 @@
 export {};
+import { initTournamentUI } from './tournament';
 
 const app = document.getElementById("app") as HTMLDivElement | null;
 
@@ -120,7 +121,7 @@ const views: ViewMap = {
       <h1>🎮 Play Game</h1>
       <div class="d-flex gap-3 justify-content-center mt-4">
         <button id="go1v1" class="btn btn-primary">⚔️ 1v1 Match</button>
-        <button id="goTournament" class="btn btn-secondary" disabled>🏆 Start Tournament (coming later)</button>
+        <button id="goTournament" class="btn btn-secondary">🏆 Create Tournament</button>
       </div>
     </div>
   `,
@@ -200,12 +201,68 @@ const views: ViewMap = {
       <div id="historyContainer" class="mt-4">Loading...</div>
     </div>
   `,
+
+  "/tournament": `
+  <div class="page-container">
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
+    </div>
+
+    <h1>🏆 Tournament</h1>
+
+    <h3>Add Players</h3>
+    <form id="addPlayerForm" class="mb-3">
+      <input
+        type="email"
+        id="playerEmail"
+        class="form-control mb-2"
+        placeholder="Player email"
+        required
+      />
+      <input
+        type="password"
+        id="playerPassword"
+        class="form-control mb-2"
+        placeholder="Password"
+        required
+      />
+      <input
+        id="playerOtp"
+        class="form-control mb-2"
+        placeholder="OTP"
+        required
+      />
+      <button class="btn btn-primary" type="submit">
+        ➕ Add Player
+      </button>
+    </form>
+
+    <h3>Players</h3>
+    <ul id="playerList" class="mb-3"></ul>
+
+    <div id="tournamentInfo" class="mb-3">
+      <p>No active tournament.</p>
+    </div>
+
+    <button id="startTournamentBtn" class="btn btn-success" disabled>
+      Create Tournament
+    </button>
+
+    <button id="startMatchBtn" class="btn btn-primary mt-2" disabled>
+      Start Match
+    </button>
+  </div>
+`,
 };
 
 declare global {
   interface Window {
     pongInterval: any;
     currentSessionId?: number;
+    currentTournamentId? : number;
   }
 }
 
@@ -282,13 +339,22 @@ async function router() {
 
   if (route === '/play') {
     await handleNavButtons();
+
     const btn1v1 = document.getElementById('go1v1');
+    const btnTournament = document.getElementById('goTournament');
+
     btn1v1?.addEventListener('click', () => (location.hash = '#/1v1'));
+    btnTournament?.addEventListener('click', () => (location.hash = '#/tournament'));
   }
 
   if (route === '/1v1') {
     await handleNavButtons();
     await load1v1Module();
+  }
+
+  if (route == '/tournament') {
+    await handleNavButtons();
+    initTournamentUI();
   }
 
   if (route === '/game') {
