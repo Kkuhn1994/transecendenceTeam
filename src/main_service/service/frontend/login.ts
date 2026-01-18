@@ -172,8 +172,9 @@ export function initLoginAndRegister() {
       
       // Validate form data
       const errors = SecurityValidator.validateForm(
-        { password, otp },
+        { email, password, otp },
         { 
+          email: VALIDATION_RULES.email,
           password: VALIDATION_RULES.password,
           otp : VALIDATION_RULES.password
         }
@@ -218,8 +219,9 @@ export function initLoginAndRegister() {
       
       // Validate form data
       const errors = SecurityValidator.validateForm(
-        { password },
+        { email, password },
         { 
+          email: VALIDATION_RULES.email,
           password: VALIDATION_RULES.password
         }
       );

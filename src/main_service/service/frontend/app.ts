@@ -14,7 +14,7 @@ const views: ViewMap = {
           <label for="loginUsername" class="form-label">Username</label>
           <input 
             type="text" 
-            id="loginEmail" 
+            id="loginUsername" 
             class="form-control" 
             placeholder="Enter your username" 
             maxlength="20"
@@ -136,8 +136,8 @@ const views: ViewMap = {
       <p>Player 2 must log in here:</p>
       <form id="player2Form">
         <div class="mb-3">
-          <label for="player2Email" class="form-label">Player 2 Email</label>
-          <input type="email" id="player2Email" class="form-control" placeholder="Enter Player 2's email" required />
+          <label for="player2Email" class="form-label">Player 2 username</label>
+          <input id="player2Email" class="form-control" placeholder="Enter Player 2's username" required />
         </div>
         <div class="mb-3">
           <label for="player2Password" class="form-label">Player 2 Password</label>
@@ -213,10 +213,9 @@ const views: ViewMap = {
     <h3>Add Players</h3>
     <form id="addPlayerForm" class="mb-3">
       <input
-        type="email"
         id="playerEmail"
         class="form-control mb-2"
-        placeholder="Player email"
+        placeholder="Player username"
         required
       />
       <input

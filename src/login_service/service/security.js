@@ -22,21 +22,21 @@ function sanitizeInput(input) {
  * @returns {object} - {isValid: boolean, error?: string}
  */
 function validateEmail(email) {
-  // if (!email || typeof email !== 'string') {
-  //   return { isValid: false, error: 'Email is required' };
-  // }
+  if (!email || typeof email !== 'string') {
+    return { isValid: false, error: 'Email is required' };
+  }
 
-  // const sanitized = sanitizeInput(email);
+  const sanitized = sanitizeInput(email);
   
-  // if (sanitized.length > 254) {
-  //   return { isValid: false, error: 'Email is too long (max 254 characters)' };
-  // }
+  if (sanitized.length > 20) {
+    return { isValid: false, error: 'Email is too long (max 254 characters)' };
+  }
 
-  // if (!sanitized.includes('@') || !sanitized.includes('.')) {
-  //   return { isValid: false, error: 'Invalid email format' };
-  // }
+  if (sanitized.includes('>') || sanitized.includes('<')) {
+    return { isValid: false, error: 'Invalid username format' };
+  }
 
-  // return { isValid: true, sanitized };
+  return { isValid: true, sanitized };
 }
 
 /**
@@ -68,6 +68,13 @@ function validatePassword(password) {
 function validateAuthRequest(body) {
   const errors = [];
   const sanitizedData = {};
+
+  const emailValidation = validateEmail(body?.email);
+  if (!emailValidation.isValid) {
+    errors.push(emailValidation.error);
+  } else {
+    sanitizedData.email = emailValidation.sanitized;
+  }
 
   const passwordValidation = validatePassword(body?.password);
   if (!passwordValidation.isValid) {
