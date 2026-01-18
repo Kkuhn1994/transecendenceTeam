@@ -11,14 +11,13 @@ const views: ViewMap = {
       <h1>Pong Login</h1>
       <form id="loginForm" novalidate>
         <div class="mb-3">
-          <label for="loginEmail" class="form-label">Email</label>
+          <label for="loginUsername" class="form-label">Username</label>
           <input 
-            type="email" 
-            id="loginEmail" 
+            type="text" 
+            id="loginUsername" 
             class="form-control" 
-            placeholder="Enter your email" 
-            autocomplete="email"
-            maxlength="254"
+            placeholder="Enter your username" 
+            maxlength="20"
             required 
           />
         </div>
@@ -57,14 +56,12 @@ const views: ViewMap = {
       <h1>🎆 Create Account</h1>
       <form id="registerForm" novalidate>
         <div class="mb-3">
-          <label for="registerEmail" class="form-label">Email</label>
+          <label for="registerUsername" class="form-label">Username</label>
           <input 
-            type="email" 
-            id="registerEmail" 
+            id="registerUsername" 
             class="form-control" 
-            placeholder="Enter your email" 
-            autocomplete="email"
-            maxlength="254"
+            placeholder="Enter your Username" 
+            maxlength="20"
             required 
           />
         </div>
@@ -139,8 +136,8 @@ const views: ViewMap = {
       <p>Player 2 must log in here:</p>
       <form id="player2Form">
         <div class="mb-3">
-          <label for="player2Email" class="form-label">Player 2 Email</label>
-          <input type="email" id="player2Email" class="form-control" placeholder="Enter Player 2's email" required />
+          <label for="player2Email" class="form-label">Player 2 username</label>
+          <input id="player2Email" class="form-control" placeholder="Enter Player 2's username" required />
         </div>
         <div class="mb-3">
           <label for="player2Password" class="form-label">Player 2 Password</label>
@@ -216,10 +213,9 @@ const views: ViewMap = {
     <h3>Add Players</h3>
     <form id="addPlayerForm" class="mb-3">
       <input
-        type="email"
         id="playerEmail"
         class="form-control mb-2"
-        placeholder="Player email"
+        placeholder="Player username"
         required
       />
       <input

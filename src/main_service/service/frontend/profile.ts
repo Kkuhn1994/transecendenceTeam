@@ -108,7 +108,7 @@ export async function initProfile() {
     const winratePercent = (data.winrate * 100).toFixed(1);
 
     infoDiv.innerHTML = `
-      <p>Email: ${data.email}</p>
+      <p>Username: ${data.email}</p>
       <p>Games played: ${data.gamesPlayed}</p>
       <p>Wins: ${data.wins}</p>
       <p>Winrate: ${winratePercent}%</p>

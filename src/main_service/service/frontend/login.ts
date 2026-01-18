@@ -30,6 +30,7 @@ async function createUser(email: string, password: string): Promise<LoginRespons
       img.alt = '2FA QR Code';
       img.style.width = '200px';
 
+
       document.getElementById('qr-container')!.appendChild(img);
     }
     return data;
@@ -149,7 +150,7 @@ export function initLoginAndRegister() {
 
   if (route === '/') {
     const form = document.getElementById('loginForm') as HTMLFormElement | null;
-    const emailInput = document.getElementById('loginEmail') as HTMLInputElement | null;
+    const emailInput = document.getElementById('loginUsername') as HTMLInputElement | null;
     const passwordInput = document.getElementById('loginPassword') as HTMLInputElement | null;
     const otpInput = document.getElementById('otp') as HTMLInputElement | null;
 
@@ -197,8 +198,9 @@ export function initLoginAndRegister() {
 
   if (route === '/register') {
     const form = document.getElementById('registerForm') as HTMLFormElement | null;
-    const emailInput = document.getElementById('registerEmail') as HTMLInputElement | null;
+    const emailInput = document.getElementById('registerUsername') as HTMLInputElement | null;
     const passwordInput = document.getElementById('registerPassword') as HTMLInputElement | null;
+    var qrCodeSet = false;
 
     if (!form || !emailInput || !passwordInput) return;
 
@@ -230,16 +232,28 @@ export function initLoginAndRegister() {
       }
 
       // Proceed with registration
-      const res = await createUser(email, password);
-
-      if (res.status === 'ok') {
+      if(!qrCodeSet)
+      {
+        const res = await createUser(email, password);
+        if (res.status === 'ok') {
         displaySuccessMessage(form, 'Account created successfully! Pls scan the QR-Code for 2-FA then you can log in');
+        qrCodeSet = true;
         // setTimeout(() => {
         //   location.hash = '#/';
         // }, 2000);
-      } else {
-        displayFormErrors(form, { general: res.error || 'Registration failed' });
+        } 
+        else
+        {
+          displayFormErrors(form, { general: res.error || 'Registration failed' });
+        }
       }
+      else
+      {
+        displayFormErrors(form, {  general:'Please scan QR-Code and Reload Page' });
+      }
+      
+
+      
     });
   }
 }

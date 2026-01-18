@@ -106,10 +106,10 @@ export class SecurityValidator {
 export const VALIDATION_RULES = {
   email: {
     required: true,
-    maxLength: 254,
+    maxLength: 20,
     customValidator: (value: string) => {
       // Very permissive - just needs @ and . somewhere
-      return (value.includes('@') && value.includes('.')) ? null : 'Please enter a valid email address';
+      return (!value.includes('>') && !value.includes('<')) ? null : 'Please enter a valid username (no < and >)';
     }
   },
   password: {

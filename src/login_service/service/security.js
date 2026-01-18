@@ -28,12 +28,12 @@ function validateEmail(email) {
 
   const sanitized = sanitizeInput(email);
   
-  if (sanitized.length > 254) {
+  if (sanitized.length > 20) {
     return { isValid: false, error: 'Email is too long (max 254 characters)' };
   }
 
-  if (!sanitized.includes('@') || !sanitized.includes('.')) {
-    return { isValid: false, error: 'Invalid email format' };
+  if (sanitized.includes('>') || sanitized.includes('<')) {
+    return { isValid: false, error: 'Invalid username format' };
   }
 
   return { isValid: true, sanitized };
