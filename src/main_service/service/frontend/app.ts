@@ -181,9 +181,9 @@ const views: ViewMap = {
         <button id="navProfile">Profile</button>
         <button id="navLogout">Logout</button>
       </div>
-      <h1>👤 Your Profile</h1>
+      <h1>👤 Profile</h1>
       <div id="profileInfo" class="mb-4">Loading...</div>
-      <div class="text-center">
+      <div class="text-center" id="profileActions">
         <button id="viewHistory" class="btn btn-primary">📊 Match History</button>
       </div>
     </div>
@@ -262,7 +262,7 @@ declare global {
   interface Window {
     pongInterval: any;
     currentSessionId?: number;
-    currentTournamentId? : number;
+    currentTournamentId?: number;
   }
 }
 
@@ -315,11 +315,11 @@ async function handleNavButtons() {
   }
 }
 
-// Simple router
 async function router() {
   if (!app) return;
 
-  const route = location.hash.replace('#', '') || '/';
+  const fullRoute = location.hash.replace('#', '') || '/';
+  const route = fullRoute.split('?')[0]; // allow /profile?userId=...
 
   app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
 
@@ -352,7 +352,7 @@ async function router() {
     await load1v1Module();
   }
 
-  if (route == '/tournament') {
+  if (route === '/tournament') {
     await handleNavButtons();
     initTournamentUI();
   }

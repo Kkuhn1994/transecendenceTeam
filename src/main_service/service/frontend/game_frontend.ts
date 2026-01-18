@@ -1,5 +1,7 @@
 export {};
 
+import { uiAlert, uiDialog } from './ui_modal';
+
 declare global {
   interface Window {
     pongInterval: any;
@@ -180,12 +182,12 @@ export function startGame() {
     rafId = requestAnimationFrame(draw);
   }
 
-  function announceByes(byes: any) {
+  async function announceByes(byes: any) {
     if (!Array.isArray(byes) || byes.length === 0) return;
     for (const pid of byes) {
       const id = Number(pid);
       const n = Number.isFinite(id) ? nameOf(id) : 'One player';
-      alert(`Bye round: ${n} advances automatically.`);
+      await uiAlert(`Bye round:\n${n} advances automatically. Lucky you :)`, 'Bye round');
     }
   }
 
@@ -204,8 +206,6 @@ export function startGame() {
   }
 
   function isTournamentMode(): boolean {
-    // IMPORTANT: do not key off tournamentId alone, because it may be leftover from old runs.
-    // Tournament mode only when BOTH match players are known.
     return (
       window.currentTournamentId != null &&
       window.currentMatchPlayer1Id != null &&
@@ -215,27 +215,39 @@ export function startGame() {
 
   async function handle1v1End(winnerIndex: number) {
     const winner = winnerIndex === 1 ? 'Left Player' : 'Right Player';
-    const msg =
-      `🏁 Game finished!\n` +
-      `Final score: ${scoreLeft} - ${scoreRight}\n` +
-      `Winner: ${winner}\n\n` +
-      `OK = Play again\nCancel = Lobby`;
 
-    const playAgain = confirm(msg);
+    const choice = await uiDialog<'again' | 'lobby'>({
+      title: '🏁 Game finished!',
+      message: `Final score: ${scoreLeft} - ${scoreRight}\nWinner: ${winner}`,
+      buttons: [
+        { id: 'again', text: 'Play again', variant: 'primary' },
+        { id: 'lobby', text: 'Lobby', variant: 'ghost' },
+      ],
+      dismissible: true,
+    });
 
-    if (playAgain) {
-      // restart same session + same players
+    if (choice === 'again') {
       resetLocalStateForNewMatch();
-
-      // Restart polling. Animation loop is already running via RAF.
       window.pongInterval = setInterval(getGameState, 20);
       return;
     }
 
-    // go back to lobby/menu
     window.currentSessionId = undefined;
     cleanup();
     location.hash = '#/play';
+  }
+
+  async function askStartNextMatch(p1: string, p2: string): Promise<boolean> {
+    const choice = await uiDialog<'start' | 'back'>({
+      title: 'Next match ready',
+      message: `${p1} vs ${p2}`,
+      buttons: [
+        { id: 'start', text: 'Start match', variant: 'primary' },
+        { id: 'back', text: 'Abandon', variant: 'ghost' },
+      ],
+      dismissible: true,
+    });
+    return choice === 'start';
   }
 
   async function getGameState() {
@@ -292,13 +304,11 @@ export function startGame() {
         matchEnding = true;
         endHandled = true;
 
-        // stop polling immediately
         if (window.pongInterval) {
           clearInterval(window.pongInterval);
           window.pongInterval = null;
         }
 
-        // TOURNAMENT FLOW (robust detection)
         if (isTournamentMode()) {
           const p1Id = window.currentMatchPlayer1Id!;
           const p2Id = window.currentMatchPlayer2Id!;
@@ -306,8 +316,9 @@ export function startGame() {
           const p2Name = nameOf(p2Id);
           const winnerName = winnerIndex === 1 ? p1Name : p2Name;
 
-          alert(
-            `✅ Match finished!\n${p1Name} vs ${p2Name}\nFinal score: ${scoreLeft} - ${scoreRight}\n🏅 Winner: ${winnerName}`
+          await uiAlert(
+            `✅ Match finished!\n${p1Name} vs ${p2Name}\nFinal score: ${scoreLeft} - ${scoreRight}\n🏅 Winner: ${winnerName}`,
+            'Match finished'
           );
 
           const finishRes = await fetch('/game_service/tournament/match-finished', {
@@ -321,7 +332,7 @@ export function startGame() {
 
           const finishData = await finishRes.json().catch(() => ({}));
           if (!finishRes.ok) {
-            alert(finishData.error || `match-finished failed (${finishRes.status})`);
+            await uiAlert(finishData.error || `match-finished failed (${finishRes.status})`, 'Error');
             cleanup();
             return;
           }
@@ -329,7 +340,8 @@ export function startGame() {
           if (finishData.tournamentFinished) {
             const winId = finishData.winnerId;
             const winName = (winId != null) ? nameOf(winId) : winnerName;
-            alert(`🏆 Tournament finished!\nWinner: ${winName}`);
+
+            await uiAlert(`🏆 Tournament finished!\nWinner: ${winName}`, 'Tournament finished');
 
             window.currentTournamentId = undefined;
             window.currentSessionId = undefined;
@@ -344,9 +356,8 @@ export function startGame() {
           const nextData = await requestNextMatchOrFinish();
 
           if (nextData.error) {
-            alert(`${nextData.error} (${nextData.status ?? ''})`);
+            await uiAlert(`${nextData.error} (${nextData.status ?? ''})`, 'Error');
 
-            // fail safe: leave tournament mode cleanly
             window.currentSessionId = undefined;
             window.currentMatchPlayer1Id = undefined;
             window.currentMatchPlayer2Id = undefined;
@@ -356,12 +367,13 @@ export function startGame() {
             return;
           }
 
-          announceByes(nextData.byes);
+          await announceByes(nextData.byes);
 
           if (nextData.tournamentFinished) {
             const winId = nextData.winnerId;
             const winName = (winId != null) ? nameOf(winId) : winnerName;
-            alert(`🏆 Tournament finished!\nWinner: ${winName}`);
+
+            await uiAlert(`🏆 Tournament finished!\nWinner: ${winName}`, 'Tournament finished');
 
             window.currentTournamentId = undefined;
             window.currentSessionId = undefined;
@@ -374,7 +386,7 @@ export function startGame() {
           }
 
           if (!nextData.sessionId || !nextData.player1Id || !nextData.player2Id) {
-            alert('No match to play (tournament state is not ready).');
+            await uiAlert('No match to play (tournament state is not ready).', 'Error');
 
             window.currentSessionId = undefined;
             window.currentMatchPlayer1Id = undefined;
@@ -388,7 +400,7 @@ export function startGame() {
           const nextP1 = nameOf(nextData.player1Id);
           const nextP2 = nameOf(nextData.player2Id);
 
-          const ok = confirm(`Next match ready:\n${nextP1} vs ${nextP2}\n\nPress OK to start.`);
+          const ok = await askStartNextMatch(nextP1, nextP2);
           if (!ok) {
             cleanup();
             location.hash = '#/tournament';
@@ -401,13 +413,10 @@ export function startGame() {
 
           resetLocalStateForNewMatch();
           window.pongInterval = setInterval(getGameState, 20);
-
-          alert(`🏓 Match starting!\n${nextP1} vs ${nextP2}`);
           return;
         }
 
-        // 1v1 FLOW (no tournament side effects)
-        // Defensive: if some tournament global leaked, ignore it here.
+        // 1v1 flow
         await handle1v1End(Number(winnerIndex));
       }
     } catch (err) {

@@ -1,9 +1,101 @@
+export {};
+
+type FriendLite = {
+  id: number;
+  email: string;
+  nickname: string | null;
+  avatar: string;
+};
+
+function getUserIdFromHash(): number | null {
+  const fullRoute = location.hash.replace('#', '') || '/';
+  const qs = fullRoute.split('?')[1] || '';
+  const params = new URLSearchParams(qs);
+  const v = params.get('userId');
+  if (!v) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+function readFriendFromSession(): FriendLite | null {
+  try {
+    const raw = sessionStorage.getItem('friendProfile');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id || !parsed?.email) return null;
+    return {
+      id: Number(parsed.id),
+      email: String(parsed.email),
+      nickname: parsed.nickname != null ? String(parsed.nickname) : null,
+      avatar: parsed.avatar != null ? String(parsed.avatar) : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function initProfile() {
   const infoDiv = document.getElementById('profileInfo') as HTMLDivElement | null;
   const historyBtn = document.getElementById('viewHistory') as HTMLButtonElement | null;
+  const actions = document.getElementById('profileActions') as HTMLDivElement | null;
 
   if (!infoDiv) return;
 
+  const friendId = getUserIdFromHash();
+
+  // FRIEND PROFILE VIEW (no backend call needed)
+  if (friendId) {
+    const friend = readFriendFromSession();
+
+    // Hide history button for friend profiles
+    if (actions) actions.style.display = 'none';
+
+    if (!friend || friend.id !== friendId) {
+      infoDiv.innerHTML = `
+        <p>Friend profile not found in session.</p>
+        <p style="opacity:0.8;">Go back to Friends and click "See profile" again.</p>
+        <button id="backToFriends" class="btn btn-primary">Back to Friends</button>
+      `;
+      document.getElementById('backToFriends')?.addEventListener('click', () => {
+        location.hash = '#/friends';
+      });
+      return;
+    }
+
+    const displayName = friend.nickname || friend.email;
+
+    infoDiv.innerHTML = `
+      <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+        ${
+          friend.avatar
+            ? `<img src="${friend.avatar}" alt="Avatar"
+                style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #00ffff;background:#222;"
+                onerror="this.style.display='none';" />`
+            : `<div style="width:72px;height:72px;border-radius:50%;background:#222;border:2px solid #00ffff;display:flex;align-items:center;justify-content:center;">👤</div>`
+        }
+        <div>
+          <div style="font-size:18px;font-weight:bold;">${displayName}</div>
+          <div style="opacity:0.8;">${friend.email}</div>
+          <div style="opacity:0.6;font-size:12px;">id=${friend.id}</div>
+        </div>
+      </div>
+
+      <p style="opacity:0.85;">Friend profile view (stats coming soon).</p>
+
+      <div class="mt-3">
+        <button id="backToFriends" class="btn btn-primary">Back to Friends</button>
+      </div>
+    `;
+
+    document.getElementById('backToFriends')?.addEventListener('click', () => {
+      location.hash = '#/friends';
+    });
+
+    return;
+  }
+
+  // MY PROFILE VIEW (your original logic)
   try {
     const res = await fetch('/profile/me');
     const data = await res.json();
@@ -25,6 +117,8 @@ export async function initProfile() {
     console.error('Error loading profile:', err);
     infoDiv.textContent = 'Network error.';
   }
+
+  if (actions) actions.style.display = 'block';
 
   if (historyBtn) {
     historyBtn.addEventListener('click', () => {

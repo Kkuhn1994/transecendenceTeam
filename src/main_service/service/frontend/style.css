@@ -283,3 +283,88 @@ a:hover {
   justify-content: center;
 }
 
+/* ---------- Custom Modal (ui_modal.ts) ---------- */
+
+#modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none; /* only modal overlay enables interaction */
+}
+
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.ui-modal {
+  width: min(520px, 92vw);
+  border-radius: 14px;
+  background: rgba(26, 26, 46, 0.96);
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 25px rgba(0,255,255,0.12);
+  padding: 18px 18px 14px 18px;
+}
+
+.ui-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.ui-modal-body {
+  color: rgba(255,255,255,0.92);
+  line-height: 1.35;
+  font-size: 14.5px;
+  margin-bottom: 14px;
+}
+
+.ui-modal-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.ui-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.ui-btn:active {
+  transform: translateY(1px);
+}
+
+.ui-btn-primary {
+  background: linear-gradient(45deg, #00ffff, #0080ff);
+  color: #000;
+}
+
+.ui-btn-secondary {
+  background: linear-gradient(45deg, #666, #999);
+  color: #111;
+}
+
+.ui-btn-danger {
+  background: linear-gradient(45deg, #ff6b6b, #d9534f);
+  color: #111;
+}
+
+.ui-btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  color: rgba(255,255,255,0.95);
+}
+
+.ui-btn:hover {
+  box-shadow: 0 0 14px rgba(0,255,255,0.35);
+}
