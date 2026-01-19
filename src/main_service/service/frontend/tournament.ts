@@ -87,7 +87,7 @@ async function startMatchLoop(): Promise<void> {
   // - tournament finished, or
   // - an error occurs
   for (let guard = 0; guard < 50; guard++) {
-    const res = await fetch('/game_service/tournament/start-match', {
+    const res = await fetch('/tournament_service/tournament/start-match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tournamentId: window.currentTournamentId }),
@@ -186,7 +186,7 @@ export async function initTournamentUI() {
       list!.appendChild(li);
     });
 
-    startTournamentBtn!.disabled = tournamentPlayers.length < 2;
+    startTournamentBtn!.disabled = tournamentPlayers.length < 3;
   }
 
   const me = await getMe();
@@ -225,7 +225,7 @@ export async function initTournamentUI() {
 
   startTournamentBtn.addEventListener('click', async () => {
     try {
-      const res = await fetch('/game_service/tournament/create', {
+      const res = await fetch('/tournament_service/tournament/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

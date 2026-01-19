@@ -72,7 +72,7 @@ export async function initFriends(): Promise<void> {
       <h1>Friends List</h1>
 
       <div class="add-friend" style="margin: 20px 0;">
-        <input type="email" id="friendEmailInput" placeholder="Enter friend's email" style="padding: 8px; margin-right: 10px; width: 250px;">
+        <input type="email" id="friendEmailInput" placeholder="Enter friend's Username" style="padding: 8px; margin-right: 10px; width: 250px;">
         <button id="addFriendBtn" style="padding: 8px 16px;">Add Friend</button>
       </div>
 

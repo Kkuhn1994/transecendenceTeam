@@ -118,7 +118,7 @@ const views: ViewMap = {
       <h1>🎮 Play Game</h1>
       <div class="d-flex gap-3 justify-content-center mt-4">
         <button id="go1v1" class="btn btn-primary">⚔️ 1v1 Match</button>
-        <button id="goTournament" class="btn btn-secondary">🏆 Create Tournament</button>
+        <button id="goTournament" class="btn btn-primary">🏆 Create Tournament</button>
       </div>
     </div>
   `,
@@ -242,6 +242,8 @@ const views: ViewMap = {
     <div id="tournamentInfo" class="mb-3">
       <p>No active tournament.</p>
     </div>
+
+    <p class="text-muted mb-2">Minimum 3 players required.</p>
 
     <button id="startTournamentBtn" class="btn btn-success" disabled>
       Create Tournament

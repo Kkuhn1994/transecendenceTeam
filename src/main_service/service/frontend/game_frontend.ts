@@ -192,7 +192,7 @@ export function startGame() {
   }
 
   async function requestNextMatchOrFinish(): Promise<any> {
-    const res = await fetch('/game_service/tournament/start-match', {
+    const res = await fetch('/tournament_service/tournament/start-match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tournamentId: window.currentTournamentId }),
@@ -321,7 +321,7 @@ export function startGame() {
             'Match finished'
           );
 
-          const finishRes = await fetch('/game_service/tournament/match-finished', {
+          const finishRes = await fetch('/tournament_service/tournament/match-finished', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
