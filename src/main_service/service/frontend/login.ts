@@ -48,12 +48,18 @@ export async function loginUser(email: string, password: string, otp: string): P
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      credentials: 'include',
     });
+    // const data = await response.text()
+    // alert(data);
+    // const data = await response.body.json();
+//     const data = await response.json(); // 👈 Response-Body
+//     const dataText = JSON.stringify(data, null, 2);
+// alert(dataText);
 
-    const data = await response.json();
-    return data;
+    return { status: 'ok', error: String(response.status) };
   } catch (err) {
-    console.error('Login failed:', err);
+    alert(err);
     return { status: 'error', error: (err as Error).message };
   }
 }
@@ -187,7 +193,7 @@ export function initLoginAndRegister() {
 
       // Proceed with login
       const res = await loginUser(email, password, otp);
-
+      alert(res.status);
       if (res.status === 'ok') {
         location.hash = '#/home';
       } else {

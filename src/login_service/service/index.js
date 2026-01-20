@@ -10,7 +10,8 @@ const speakeasy = require("speakeasy");
 const qrcode = require("qrcode");
 const { validateAuthRequest } = require('./security.js');
 const base32 = require("thirty-two");
-
+const jwt = require("jsonwebtoken");
+const { resolve } = require('dns');
 const DB_PATH = '/app/data/database.db';
 
 fastify.register(fastifyCookie, {
@@ -39,6 +40,41 @@ function runAsync(db, sql, params = []) {
     });
   });
 }
+
+function getJWTToken(refresh_token, db) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT * FROM users WHERE session_cookie = ?`,
+      [refresh_token],
+      (err, row) => {
+        if (err) {
+          return reject(err); // DB-Fehler
+        }
+        if (!row) {
+          return reject(new Error("Wrong Refresh Token")); // Kein Treffer
+        }
+
+        // JWT erzeugen
+        const token = jwt.sign(
+          { id: row.id,
+            email: row.name, 
+            nickname: row.nickname, 
+            avatar: row.avatar, 
+            is_active: row.is_active },
+          process.env.JWT_SECRET,
+          { expiresIn: "5m" }
+        );
+
+        // console.log("JWT Token erzeugt:", token);
+
+        // ✅ Hier den Token zurückgeben
+        resolve(token);
+      }
+    );
+  });
+}
+
+
 
 /**
  * Create account
@@ -97,18 +133,18 @@ fastify.post('/createAccount', async (request, reply) => {
  * Body: { email, password }
  */
 
-function getBinaryString(time_counter)
-{
-  let binary_string = "";
-  while (time_counter > 0)
-  {
-    binary_part = (time_counter % 2);
-    asciiString = binary_part.toString();
-    time_counter = Math.floor(time_counter / 2);
-    binary_string = asciiString + binary_string;
-  }
-  return binary_string;
-}
+// function getBinaryString(time_counter)
+// {
+//   let binary_string = "";
+//   while (time_counter > 0)
+//   {
+//     binary_part = (time_counter % 2);
+//     asciiString = binary_part.toString();
+//     time_counter = Math.floor(time_counter / 2);
+//     binary_string = asciiString + binary_string;
+//   }
+//   return binary_string;
+// }
 
 function getTimeBytes(counter) {
   const buffer = Buffer.alloc(8);       // 8 Bytes = 64 Bit
@@ -153,7 +189,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
   return false;
 }
 
-fastify.post('/loginAccount', (request, reply) => {
+fastify.post('/loginAccount', async (request, reply) => {
   // Validate and sanitize input  
   const validation = validateAuthRequest(request.body);
   console.log("login");
@@ -167,6 +203,7 @@ fastify.post('/loginAccount', (request, reply) => {
   const hashed = hashPassword(password);
 
   // First check if email exists
+  console.log("db get ");
   db.get(
 
     `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
@@ -180,11 +217,12 @@ fastify.post('/loginAccount', (request, reply) => {
 
       // Email doesn't exist
       if (!row) {
+        console.log("login no row ");
         db.close();
         return sendError(reply, 401, 'Wrong User Credentials');
       }
-      console.log("row:", row);
-      console.log("row.id:", row?.id);
+      // console.log("row:", row);
+      // console.log("row.id:", row?.id);
       const secret = row.secret;
       if(!verifyTOTP(secret, otp))
       {
@@ -193,28 +231,42 @@ fastify.post('/loginAccount', (request, reply) => {
       const sessionCookie = crypto.randomBytes(32).toString('hex');
 
 
-          db.run(
+          db.run (
             `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
             [sessionCookie, row.id],
-            (err2) => {
+            async (err2) => {
               db.close();
               if (err2) {
                 console.error('Error updating session cookie:', err2);
                 return sendError(reply, 500, 'Failed to update session');
               }
 
-              reply.setCookie('session', sessionCookie, {
+              // reply.setCookie('session', sessionCookie, {
+              //   httpOnly: true,
+              //   path: '/',
+              // });
+              const JWT = await getJWTToken(sessionCookie, db);
+              console.log("JWT2 " + JWT);
+              // reply.setCookie('JWT', JWT, {
+              //   httpOnly: true,
+              //   path: '/',
+              //   maxAge: 60 * 60 * 24,
+              // });
+              console.log("JWT2 " + JWT);
+              return reply.setCookie('session', sessionCookie, {
                 httpOnly: true,
-                secure: false, // set true if https
-                sameSite: 'strict',
                 path: '/',
                 maxAge: 60 * 60 * 24,
-              });
-
-              return reply.send({
+              }).setCookie('JWT', JWT, {
+                httpOnly: true,
+                path: '/',
+                maxAge: 60 * 60 * 24,
+              })
+              .send({
                 status: 'ok',
                 email: row.email,
-                userId: row.id,
+                userId: Number(row.id),
+                error: "no error"
               });
             }
           );
