@@ -50,12 +50,13 @@ export async function loginUser(email: string, password: string, otp: string): P
       body: JSON.stringify(body),
       credentials: 'include',
     });
-    // const data = await response.text()
-    // alert(data);
-    // const data = await response.body.json();
-//     const data = await response.json(); // 👈 Response-Body
-//     const dataText = JSON.stringify(data, null, 2);
-// alert(dataText);
+    alert('STATUS:'+ response.status);
+alert('OK:'+ response.ok);
+alert('CTYPE:'+ response.headers.get('content-type'));
+
+const raw = await response.text();
+alert('RAW:'+ JSON.stringify(raw));
+    alert(response.type);
 
     return { status: 'ok', error: String(response.status) };
   } catch (err) {

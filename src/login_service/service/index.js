@@ -189,7 +189,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
   return false;
 }
 
-fastify.post('/loginAccount', async (request, reply) => {
+fastify.post('/loginAccount', (request, reply) => {
   // Validate and sanitize input  
   const validation = validateAuthRequest(request.body);
   console.log("login");
@@ -203,7 +203,6 @@ fastify.post('/loginAccount', async (request, reply) => {
   const hashed = hashPassword(password);
 
   // First check if email exists
-  console.log("db get ");
   db.get(
 
     `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
@@ -217,12 +216,11 @@ fastify.post('/loginAccount', async (request, reply) => {
 
       // Email doesn't exist
       if (!row) {
-        console.log("login no row ");
         db.close();
         return sendError(reply, 401, 'Wrong User Credentials');
       }
-      // console.log("row:", row);
-      // console.log("row.id:", row?.id);
+      console.log("row:", row);
+      console.log("row.id:", row?.id);
       const secret = row.secret;
       if(!verifyTOTP(secret, otp))
       {
@@ -231,45 +229,52 @@ fastify.post('/loginAccount', async (request, reply) => {
       const sessionCookie = crypto.randomBytes(32).toString('hex');
 
 
-          db.run (
+          db.run(
             `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
             [sessionCookie, row.id],
-            async (err2) => {
+            (err2) => {
               db.close();
               if (err2) {
                 console.error('Error updating session cookie:', err2);
                 return sendError(reply, 500, 'Failed to update session');
               }
 
-              // reply.setCookie('session', sessionCookie, {
-              //   httpOnly: true,
-              //   path: '/',
-              // });
-              const JWT = await getJWTToken(sessionCookie, db);
-              console.log("JWT2 " + JWT);
-              // reply.setCookie('JWT', JWT, {
-              //   httpOnly: true,
-              //   path: '/',
-              //   maxAge: 60 * 60 * 24,
-              // });
-              console.log("JWT2 " + JWT);
+              
+            }
+          );
+          // reply.setCookie('session', sessionCookie, {
+          //       httpOnly: true,
+          //       secure: false, // set true if https
+          //       sameSite: 'strict',
+          //       path: '/',
+          //       maxAge: 60 * 60 * 24,
+          //     });
+               const JWT = getJWTToken(sessionCookie, db);
+          // reply.setCookie('JWT', JWT, {
+          //       httpOnly: true,
+          //       secure: false, // set true if https
+          //       sameSite: 'strict',
+          //       path: '/',
+          //       maxAge: 60 * 60 * 24,
+          //     });
+
               return reply.setCookie('session', sessionCookie, {
                 httpOnly: true,
+                secure: false, // set true if https
+                sameSite: 'strict',
                 path: '/',
                 maxAge: 60 * 60 * 24,
               }).setCookie('JWT', JWT, {
                 httpOnly: true,
+                secure: false, // set true if https
+                sameSite: 'strict',
                 path: '/',
                 maxAge: 60 * 60 * 24,
-              })
-              .send({
+              }).send({
                 status: 'ok',
                 email: row.email,
-                userId: Number(row.id),
-                error: "no error"
+                userId: row.id,
               });
-            }
-          );
         }
       );
     }
