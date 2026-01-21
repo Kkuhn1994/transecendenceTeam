@@ -1,20 +1,21 @@
 const fastify = require('fastify')({
-  logger: false
+  logger: false,
 });
 
 const sqlite3 = require('sqlite3');
 const crypto = require('crypto');
 const fastifyCookie = require('@fastify/cookie');
 const { hashPassword } = require('./hash.js');
-const speakeasy = require("speakeasy");
-const qrcode = require("qrcode");
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
 const { validateAuthRequest } = require('./security.js');
-const base32 = require("thirty-two");
-
+const base32 = require('thirty-two');
+const jwt = require('jsonwebtoken');
+const { resolve } = require('dns');
 const DB_PATH = '/app/data/database.db';
 
 fastify.register(fastifyCookie, {
-  secret: "super_secret_key_32_chars",
+  secret: 'super_secret_key_32_chars',
 });
 
 /**
@@ -40,6 +41,47 @@ function runAsync(db, sql, params = []) {
   });
 }
 
+function getAsync(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+function getJWTToken(refresh_token, db) {
+  return new Promise((resolve, reject) => {
+    console.log('get Token');
+    db.get(
+      `SELECT * FROM users WHERE session_cookie = ?`,
+      [refresh_token],
+      (err, row) => {
+        if (err) return reject(err);
+        if (!row) return reject(new Error('Wrong Refresh Token'));
+
+        console.log('get Token2');
+
+        const token = jwt.sign(
+          {
+            id: row.id,
+            email: row.email,
+            nickname: row.nickname,
+            avatar: row.avatar,
+            is_active: row.is_active,
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '5m' },
+        );
+
+        console.log('get Token3', token);
+
+        resolve(token); // ✅ Hier wird das Promise erfüllt
+      },
+    );
+  });
+}
+
 /**
  * Create account
  * Body: { email, password }
@@ -47,7 +89,7 @@ function runAsync(db, sql, params = []) {
 fastify.post('/createAccount', async (request, reply) => {
   // Validate and sanitize input
   const validation = validateAuthRequest(request.body);
-  
+
   if (!validation.isValid) {
     return sendError(reply, 400, validation.errors.join(', '));
   }
@@ -57,15 +99,15 @@ fastify.post('/createAccount', async (request, reply) => {
   const hashed = hashPassword(password);
   const secret = speakeasy.generateSecret({
     length: 20, // 160 Bit (Standard)
-    name: "Pong",        // App-Name
-    issuer: "PongHUB"       // Optional, aber empfohlen
+    name: 'Pong', // App-Name
+    issuer: 'PongHUB', // Optional, aber empfohlen
   });
 
-    try {
+  try {
     const result = await runAsync(
       db,
       `INSERT INTO users (email, password, secret) VALUES (?, ?, ?)`,
-      [email, hashed, secret.base32] // ❗ Base32 speichern, NICHT das ganze Objekt
+      [email, hashed, secret.base32], // ❗ Base32 speichern, NICHT das ganze Objekt
     );
 
     const otpAuthUrl = secret.otpauth_url;
@@ -76,9 +118,8 @@ fastify.post('/createAccount', async (request, reply) => {
       userId: result.lastID,
       email,
       qr,
-      otpAuthUrl
+      otpAuthUrl,
     });
-
   } catch (err) {
     console.error('DB insert error:', err);
 
@@ -97,45 +138,42 @@ fastify.post('/createAccount', async (request, reply) => {
  * Body: { email, password }
  */
 
-function getBinaryString(time_counter)
-{
-  let binary_string = "";
-  while (time_counter > 0)
-  {
-    binary_part = (time_counter % 2);
-    asciiString = binary_part.toString();
-    time_counter = Math.floor(time_counter / 2);
-    binary_string = asciiString + binary_string;
-  }
-  return binary_string;
-}
+// function getBinaryString(time_counter)
+// {
+//   let binary_string = "";
+//   while (time_counter > 0)
+//   {
+//     binary_part = (time_counter % 2);
+//     asciiString = binary_part.toString();
+//     time_counter = Math.floor(time_counter / 2);
+//     binary_string = asciiString + binary_string;
+//   }
+//   return binary_string;
+// }
 
 function getTimeBytes(counter) {
-  const buffer = Buffer.alloc(8);       // 8 Bytes = 64 Bit
-  buffer.writeUInt32BE(0, 0);           // obere 4 Bytes = 0
-  buffer.writeUInt32BE(counter, 4);     // untere 4 Bytes = counter
+  const buffer = Buffer.alloc(8); // 8 Bytes = 64 Bit
+  buffer.writeUInt32BE(0, 0); // obere 4 Bytes = 0
+  buffer.writeUInt32BE(counter, 4); // untere 4 Bytes = counter
   return buffer;
 }
 
-function generateTOTP(secret, time)  {
+function generateTOTP(secret, time) {
   let time_counter = Math.floor(time / 30);
-  console.log("time_counter:" + time_counter);
+  console.log('time_counter:' + time_counter);
   let timeBytes = getTimeBytes(time_counter);
-  console.log("time_bytes:" + timeBytes);
+  console.log('time_bytes:' + timeBytes);
   let key = base32.decode(secret);
-  const hmac = crypto
-    .createHmac("sha1", key)
-    .update(timeBytes)
-    .digest();
-    //offset ist 0 - 15 because of the masking
+  const hmac = crypto.createHmac('sha1', key).update(timeBytes).digest();
+  //offset ist 0 - 15 because of the masking
   const offset = hmac[hmac.length - 1] & 0x0f;
   const hashPart = hmac.slice(offset, offset + 4);
   let value = hashPart.readUInt32BE(0);
- // removes sign
+  // removes sign
   value = value & 0x7fffffff;
   let nrDigits = 6;
-  const code = value % (Math.pow(10, nrDigits));
-  return code.toString().padStart(nrDigits, "0");
+  const code = value % Math.pow(10, nrDigits);
+  return code.toString().padStart(nrDigits, '0');
 }
 
 function verifyTOTP(secret, otp, window = 1, period = 30) {
@@ -153,10 +191,10 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
   return false;
 }
 
-fastify.post('/loginAccount', (request, reply) => {
-  // Validate and sanitize input  
+fastify.post('/loginAccount', async (request, reply) => {
+  // Validate and sanitize input
   const validation = validateAuthRequest(request.body);
-  console.log("login");
+  console.log('login');
   if (!validation.isValid) {
     return sendError(reply, 400, validation.errors.join(', '));
   }
@@ -165,63 +203,59 @@ fastify.post('/loginAccount', (request, reply) => {
   const otp = request.body.otp;
   const db = openDb();
   const hashed = hashPassword(password);
+  var sessionCookie;
+  var token;
 
-  // First check if email exists
-  db.get(
-
+  const row = await getAsync(
+    db,
     `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
     [email, hashed],
-    (err, row) => {
-      if (err) {
-        console.error('DB select error:', err);
-        db.close();
-        return sendError(reply, 500, 'Database error');
-      }
-
-      // Email doesn't exist
-      if (!row) {
-        db.close();
-        return sendError(reply, 401, 'Wrong User Credentials');
-      }
-      console.log("row:", row);
-      console.log("row.id:", row?.id);
-      const secret = row.secret;
-      if(!verifyTOTP(secret, otp))
-      {
-        return sendError(reply, 401, 'Invalid OTP');
-      }
-      const sessionCookie = crypto.randomBytes(32).toString('hex');
-
-
-          db.run(
-            `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
-            [sessionCookie, row.id],
-            (err2) => {
-              db.close();
-              if (err2) {
-                console.error('Error updating session cookie:', err2);
-                return sendError(reply, 500, 'Failed to update session');
-              }
-
-              reply.setCookie('session', sessionCookie, {
-                httpOnly: true,
-                secure: false, // set true if https
-                sameSite: 'strict',
-                path: '/',
-                maxAge: 60 * 60 * 24,
-              });
-
-              return reply.send({
-                status: 'ok',
-                email: row.email,
-                userId: row.id,
-              });
-            }
-          );
-        }
-      );
-    }
   );
+  if (!row) {
+    db.close();
+    return sendError(reply, 401, 'Wrong User Credentials');
+  }
+  console.log('row:', row);
+  console.log('row.id:', row?.id);
+  const secret = row.secret;
+  if (!verifyTOTP(secret, otp)) {
+    return sendError(reply, 401, 'Invalid OTP');
+  }
+  sessionCookie = crypto.randomBytes(32).toString('hex');
+  await db.run(
+    `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
+    [sessionCookie, row.id],
+    (err2) => {
+      db.close();
+      if (err2) {
+        console.error('Error updating session cookie:', err2);
+        return sendError(reply, 500, 'Failed to update session');
+      }
+    },
+  );
+
+  const JWT = await getJWTToken(sessionCookie, db);
+  return reply
+    .setCookie('session', sessionCookie, {
+      httpOnly: true,
+      secure: false, // set true if https
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24,
+    })
+    .setCookie('JWT', JWT, {
+      httpOnly: true,
+      secure: false, // set true if https
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24,
+    })
+    .send({
+      status: 'ok',
+      email: row.email,
+      userId: row.id,
+    });
+});
 
 /**
  * Logout: invalidate session
@@ -247,7 +281,7 @@ fastify.post('/logout', (request, reply) => {
 
       reply.clearCookie('session', { path: '/' });
       return reply.send({ status: 'ok' });
-    }
+    },
   );
 });
 
@@ -255,35 +289,30 @@ fastify.post('/logout', (request, reply) => {
  * /auth/me — get current user from cookie
  * Returns: { id, email }
  */
-fastify.post('/auth/me', (request, reply) => {
-  const sessionCookie = request.cookies.session;
-
-  if (!sessionCookie) {
-    return sendError(reply, 401, 'No session cookie');
+fastify.post('/auth/me', async (request, reply) => {
+  var token;
+  try {
+    token = request.cookies.JWT;
+    // console.log(token.type);
+  } catch (err) {
+    console.log(err);
   }
 
-  const db = openDb();
-  db.get(
-    `SELECT id, email, nickname, avatar, is_active FROM users WHERE session_cookie = ?`,
-    [sessionCookie],
-    (err, row) => {
-      db.close();
-      if (err) {
-        console.error('DB error in auth/me:', err);
-        return sendError(reply, 500, 'Database error');
-      }
-      if (!row) {
-        return sendError(reply, 401, 'Invalid session');
-      }
-      return reply.send({ 
-        id: row.id, 
-        email: row.email,
-        nickname: row.nickname,
-        avatar: row.avatar,
-        is_active: row.is_active
-      });
-    }
-  );
+  // console.log('token: ' + token.JWT);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded);
+    return reply.send({
+      id: decoded.id,
+      email: decoded.email,
+      nickname: decoded.nickname,
+      avatar: decoded.avatar,
+      is_active: decoded.is_active,
+    });
+  } catch (err) {
+    console.error('Invalid or expired token:', err.message);
+    return sendError(reply, 401, 'corrupted jwt');
+  }
 });
 
 /**
@@ -294,7 +323,7 @@ fastify.post('/auth/me', (request, reply) => {
  */
 fastify.post('/verifyCredentials', (request, reply) => {
   const { email, password, otp } = request.body || {};
-  console.log("verify");
+  console.log('verify');
   if (!email || !password) {
     return sendError(reply, 400, 'Email and password are required');
   }
@@ -315,13 +344,12 @@ fastify.post('/verifyCredentials', (request, reply) => {
         return sendError(reply, 401, 'Invalid email or password for Player 2');
       }
       const secret = row.secret;
-      console.log("OPT:", otp);
-      if(!verifyTOTP(secret, otp))
-      {
+      console.log('OPT:', otp);
+      if (!verifyTOTP(secret, otp)) {
         return sendError(reply, 401, 'Invalid OTP');
       }
       return reply.send({ status: 'ok', id: row.id, email: row.email });
-    }
+    },
   );
 });
 
@@ -332,19 +360,19 @@ fastify.post('/verifyCredentials', (request, reply) => {
  */
 fastify.post('/user/update', (request, reply) => {
   const sessionCookie = request.cookies.session;
-  
+
   if (!sessionCookie) {
     return sendError(reply, 401, 'Authentication required');
   }
 
   const { nickname, avatar } = request.body || {};
-  
+
   if (!nickname && !avatar) {
     return sendError(reply, 400, 'Nickname or avatar required');
   }
 
   const db = openDb();
-  
+
   // First verify session
   db.get(
     `SELECT id FROM users WHERE session_cookie = ?`,
@@ -358,7 +386,7 @@ fastify.post('/user/update', (request, reply) => {
       // Build dynamic update query
       const updates = [];
       const values = [];
-      
+
       if (nickname) {
         updates.push('nickname = ?');
         values.push(nickname);
@@ -367,22 +395,22 @@ fastify.post('/user/update', (request, reply) => {
         updates.push('avatar = ?');
         values.push(avatar);
       }
-      
+
       values.push(user.id);
-      
+
       db.run(
         `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
         values,
-        function(err) {
+        function (err) {
           db.close();
           if (err) {
             console.error('Error updating profile:', err);
             return sendError(reply, 500, 'Failed to update profile');
           }
           return reply.send({ status: 'ok', updated: this.changes });
-        }
+        },
       );
-    }
+    },
   );
 });
 
@@ -392,7 +420,7 @@ fastify.post('/user/update', (request, reply) => {
  */
 fastify.get('/user/profile', (request, reply) => {
   const userId = request.query.userId;
-  
+
   if (!userId) {
     return sendError(reply, 400, 'userId required');
   }
@@ -411,7 +439,7 @@ fastify.get('/user/profile', (request, reply) => {
         return sendError(reply, 404, 'User not found');
       }
       return reply.send(row);
-    }
+    },
   );
 });
 
@@ -421,13 +449,13 @@ fastify.get('/user/profile', (request, reply) => {
  */
 fastify.get('/user/friends', (request, reply) => {
   const sessionCookie = request.cookies.session;
-  
+
   if (!sessionCookie) {
     return sendError(reply, 401, 'Authentication required');
   }
 
   const db = openDb();
-  
+
   // First get current user ID
   db.get(
     `SELECT id FROM users WHERE session_cookie = ?`,
@@ -453,9 +481,9 @@ fastify.get('/user/friends', (request, reply) => {
             return sendError(reply, 500, 'Database error');
           }
           return reply.send({ friends: rows || [] });
-        }
+        },
       );
-    }
+    },
   );
 });
 
@@ -466,17 +494,17 @@ fastify.get('/user/friends', (request, reply) => {
 fastify.post('/user/friends/add', (request, reply) => {
   const sessionCookie = request.cookies.session;
   const { friendId, friendEmail } = request.body || {};
-  
+
   if (!sessionCookie) {
     return sendError(reply, 401, 'Authentication required');
   }
-  
+
   if (!friendId && !friendEmail) {
     return sendError(reply, 400, 'friendId or friendEmail required');
   }
 
   const db = openDb();
-  
+
   db.get(
     `SELECT id FROM users WHERE session_cookie = ?`,
     [sessionCookie],
@@ -497,7 +525,7 @@ fastify.post('/user/friends/add', (request, reply) => {
         db.run(
           `INSERT INTO friends (user_id, friend_id) VALUES (?, ?)`,
           [user.id, targetFriendId],
-          function(err) {
+          function (err) {
             db.close();
             if (err) {
               if (err.code === 'SQLITE_CONSTRAINT') {
@@ -507,7 +535,7 @@ fastify.post('/user/friends/add', (request, reply) => {
               return sendError(reply, 500, 'Failed to add friend');
             }
             return reply.send({ status: 'ok', friendshipId: this.lastID });
-          }
+          },
         );
       };
 
@@ -522,7 +550,7 @@ fastify.post('/user/friends/add', (request, reply) => {
               return sendError(reply, 404, 'User with that email not found');
             }
             addFriendById(friend.id);
-          }
+          },
         );
       } else {
         // friendId provided directly
@@ -535,10 +563,10 @@ fastify.post('/user/friends/add', (request, reply) => {
               return sendError(reply, 404, 'User not found');
             }
             addFriendById(friend.id);
-          }
+          },
         );
       }
-    }
+    },
   );
 });
 
@@ -549,17 +577,17 @@ fastify.post('/user/friends/add', (request, reply) => {
 fastify.post('/user/friends/remove', (request, reply) => {
   const sessionCookie = request.cookies.session;
   const { friendId } = request.body || {};
-  
+
   if (!sessionCookie) {
     return sendError(reply, 401, 'Authentication required');
   }
-  
+
   if (!friendId) {
     return sendError(reply, 400, 'friendId required');
   }
 
   const db = openDb();
-  
+
   db.get(
     `SELECT id FROM users WHERE session_cookie = ?`,
     [sessionCookie],
@@ -572,16 +600,16 @@ fastify.post('/user/friends/remove', (request, reply) => {
       db.run(
         `DELETE FROM friends WHERE user_id = ? AND friend_id = ?`,
         [user.id, friendId],
-        function(err) {
+        function (err) {
           db.close();
           if (err) {
             console.error('Error removing friend:', err);
             return sendError(reply, 500, 'Failed to remove friend');
           }
           return reply.send({ status: 'ok', removed: this.changes });
-        }
+        },
       );
-    }
+    },
   );
 });
 
@@ -591,13 +619,13 @@ fastify.post('/user/friends/remove', (request, reply) => {
  */
 fastify.get('/user/stats', (request, reply) => {
   const userId = request.query.userId;
-  
+
   if (!userId) {
     return sendError(reply, 400, 'userId required');
   }
 
   const db = openDb();
-  
+
   db.all(
     `SELECT 
       COUNT(*) as total_games,
@@ -612,10 +640,10 @@ fastify.get('/user/stats', (request, reply) => {
         console.error('Error fetching stats:', err);
         return sendError(reply, 500, 'Database error');
       }
-      
+
       const stats = rows[0] || { total_games: 0, wins: 0, losses: 0 };
       return reply.send(stats);
-    }
+    },
   );
 });
 
@@ -626,13 +654,13 @@ fastify.get('/user/stats', (request, reply) => {
 fastify.get('/user/matches', (request, reply) => {
   const userId = request.query.userId;
   const limit = parseInt(request.query.limit) || 10;
-  
+
   if (!userId) {
     return sendError(reply, 400, 'userId required');
   }
 
   const db = openDb();
-  
+
   db.all(
     `SELECT 
       gs.*,
@@ -654,7 +682,7 @@ fastify.get('/user/matches', (request, reply) => {
         return sendError(reply, 500, 'Database error');
       }
       return reply.send({ matches: rows || [] });
-    }
+    },
   );
 });
 

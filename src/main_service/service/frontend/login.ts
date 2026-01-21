@@ -13,7 +13,10 @@ interface LoginResponse {
   error?: string;
 }
 
-async function createUser(email: string, password: string): Promise<LoginResponse> {
+async function createUser(
+  email: string,
+  password: string,
+): Promise<LoginResponse> {
   const body: LoginRequest = { email, password };
 
   try {
@@ -30,7 +33,6 @@ async function createUser(email: string, password: string): Promise<LoginRespons
       img.alt = '2FA QR Code';
       img.style.width = '200px';
 
-
       document.getElementById('qr-container')!.appendChild(img);
     }
     return data;
@@ -40,7 +42,11 @@ async function createUser(email: string, password: string): Promise<LoginRespons
   }
 }
 
-export async function loginUser(email: string, password: string, otp: string): Promise<LoginResponse> {
+export async function loginUser(
+  email: string,
+  password: string,
+  otp: string,
+): Promise<LoginResponse> {
   const body: LoginRequest = { email, password, otp };
 
   try {
@@ -48,12 +54,22 @@ export async function loginUser(email: string, password: string, otp: string): P
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      credentials: 'include',
     });
+    // alert('STATUS:' + response.status);
+    // alert('OK:' + response.ok);
+    // alert('CTYPE:' + response.headers.get('content-type'));
 
-    const data = await response.json();
-    return data;
+    const raw = await response.text();
+    // alert('RAW:' + JSON.stringify(raw));
+    // alert(response.type);
+    if (response.status == 200) {
+      return { status: 'ok', error: String(response.status) };
+    } else {
+      return { status: 'login fail', error: String(response.status) };
+    }
   } catch (err) {
-    console.error('Login failed:', err);
+    alert(err);
     return { status: 'error', error: (err as Error).message };
   }
 }
@@ -98,12 +114,12 @@ function addErrorDisplayElements(form: HTMLFormElement): void {
 function clearFormErrors(form: HTMLFormElement): void {
   const errorDisplay = form.querySelector('.error-display') as HTMLElement;
   const successDisplay = form.querySelector('.success-display') as HTMLElement;
-  
+
   if (errorDisplay) {
     errorDisplay.style.display = 'none';
     errorDisplay.textContent = '';
   }
-  
+
   if (successDisplay) {
     successDisplay.style.display = 'none';
     successDisplay.textContent = '';
@@ -111,26 +127,32 @@ function clearFormErrors(form: HTMLFormElement): void {
 
   // Remove field-specific error styling
   const inputs = form.querySelectorAll('input');
-  inputs.forEach(input => {
+  inputs.forEach((input) => {
     input.style.borderColor = '';
   });
 }
 
-function displayFormErrors(form: HTMLFormElement, errors: Record<string, string>): void {
+function displayFormErrors(
+  form: HTMLFormElement,
+  errors: Record<string, string>,
+): void {
   const errorDisplay = form.querySelector('.error-display') as HTMLElement;
-  
+
   if (errorDisplay) {
     // Get the first error only
     const [firstField, firstMessage] = Object.entries(errors)[0];
-    
+
     // Highlight the problematic input field
-    const input = form.querySelector(`#${form.id.replace('Form', '')}${firstField.charAt(0).toUpperCase() + firstField.slice(1)}`) as HTMLInputElement;
+    const input = form.querySelector(
+      `#${form.id.replace('Form', '')}${firstField.charAt(0).toUpperCase() + firstField.slice(1)}`,
+    ) as HTMLInputElement;
     if (input && firstField !== 'general') {
       input.style.borderColor = '#ff6b6b';
     }
-    
+
     // Display only the first error message
-    const displayMessage = firstField === 'general' ? firstMessage : firstMessage;
+    const displayMessage =
+      firstField === 'general' ? firstMessage : firstMessage;
     SecurityValidator.safeSetText(errorDisplay, displayMessage);
     errorDisplay.style.display = 'block';
   }
@@ -138,7 +160,7 @@ function displayFormErrors(form: HTMLFormElement, errors: Record<string, string>
 
 function displaySuccessMessage(form: HTMLFormElement, message: string): void {
   const successDisplay = form.querySelector('.success-display') as HTMLElement;
-  
+
   if (successDisplay) {
     SecurityValidator.safeSetText(successDisplay, message);
     successDisplay.style.display = 'block';
@@ -150,8 +172,12 @@ export function initLoginAndRegister() {
 
   if (route === '/') {
     const form = document.getElementById('loginForm') as HTMLFormElement | null;
-    const emailInput = document.getElementById('loginUsername') as HTMLInputElement | null;
-    const passwordInput = document.getElementById('loginPassword') as HTMLInputElement | null;
+    const emailInput = document.getElementById(
+      'loginUsername',
+    ) as HTMLInputElement | null;
+    const passwordInput = document.getElementById(
+      'loginPassword',
+    ) as HTMLInputElement | null;
     const otpInput = document.getElementById('otp') as HTMLInputElement | null;
 
     if (!form || !emailInput || !passwordInput) return;
@@ -161,25 +187,25 @@ export function initLoginAndRegister() {
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       // Clear previous errors
       clearFormErrors(form);
-      
+
       // Get sanitized input values
       const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
       const password = passwordInput.value; // Don't sanitize passwords, just validate length
       const otp = otpInput!.value;
-      
+
       // Validate form data
       const errors = SecurityValidator.validateForm(
         { email, password, otp },
-        { 
+        {
           email: VALIDATION_RULES.email,
           password: VALIDATION_RULES.password,
-          otp : VALIDATION_RULES.password
-        }
+          otp: VALIDATION_RULES.password,
+        },
       );
-      
+
       if (Object.keys(errors).length > 0) {
         displayFormErrors(form, errors);
         return;
@@ -187,7 +213,7 @@ export function initLoginAndRegister() {
 
       // Proceed with login
       const res = await loginUser(email, password, otp);
-
+      // alert(res.status);
       if (res.status === 'ok') {
         location.hash = '#/home';
       } else {
@@ -197,9 +223,15 @@ export function initLoginAndRegister() {
   }
 
   if (route === '/register') {
-    const form = document.getElementById('registerForm') as HTMLFormElement | null;
-    const emailInput = document.getElementById('registerUsername') as HTMLInputElement | null;
-    const passwordInput = document.getElementById('registerPassword') as HTMLInputElement | null;
+    const form = document.getElementById(
+      'registerForm',
+    ) as HTMLFormElement | null;
+    const emailInput = document.getElementById(
+      'registerUsername',
+    ) as HTMLInputElement | null;
+    const passwordInput = document.getElementById(
+      'registerPassword',
+    ) as HTMLInputElement | null;
     var qrCodeSet = false;
 
     if (!form || !emailInput || !passwordInput) return;
@@ -209,51 +241,50 @@ export function initLoginAndRegister() {
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       // Clear previous errors
       clearFormErrors(form);
-      
+
       // Get sanitized input values
       const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
       const password = passwordInput.value;
-      
+
       // Validate form data
       const errors = SecurityValidator.validateForm(
         { email, password },
-        { 
+        {
           email: VALIDATION_RULES.email,
-          password: VALIDATION_RULES.password
-        }
+          password: VALIDATION_RULES.password,
+        },
       );
-      
+
       if (Object.keys(errors).length > 0) {
         displayFormErrors(form, errors);
         return;
       }
 
       // Proceed with registration
-      if(!qrCodeSet)
-      {
+      if (!qrCodeSet) {
         const res = await createUser(email, password);
         if (res.status === 'ok') {
-        displaySuccessMessage(form, 'Account created successfully! Pls scan the QR-Code for 2-FA then you can log in');
-        qrCodeSet = true;
-        // setTimeout(() => {
-        //   location.hash = '#/';
-        // }, 2000);
-        } 
-        else
-        {
-          displayFormErrors(form, { general: res.error || 'Registration failed' });
+          displaySuccessMessage(
+            form,
+            'Account created successfully! Pls scan the QR-Code for 2-FA then you can log in',
+          );
+          qrCodeSet = true;
+          // setTimeout(() => {
+          //   location.hash = '#/';
+          // }, 2000);
+        } else {
+          displayFormErrors(form, {
+            general: res.error || 'Registration failed',
+          });
         }
+      } else {
+        displayFormErrors(form, {
+          general: 'Please scan QR-Code and Reload Page',
+        });
       }
-      else
-      {
-        displayFormErrors(form, {  general:'Please scan QR-Code and Reload Page' });
-      }
-      
-
-      
     });
   }
 }
