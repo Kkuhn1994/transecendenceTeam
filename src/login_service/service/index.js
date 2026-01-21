@@ -206,21 +206,6 @@ fastify.post('/loginAccount', async (request, reply) => {
   var sessionCookie;
   var token;
 
-  // First check if email exists
-  // await db.get(
-  //   `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
-  //   [email, hashed],
-  //   (err, row) => {
-  //     if (err) {
-  //       console.error('DB select error:', err);
-  //       db.close();
-  //       return sendError(reply, 500, 'Database error');
-  //     }
-
-  //     // Email doesn't exist
-
-  //   },
-  // );
   const row = await getAsync(
     db,
     `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
@@ -306,15 +291,9 @@ fastify.post('/logout', (request, reply) => {
  */
 fastify.post('/auth/me', async (request, reply) => {
   var token;
-  console.log('/auth/me 2');
   try {
-    console.log('/auth/me 3');
     token = request.cookies.JWT;
     // console.log(token.type);
-    console.log('/auth/me 4');
-    console.log(token);
-    console.log(token);
-    console.log('/auth/me 4');
   } catch (err) {
     console.log(err);
   }
@@ -334,34 +313,6 @@ fastify.post('/auth/me', async (request, reply) => {
     console.error('Invalid or expired token:', err.message);
     return sendError(reply, 401, 'corrupted jwt');
   }
-  // const sessionCookie = request.cookies.session;
-
-  // if (!sessionCookie) {
-  //   return sendError(reply, 401, 'No session cookie');
-  // }
-
-  // const db = openDb();
-  // db.get(
-  //   `SELECT id, email, nickname, avatar, is_active FROM users WHERE session_cookie = ?`,
-  //   [sessionCookie],
-  //   (err, row) => {
-  //     db.close();
-  //     if (err) {
-  //       console.error('DB error in auth/me:', err);
-  //       return sendError(reply, 500, 'Database error');
-  //     }
-  //     if (!row) {
-  //       return sendError(reply, 401, 'Invalid session');
-  //     }
-  //     return reply.send({
-  //       id: row.id,
-  //       email: row.email,
-  //       nickname: row.nickname,
-  //       avatar: row.avatar,
-  //       is_active: row.is_active,
-  //     });
-  //   },
-  // );
 });
 
 /**
