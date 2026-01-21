@@ -41,20 +41,27 @@ function runAsync(db, sql, params = []) {
   });
 }
 
+function getAsync(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
 function getJWTToken(refresh_token, db) {
   return new Promise((resolve, reject) => {
+    console.log('get Token');
     db.get(
       `SELECT * FROM users WHERE session_cookie = ?`,
       [refresh_token],
       (err, row) => {
-        if (err) {
-          return reject(err); // DB-Fehler
-        }
-        if (!row) {
-          return reject(new Error('Wrong Refresh Token')); // Kein Treffer
-        }
+        if (err) return reject(err);
+        if (!row) return reject(new Error('Wrong Refresh Token'));
 
-        // JWT erzeugen
+        console.log('get Token2');
+
         const token = jwt.sign(
           {
             id: row.id,
@@ -67,10 +74,9 @@ function getJWTToken(refresh_token, db) {
           { expiresIn: '5m' },
         );
 
-        // console.log("JWT Token erzeugt:", token);
+        console.log('get Token3', token);
 
-        // ✅ Hier den Token zurückgeben
-        resolve(token);
+        resolve(token); // ✅ Hier wird das Promise erfüllt
       },
     );
   });
@@ -185,7 +191,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
   return false;
 }
 
-fastify.post('/loginAccount', (request, reply) => {
+fastify.post('/loginAccount', async (request, reply) => {
   // Validate and sanitize input
   const validation = validateAuthRequest(request.body);
   console.log('login');
@@ -197,67 +203,73 @@ fastify.post('/loginAccount', (request, reply) => {
   const otp = request.body.otp;
   const db = openDb();
   const hashed = hashPassword(password);
+  var sessionCookie;
+  var token;
 
   // First check if email exists
-  db.get(
+  // await db.get(
+  //   `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
+  //   [email, hashed],
+  //   (err, row) => {
+  //     if (err) {
+  //       console.error('DB select error:', err);
+  //       db.close();
+  //       return sendError(reply, 500, 'Database error');
+  //     }
+
+  //     // Email doesn't exist
+
+  //   },
+  // );
+  const row = await getAsync(
+    db,
     `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
     [email, hashed],
-    (err, row) => {
-      if (err) {
-        console.error('DB select error:', err);
-        db.close();
-        return sendError(reply, 500, 'Database error');
+  );
+  if (!row) {
+    db.close();
+    return sendError(reply, 401, 'Wrong User Credentials');
+  }
+  console.log('row:', row);
+  console.log('row.id:', row?.id);
+  const secret = row.secret;
+  if (!verifyTOTP(secret, otp)) {
+    return sendError(reply, 401, 'Invalid OTP');
+  }
+  sessionCookie = crypto.randomBytes(32).toString('hex');
+  await db.run(
+    `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
+    [sessionCookie, row.id],
+    (err2) => {
+      db.close();
+      if (err2) {
+        console.error('Error updating session cookie:', err2);
+        return sendError(reply, 500, 'Failed to update session');
       }
-
-      // Email doesn't exist
-      if (!row) {
-        db.close();
-        return sendError(reply, 401, 'Wrong User Credentials');
-      }
-      console.log('row:', row);
-      console.log('row.id:', row?.id);
-      const secret = row.secret;
-      if (!verifyTOTP(secret, otp)) {
-        return sendError(reply, 401, 'Invalid OTP');
-      }
-      const sessionCookie = crypto.randomBytes(32).toString('hex');
-
-      db.run(
-        `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
-        [sessionCookie, row.id],
-        (err2) => {
-          db.close();
-          if (err2) {
-            console.error('Error updating session cookie:', err2);
-            return sendError(reply, 500, 'Failed to update session');
-          }
-        },
-      );
-
-      const JWT = getJWTToken(sessionCookie, db);
-
-      return reply
-        .setCookie('session', sessionCookie, {
-          httpOnly: true,
-          secure: false, // set true if https
-          sameSite: 'strict',
-          path: '/',
-          maxAge: 60 * 60 * 24,
-        })
-        .setCookie('JWT', JWT, {
-          httpOnly: true,
-          secure: false, // set true if https
-          sameSite: 'strict',
-          path: '/',
-          maxAge: 60 * 60 * 24,
-        })
-        .send({
-          status: 'ok',
-          email: row.email,
-          userId: row.id,
-        });
     },
   );
+
+  const JWT = await getJWTToken(sessionCookie, db);
+  return reply
+    .setCookie('session', sessionCookie, {
+      httpOnly: true,
+      secure: false, // set true if https
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24,
+    })
+    .setCookie('JWT', JWT, {
+      httpOnly: true,
+      secure: false, // set true if https
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24,
+    })
+    .send({
+      status: 'ok',
+      email: row.email,
+      userId: row.id,
+    });
 });
 
 /**
@@ -292,35 +304,61 @@ fastify.post('/logout', (request, reply) => {
  * /auth/me — get current user from cookie
  * Returns: { id, email }
  */
-fastify.post('/auth/me', (request, reply) => {
-  const sessionCookie = request.cookies.session;
-
-  if (!sessionCookie) {
-    return sendError(reply, 401, 'No session cookie');
+fastify.post('/auth/me', async (request, reply) => {
+  console.log('/auth/me 2');
+  try {
+    console.log('/auth/me 3');
+    const token = request.cookies;
+    console.log(token.type);
+    console.log(token);
+    console.log('/auth/me 4');
+  } catch (err) {
+    console.log(err);
   }
 
-  const db = openDb();
-  db.get(
-    `SELECT id, email, nickname, avatar, is_active FROM users WHERE session_cookie = ?`,
-    [sessionCookie],
-    (err, row) => {
-      db.close();
-      if (err) {
-        console.error('DB error in auth/me:', err);
-        return sendError(reply, 500, 'Database error');
-      }
-      if (!row) {
-        return sendError(reply, 401, 'Invalid session');
-      }
-      return reply.send({
-        id: row.id,
-        email: row.email,
-        nickname: row.nickname,
-        avatar: row.avatar,
-        is_active: row.is_active,
-      });
-    },
-  );
+  console.log('token: ' + token.JWT);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded);
+    return reply.send({
+      id: decoded.id,
+      email: decoded.email,
+      nickname: decoded.nickname,
+      avatar: decoded.avatar,
+      is_active: decoded.is_active,
+    });
+  } catch (err) {
+    console.error('Invalid or expired token:', err.message);
+    return sendError(reply, 401, 'corrupted jwt');
+  }
+  // const sessionCookie = request.cookies.session;
+
+  // if (!sessionCookie) {
+  //   return sendError(reply, 401, 'No session cookie');
+  // }
+
+  // const db = openDb();
+  // db.get(
+  //   `SELECT id, email, nickname, avatar, is_active FROM users WHERE session_cookie = ?`,
+  //   [sessionCookie],
+  //   (err, row) => {
+  //     db.close();
+  //     if (err) {
+  //       console.error('DB error in auth/me:', err);
+  //       return sendError(reply, 500, 'Database error');
+  //     }
+  //     if (!row) {
+  //       return sendError(reply, 401, 'Invalid session');
+  //     }
+  //     return reply.send({
+  //       id: row.id,
+  //       email: row.email,
+  //       nickname: row.nickname,
+  //       avatar: row.avatar,
+  //       is_active: row.is_active,
+  //     });
+  //   },
+  // );
 });
 
 /**
