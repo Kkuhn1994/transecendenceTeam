@@ -51,6 +51,7 @@ function getAsync(db, sql, params = []) {
 }
 
 function getJWTToken(refresh_token, db) {
+  console.log('get Token');
   return new Promise((resolve, reject) => {
     console.log('get Token');
     db.get(
@@ -310,8 +311,30 @@ fastify.post('/auth/me', async (request, reply) => {
       is_active: decoded.is_active,
     });
   } catch (err) {
-    console.error('Invalid or expired token:', err.message);
-    return sendError(reply, 401, 'corrupted jwt');
+    try {
+      const db = openDb();
+      console.log(request.cookies.session);
+      token = await getJWTToken(request.cookies.session, db);
+      console.log('token refresh');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      return reply
+        .setCookie('JWT', token, {
+          httpOnly: true,
+          secure: false, // set true if https
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 60 * 60 * 24,
+        })
+        .send({
+          id: decoded.id,
+          email: decoded.email,
+          nickname: decoded.nickname,
+          avatar: decoded.avatar,
+          is_active: decoded.is_active,
+        });
+    } catch (err) {
+      return sendError(reply, 401, 'corrupted jwt');
+    }
   }
 });
 
