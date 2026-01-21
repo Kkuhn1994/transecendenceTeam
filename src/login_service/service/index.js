@@ -65,7 +65,7 @@ function getJWTToken(refresh_token, db) {
         const token = jwt.sign(
           {
             id: row.id,
-            email: row.name,
+            email: row.email,
             nickname: row.nickname,
             avatar: row.avatar,
             is_active: row.is_active,
@@ -305,18 +305,21 @@ fastify.post('/logout', (request, reply) => {
  * Returns: { id, email }
  */
 fastify.post('/auth/me', async (request, reply) => {
+  var token;
   console.log('/auth/me 2');
   try {
     console.log('/auth/me 3');
-    const token = request.cookies;
-    console.log(token.type);
+    token = request.cookies.JWT;
+    // console.log(token.type);
+    console.log('/auth/me 4');
+    console.log(token);
     console.log(token);
     console.log('/auth/me 4');
   } catch (err) {
     console.log(err);
   }
 
-  console.log('token: ' + token.JWT);
+  // console.log('token: ' + token.JWT);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log(decoded);
