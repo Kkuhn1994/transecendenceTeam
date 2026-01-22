@@ -19,5 +19,10 @@ Work In Progress:
 Tournament system (1 Point)
 Pong Opponent AI (2 Points)
 
-TOTAL: 8/14 Points for 100% 
+Possible Modules:
+Game Customization Options (1 Point)
+Support for multiple languages (at least 3 languages) (1 Point)
+JWT (2 Points)
+
+TOTAL done: 9 (+3 WIP)/14 Points for 100% 
 
