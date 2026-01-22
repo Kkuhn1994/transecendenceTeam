@@ -161,9 +161,9 @@ function getTimeBytes(counter) {
 
 function generateTOTP(secret, time) {
   let time_counter = Math.floor(time / 30);
-  console.log('time_counter:' + time_counter);
+  // console.log('time_counter:' + time_counter);
   let timeBytes = getTimeBytes(time_counter);
-  console.log('time_bytes:' + timeBytes);
+  // console.log('time_bytes:' + timeBytes);
   let key = base32.decode(secret);
   const hmac = crypto.createHmac('sha1', key).update(timeBytes).digest();
   //offset ist 0 - 15 because of the masking
@@ -183,8 +183,8 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
   for (let i = -window; i <= window; i++) {
     const testTime = currentTime + i * period;
     const generatedOtp = generateTOTP(secret, testTime);
-    console.log(generatedOtp);
-    console.log(otp);
+    // console.log(generatedOtp);
+    // console.log(otp);
     if (generatedOtp === otp) {
       return true;
     }
@@ -207,25 +207,46 @@ fastify.post('/loginAccount', async (request, reply) => {
   var sessionCookie;
   var token;
 
-  const row = await getAsync(
-    db,
-    `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
-    [email, hashed],
-  );
-  if (!row) {
+  // const row = await getAsync(
+  //   db,
+  //   `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
+  //   [email, hashed],
+  // );
+  // if (!row) {
+  //   db.close();
+  //   return sendError(reply, 401, 'Wrong User Credentials');
+  // }
+  // console.log(request.body.type);
+  const res = await fetch('http://localhost:3000/verifyCredentials', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password, otp }),
+  });
+  const data = await res.json();
+  console.log(res.status);
+  console.log(data.id);
+  const id = data.id;
+  console.log('login status not ok');
+  if (res.status != 200) {
+    console.log('login status not ok');
     db.close();
     return sendError(reply, 401, 'Wrong User Credentials');
   }
-  console.log('row:', row);
-  console.log('row.id:', row?.id);
-  const secret = row.secret;
-  if (!verifyTOTP(secret, otp)) {
-    return sendError(reply, 401, 'Invalid OTP');
-  }
+  console.log('update sesssion');
+  // console.log(row);
+  // console.log('row:', row);
+  // console.log('row.id:', row?.id);
+  // const secret = row.secret;
+  // if (!verifyTOTP(secret, otp)) {
+  //   return sendError(reply, 401, 'Invalid OTP');
+  // }
   sessionCookie = crypto.randomBytes(32).toString('hex');
+  console.log('update sesssion');
   await db.run(
     `UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?`,
-    [sessionCookie, row.id],
+    [sessionCookie, id],
     (err2) => {
       db.close();
       if (err2) {
@@ -234,7 +255,7 @@ fastify.post('/loginAccount', async (request, reply) => {
       }
     },
   );
-
+  console.log('sesssion updatet');
   const JWT = await getJWTToken(sessionCookie, db);
   return reply
     .setCookie('session', sessionCookie, {
@@ -253,8 +274,8 @@ fastify.post('/loginAccount', async (request, reply) => {
     })
     .send({
       status: 'ok',
-      email: row.email,
-      userId: row.id,
+      email: data.email,
+      userId: id,
     });
 });
 
@@ -346,31 +367,35 @@ fastify.post('/auth/me', async (request, reply) => {
  */
 fastify.post('/verifyCredentials', (request, reply) => {
   const { email, password, otp } = request.body || {};
-  console.log('verify');
+  console.log(email);
+  console.log(password);
   if (!email || !password) {
     return sendError(reply, 400, 'Email and password are required');
   }
 
   const db = openDb();
   const hashed = hashPassword(password);
-
+  console.log('DB call pre');
   db.get(
     `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
     [email, hashed],
     (err, row) => {
       db.close();
+      console.log('DB call');
       if (err) {
-        console.error('DB error in verifyCredentials:', err);
+        console.log('DB error in verifyCredentials:');
         return sendError(reply, 500, 'Database error');
       }
       if (!row) {
+        console.log('user not found');
         return sendError(reply, 401, 'Invalid email or password for Player 2');
       }
       const secret = row.secret;
-      console.log('OPT:', otp);
+      console.log('OTP:', otp);
       if (!verifyTOTP(secret, otp)) {
         return sendError(reply, 401, 'Invalid OTP');
       }
+      console.log(row.id);
       return reply.send({ status: 'ok', id: row.id, email: row.email });
     },
   );
