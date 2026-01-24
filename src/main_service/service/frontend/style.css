@@ -1,161 +1,265 @@
-/* body {
-background-color: #f8f9fa;
-display: flex;
-align-items: center;
-justify-content: center;
-height: 100vh;
-} */
-
-/* Alle Links auf der Seite */
+/* Links */
 a {
-  color: #007bff;  /* Standard Link-Farbe */
-  text-decoration: none; /* Entfernt die Unterstreichung */
+  color: #7dd3fc;
+  text-decoration: none;
 }
-
 a:hover {
-  color: #0056b3; /* Hover-Farbe für Links */
-  text-decoration: underline; /* Fügt eine Unterstreichung beim Hover hinzu */
+  color: #bae6fd;
+  text-decoration: underline;
 }
 
+/* NOTE:
+   You don't use <nav> in your markup (you use .nav),
+   so this block isn't doing anything. Keeping it won't break anything,
+   but it's unused. You can delete it later if you want.
+*/
 nav {
-  position: fixed; /* Fixiert das nav oben */
-  top: 0; /* Setzt es ganz oben */
-  left: 0; /* Setzt es ganz links */
-  padding: 10px 20px; /* Abstand von den Rändern */
-  background-color: #fff; /* Optional: Hintergrundfarbe für das nav */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Schatten, um es hervorzuheben */
-  z-index: 1000; /* Stellt sicher, dass es über anderen Inhalten liegt */
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 10px 20px;
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  z-index: 1000;
 }
 
+/* Page background */
+body {
+  background: linear-gradient(135deg, #070a12 0%, #0b1222 50%, #0a1020 100%);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;
+
+  /* ✅ FIX: allow tall pages + scrolling */
+  align-items: flex-start;   /* was center */
+  min-height: 100vh;         /* was height: 100vh */
+  margin: 0;
+  padding: 20px 0;           /* gives breathing room */
+  overflow-y: auto;          /* was overflow: hidden */
+  overflow-x: hidden;
+
+  color: #e5e7eb;
+}
+
+/* Text */
+h1, h2, h3, h4, h5, h6 {
+  color: #f8fafc;
+  text-shadow: none;
+}
+p, label {
+  color: #e5e7eb;
+}
+small {
+  color: #cbd5e1;
+}
+
+/* Containers */
+.login-container,
+.page-container,
+.profile-container,
+.card {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
 
 .login-container {
   width: 100%;
   max-width: 450px;
-  background: rgba(26, 26, 46, 0.9);
   padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 
-    0 6px 15px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(0, 255, 255, 0.1);
   margin-top: 50px;
-  border: 1px solid rgba(0, 255, 255, 0.3);
 }
 
-.form-control {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  color: #ffffff;
-}
+.page-container {
+  padding: 2rem;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
 
-.form-control:focus {
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
-  border-color: #00ffff;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-}
-
-.form-control::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-body {
-background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-display: flex;
-justify-content: center;
-align-items: center;
-height: 100vh;
-margin: 0;
-overflow: hidden;
-color: #ffffff;
-}
-
-/* General text styling for dark theme */
-h1, h2, h3, h4, h5, h6 {
-  color: #ffffff;
-  text-shadow: 0 0 2px rgba(0, 255, 255, 0.1);
-}
-
-p {
-  color: #ffffff;
-}
-
-label {
-  color: #ffffff;
-  font-weight: 500;
-}
-
-small {
-  color: #cccccc;
-}
-
-.card {
-max-width: 400px;
-width: 100%;
-box-shadow: 
-  0 4px 12px rgba(0, 0, 0, 0.3),
-  0 0 20px rgba(0, 255, 255, 0.1);
-border: 1px solid rgba(0, 255, 255, 0.3);
-border-radius: 10px;
-background: rgba(26, 26, 46, 0.9);
-}
-
-.card-body {
-text-align: center;
-padding: 2rem;
-color: #ffffff;
+  /* ✅ FIX: keep nav visible even with huge history tables */
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
 }
 
 .profile-container {
-  background: rgba(26, 26, 46, 0.9);
   padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 
-    0 6px 15px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
   max-width: 600px;
   margin: 0 auto;
 }
 
-h1 {
-font-size: 1.8rem;
-margin-bottom: 1rem;
-}
-
-.btn-primary {
-  margin-top: 1rem;
+.card {
+  max-width: 400px;
   width: 100%;
-  background: linear-gradient(45deg, #00ffff, #0080ff);
-  border: none;
-  color: #000000;
-  font-weight: bold;
-  transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
-  background: linear-gradient(45deg, #00cccc, #0066cc);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
-  transform: translateY(-2px);
-  color: #000000;
+.card-body {
+  text-align: center;
+  padding: 2rem;
+  color: #ffffff;
 }
 
-.btn-secondary {
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+/* Inputs */
+.form-control {
+  background: rgba(2, 6, 23, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.14);
+  background: rgba(2, 6, 23, 0.4);
+  color: #e5e7eb;
+}
+
+.form-control::placeholder {
+  color: rgba(226, 232, 240, 0.55);
+}
+
+/* ---------------- Buttons (clean) ---------------- */
+.btn {
   margin-top: 1rem;
-  width: auto;
-  background: linear-gradient(45deg, #666666, #999999);
-  border: none;
-  color: #333333;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  opacity: 0.6;
-  cursor: not-allowed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  user-select: none;
 }
 
-.btn-secondary:disabled {
-  background: linear-gradient(45deg, #444444, #666666);
-  color: #888888;
-  opacity: 0.5;
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.w-100,
+.btn.btn-block {
+  width: 100%;
+}
+
+/* Primary */
+.btn-primary {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.95), rgba(56, 189, 248, 0.85));
+  color: #06101d;
+  border-color: rgba(125, 211, 252, 0.35);
+}
+.btn-primary:hover {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 1), rgba(56, 189, 248, 0.92));
+}
+
+/* Secondary */
+.btn-secondary {
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #e5e7eb;
+}
+
+/* Success */
+.btn-success {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.82));
+  color: #06101d;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+.btn-success:hover {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 1), rgba(22, 163, 74, 0.9));
+}
+
+/* Danger */
+.btn-danger {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.95), rgba(239, 68, 68, 0.85));
+  color: #1a0b0b;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+.btn-danger:hover {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 1), rgba(239, 68, 68, 0.92));
+}
+
+/* Outline Danger */
+.btn-outline-danger {
+  background: transparent;
+  border-color: rgba(248, 113, 113, 0.55);
+  color: #fecaca;
+}
+.btn-outline-danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+/* Disabled */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ---------------- Tournament actions layout ---------------- */
+.tournament-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+.tournament-actions .btn {
+  margin-top: 0;
+  min-width: 160px;
+}
+
+/* Nav: make nav buttons match btn style without changing markup */
+.nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+
+  /* ✅ FIX: keep visible when page-container scrolls */
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  /* prevents content showing behind it */
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(6px);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.12);
+  color: #e5e7eb;
+  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.nav button:hover {
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(125, 211, 252, 0.22);
+}
+
+.nav button:active {
+  transform: translateY(1px);
 }
 
 /* Game Styling */
@@ -167,12 +271,10 @@ margin-bottom: 1rem;
 }
 
 #pongCanvas {
-  border: 3px solid #00ffff;
-  border-radius: 10px;
-  box-shadow: 
-    0 0 20px rgba(0, 255, 255, 0.3),
-    inset 0 0 20px rgba(0, 255, 255, 0.1);
-  background: linear-gradient(45deg, #0a0a0a 0%, #1a1a1a 100%);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  background: rgba(2, 6, 23, 0.55);
   margin: 20px;
 }
 
@@ -186,116 +288,37 @@ margin-bottom: 1rem;
 }
 
 .game-controls {
-  color: #ffffff;
+  color: #e5e7eb;
   text-align: center;
   margin-top: 15px;
   font-size: 0.9rem;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-.nav {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.nav button {
-  background: linear-gradient(45deg, #00ffff, #0080ff);
-  border: none;
-  color: black;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-
-.nav button:hover {
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
-  transform: translateY(-2px);
-}
-
-/* General page container */
-.page-container {
-  background: rgba(26, 26, 46, 0.9);
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 
-    0 6px 15px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  max-width: 800px;
-  margin: 0 auto;
-  color: #ffffff;
-}
-
-/* Links styling */
-a {
-  color: #00ffff;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-a:hover {
-  color: #ffffff;
-  text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
-  text-decoration: underline;
-}
-
-/* Bootstrap-like utility classes */
-.text-center {
-  text-align: center;
-}
-
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-
-.mb-3 {
-  margin-bottom: 1rem;
-}
-
-.mb-4 {
-  margin-bottom: 1.5rem;
-}
-
-.mt-3 {
-  margin-top: 1rem;
-}
-
-.mt-4 {
-  margin-top: 1.5rem;
-}
-
-.w-100 {
-  width: 100%;
-}
-
-.d-flex {
-  display: flex;
-}
-
-.gap-3 {
-  gap: 1rem;
-}
-
-.justify-content-center {
-  justify-content: center;
-}
+/* Utility classes */
+.text-center { text-align: center; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+.w-100 { width: 100%; }
+.d-flex { display: flex; }
+.gap-3 { gap: 1rem; }
+.justify-content-center { justify-content: center; }
 
 /* ---------- Custom Modal (ui_modal.ts) ---------- */
-
 #modal-root {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  pointer-events: none; /* only modal overlay enables interaction */
+  pointer-events: none;
 }
 
 .ui-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.62);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,21 +328,21 @@ a:hover {
 .ui-modal {
   width: min(520px, 92vw);
   border-radius: 14px;
-  background: rgba(26, 26, 46, 0.96);
-  border: 1px solid rgba(0, 255, 255, 0.35);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 25px rgba(0,255,255,0.12);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
   padding: 18px 18px 14px 18px;
 }
 
 .ui-modal-title {
   font-size: 18px;
-  font-weight: 700;
-  color: #ffffff;
+  font-weight: 800;
+  color: #f8fafc;
   margin-bottom: 10px;
 }
 
 .ui-modal-body {
-  color: rgba(255,255,255,0.92);
+  color: rgba(226,232,240,0.92);
   line-height: 1.35;
   font-size: 14.5px;
   margin-bottom: 14px;
@@ -332,12 +355,12 @@ a:hover {
 }
 
 .ui-btn {
-  border: none;
+  border: 1px solid transparent;
   border-radius: 10px;
   padding: 10px 14px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
 .ui-btn:active {
@@ -345,26 +368,29 @@ a:hover {
 }
 
 .ui-btn-primary {
-  background: linear-gradient(45deg, #00ffff, #0080ff);
-  color: #000;
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.95), rgba(56, 189, 248, 0.85));
+  color: #06101d;
+  border-color: rgba(125, 211, 252, 0.35);
 }
 
 .ui-btn-secondary {
-  background: linear-gradient(45deg, #666, #999);
-  color: #111;
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #e5e7eb;
 }
 
 .ui-btn-danger {
-  background: linear-gradient(45deg, #ff6b6b, #d9534f);
-  color: #111;
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.95), rgba(239, 68, 68, 0.85));
+  color: #1a0b0b;
+  border-color: rgba(248, 113, 113, 0.35);
 }
 
 .ui-btn-ghost {
   background: transparent;
-  border: 1px solid rgba(0, 255, 255, 0.35);
-  color: rgba(255,255,255,0.95);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: rgba(226,232,240,0.95);
 }
 
 .ui-btn:hover {
-  box-shadow: 0 0 14px rgba(0,255,255,0.35);
+  border-color: rgba(125, 211, 252, 0.25);
 }

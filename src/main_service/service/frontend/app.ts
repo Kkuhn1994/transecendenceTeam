@@ -1,5 +1,8 @@
 export {};
+
 import { initTournamentUI } from './tournament';
+
+import { uiConfirm } from './ui_modal';
 
 const app = document.getElementById("app") as HTMLDivElement | null;
 
@@ -12,36 +15,15 @@ const views: ViewMap = {
       <form id="loginForm" novalidate>
         <div class="mb-3">
           <label for="loginUsername" class="form-label">Username</label>
-          <input 
-            type="text" 
-            id="loginUsername" 
-            class="form-control" 
-            placeholder="Enter your username" 
-            maxlength="20"
-            required 
-          />
+          <input type="text" id="loginUsername" class="form-control" placeholder="Enter your username" maxlength="20" required />
         </div>
         <div class="mb-3">
           <label for="loginPassword" class="form-label">Password</label>
-          <input 
-            type="password" 
-            id="loginPassword" 
-            class="form-control" 
-            placeholder="Enter your password" 
-            autocomplete="current-password"
-            maxlength="128"
-            required 
-          />
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" autocomplete="current-password" maxlength="128" required />
         </div>
-         <div class="mb-3">
+        <div class="mb-3">
           <label for="otp" class="form-label">OTP</label>
-          <input 
-            id="otp" 
-            class="form-control" 
-            placeholder="Enter your OTP" 
-            maxlength="6"
-            required 
-          />
+          <input id="otp" class="form-control" placeholder="Enter your OTP" maxlength="6" required />
         </div>
         <button type="submit" class="btn btn-primary">Login</button>
       </form>
@@ -57,25 +39,11 @@ const views: ViewMap = {
       <form id="registerForm" novalidate>
         <div class="mb-3">
           <label for="registerUsername" class="form-label">Username</label>
-          <input 
-            id="registerUsername" 
-            class="form-control" 
-            placeholder="Enter your Username" 
-            maxlength="20"
-            required 
-          />
+          <input id="registerUsername" class="form-control" placeholder="Enter your Username" maxlength="20" required />
         </div>
         <div class="mb-3">
           <label for="registerPassword" class="form-label">Password</label>
-          <input 
-            type="password" 
-            id="registerPassword" 
-            class="form-control" 
-            placeholder="Create a password" 
-            autocomplete="new-password"
-            maxlength="128"
-            required 
-          />
+          <input type="password" id="registerPassword" class="form-control" placeholder="Create a password" autocomplete="new-password" maxlength="128" required />
         </div>
         <button type="submit" class="btn btn-primary">Create account</button>
       </form>
@@ -85,7 +53,6 @@ const views: ViewMap = {
       <div class="col-md-4 d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="mb-3" id="qr-container"></div>
       </div>
-
     </div>
   `,
 
@@ -200,60 +167,66 @@ const views: ViewMap = {
   `,
 
   "/tournament": `
-  <div class="page-container">
-    <div class="nav">
-      <button id="navHome">Home</button>
-      <button id="navPlay">Play</button>
-      <button id="navProfile">Profile</button>
-      <button id="navLogout">Logout</button>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
+
+      <h1>🏆 Tournament</h1>
+
+      <p class="text-muted mb-2">Minimum 3 players required.</p>
+
+      <div class="mb-3">
+        <label for="tournamentName" class="form-label">Tournament name</label>
+        <input
+          id="tournamentName"
+          class="form-control"
+          placeholder="Crazy Tournament"
+          maxlength="40"
+        />
+      </div>
+
+      <h3>Add Players</h3>
+      <form id="addPlayerForm" class="mb-3">
+        <input id="playerEmail" class="form-control mb-2" placeholder="Player username" required />
+        <input type="password" id="playerPassword" class="form-control mb-2" placeholder="Password" required />
+        <input id="playerOtp" class="form-control mb-2" placeholder="OTP" required />
+        <button class="btn btn-primary" type="submit">➕ Add Player</button>
+      </form>
+
+      <h3>Players</h3>
+      <ul id="playerList" class="mb-3"></ul>
+
+      <div id="tournamentInfo" class="mb-3">
+        <p>No active tournament.</p>
+      </div>
+
+      <div class="tournament-actions">
+        <button id="startTournamentBtn" class="btn btn-success" disabled>Create Tournament</button>
+        <button id="resetTournamentBtn" class="btn btn-danger" type="button">Reset Tournament</button>
+        <button id="startMatchBtn" class="btn btn-primary" disabled>Start Match</button>
+      </div>
     </div>
+  `,
 
-    <h1>🏆 Tournament</h1>
+  "/tournament_bracket": `
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome">Home</button>
+        <button id="navPlay">Play</button>
+        <button id="navProfile">Profile</button>
+        <button id="navLogout">Logout</button>
+      </div>
 
-    <h3>Add Players</h3>
-    <form id="addPlayerForm" class="mb-3">
-      <input
-        id="playerEmail"
-        class="form-control mb-2"
-        placeholder="Player username"
-        required
-      />
-      <input
-        type="password"
-        id="playerPassword"
-        class="form-control mb-2"
-        placeholder="Password"
-        required
-      />
-      <input
-        id="playerOtp"
-        class="form-control mb-2"
-        placeholder="OTP"
-        required
-      />
-      <button class="btn btn-primary" type="submit">
-        ➕ Add Player
-      </button>
-    </form>
+      <h1>🏆 Tournament Bracket</h1>
+      <div id="bracketRoot" class="mb-3">Loading...</div>
 
-    <h3>Players</h3>
-    <ul id="playerList" class="mb-3"></ul>
-
-    <div id="tournamentInfo" class="mb-3">
-      <p>No active tournament.</p>
+      <button id="backToTournament" class="btn btn-primary">Back</button>
     </div>
-
-    <p class="text-muted mb-2">Minimum 3 players required.</p>
-
-    <button id="startTournamentBtn" class="btn btn-success" disabled>
-      Create Tournament
-    </button>
-
-    <button id="startMatchBtn" class="btn btn-primary mt-2" disabled>
-      Start Match
-    </button>
-  </div>
-`,
+  `,
 };
 
 declare global {
@@ -294,21 +267,81 @@ async function loadFriendsModule() {
   module.initFriends();
 }
 
+const TOURNAMENT_UI_KEY = 'tournament_ui_state_v1';
+
+function hasPendingMatch(): boolean {
+  try {
+    const raw = sessionStorage.getItem(TOURNAMENT_UI_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    return !!s?.pendingMatch;
+  } catch {
+    return false;
+  }
+}
+
+async function abandonProgressIfAny(): Promise<void> {
+  // Tournament abandon = real abandon (delete DB + clear everything)
+  if (window.currentTournamentId != null) {
+    try {
+      await fetch('/tournament_service/tournament/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: window.currentTournamentId }),
+      });
+    } catch {
+      // ignore
+    }
+    window.currentTournamentId = undefined;
+    window.currentSessionId = undefined;
+    (window as any).currentMatchPlayer1Id = undefined;
+    (window as any).currentMatchPlayer2Id = undefined;
+    (window as any).tournamentPlayerMap = undefined;
+    sessionStorage.removeItem(TOURNAMENT_UI_KEY);
+    return;
+  }
+
+  // 1v1 match abandon
+  if (window.currentSessionId != null) {
+    window.currentSessionId = undefined;
+  }
+}
+
+async function guardedNavigate(targetHash: string): Promise<void> {
+  const inGame = location.hash.startsWith('#/game');
+  const inProgress = inGame && (window.currentSessionId != null || window.currentTournamentId != null || hasPendingMatch());
+
+  if (inProgress) {
+    const ok = await uiConfirm(
+      'A match/tournament is in progress.\nIf you leave now, progress will be lost.',
+      'Leave game?',
+      'Leave',
+      'Stay'
+    );
+    if (!ok) return;
+
+    await abandonProgressIfAny();
+  }
+
+  location.hash = targetHash;
+}
+
 async function handleNavButtons() {
   const homeBtn = document.getElementById('navHome');
   const playBtn = document.getElementById('navPlay');
   const profileBtn = document.getElementById('navProfile');
   const logoutBtn = document.getElementById('navLogout');
 
-  if (homeBtn) homeBtn.addEventListener('click', () => (location.hash = '#/home'));
-  if (playBtn) playBtn.addEventListener('click', () => (location.hash = '#/play'));
-  if (profileBtn) profileBtn.addEventListener('click', () => (location.hash = '#/profile'));
+  if (homeBtn) homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
+  if (playBtn) playBtn.addEventListener('click', () => guardedNavigate('#/play'));
+  if (profileBtn) profileBtn.addEventListener('click', () => guardedNavigate('#/profile'));
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
+      await guardedNavigate('#/'); // will abandon progress first if needed
       await fetch('/login_service/logout', { method: 'POST' });
       window.currentSessionId = undefined;
-      location.hash = '#/';
+      window.currentTournamentId = undefined;
     });
   }
 }
@@ -317,7 +350,7 @@ async function router() {
   if (!app) return;
 
   const fullRoute = location.hash.replace('#', '') || '/';
-  const route = fullRoute.split('?')[0]; // allow /profile?userId=...
+  const route = fullRoute.split('?')[0];
 
   app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
 
@@ -327,22 +360,15 @@ async function router() {
 
   if (route === '/home') {
     await handleNavButtons();
-    const playBtn = document.getElementById('goPlay');
-    const profileBtn = document.getElementById('goProfile');
-    const friendsBtn = document.getElementById('goFriends');
-    playBtn?.addEventListener('click', () => (location.hash = '#/play'));
-    profileBtn?.addEventListener('click', () => (location.hash = '#/profile'));
-    friendsBtn?.addEventListener('click', () => (location.hash = '#/friends'));
+    document.getElementById('goPlay')?.addEventListener('click', () => (location.hash = '#/play'));
+    document.getElementById('goProfile')?.addEventListener('click', () => (location.hash = '#/profile'));
+    document.getElementById('goFriends')?.addEventListener('click', () => (location.hash = '#/friends'));
   }
 
   if (route === '/play') {
     await handleNavButtons();
-
-    const btn1v1 = document.getElementById('go1v1');
-    const btnTournament = document.getElementById('goTournament');
-
-    btn1v1?.addEventListener('click', () => (location.hash = '#/1v1'));
-    btnTournament?.addEventListener('click', () => (location.hash = '#/tournament'));
+    document.getElementById('go1v1')?.addEventListener('click', () => (location.hash = '#/1v1'));
+    document.getElementById('goTournament')?.addEventListener('click', () => (location.hash = '#/tournament'));
   }
 
   if (route === '/1v1') {
@@ -374,12 +400,13 @@ async function router() {
     await handleNavButtons();
     await loadFriendsModule();
   }
+
+  if (route === '/tournament_bracket') {
+    await handleNavButtons();
+    const module = await import('./tournament_bracket');
+    module.initTournamentBracket();
+  }
 }
 
-window.addEventListener('load', () => {
-  router();
-});
-
-window.addEventListener('hashchange', () => {
-  router();
-});
+window.addEventListener('load', () => router());
+window.addEventListener('hashchange', () => router());

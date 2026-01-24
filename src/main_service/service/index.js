@@ -6,7 +6,6 @@ const sqlite3 = require('sqlite3');
 
 const DB_PATH = '/app/data/database.db';
 
-// Static files from dist
 fastify.register(fastifyStatic, {
   root: path.join(__dirname, 'dist'),
   prefix: '/',
@@ -16,21 +15,14 @@ fastify.register(fastifyCookie, {
   secret: 'super_secret_key_32_chars',
 });
 
-// Index: serve SPA
 fastify.get('/', (req, reply) => {
   reply.sendFile('index.html');
 });
 
-/**
- * Helper: open db
- */
 function openDb() {
   return new sqlite3.Database(DB_PATH);
 }
 
-/**
- * Helper: call login_service /auth/me
- */
 async function getCurrentUser(req) {
   const res = await fetch('http://login_service:3000/auth/me', {
     method: 'POST',
@@ -45,49 +37,33 @@ async function getCurrentUser(req) {
   return await res.json(); // { id, email }
 }
 
-/**
- * Create a 1v1 game session
- * Body: { player2Email, player2Password }
- */
 fastify.post('/session/create', async (req, reply) => {
   try {
-    // 1) Player 1 via cookie
     const me = await getCurrentUser(req);
-    if (!me) {
-      return reply.code(401).send({ error: 'Not authenticated as Player 1' });
-    }
-    console.log(req.body)
+    if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+
     const { player2Email, player2Password, otp } = req.body || {};
     if (!player2Email || !player2Password || !otp) {
-      return reply
-        .code(400)
-        .send({ error: 'Player 2 email and password are required' });
+      return reply.code(400).send({ error: 'Player 2 email, password and otp are required' });
     }
-    console.log("otp_main ", otp);
-    // 2) Verify Player 2 credentials via login_service
+
     const verifyRes = await fetch('http://login_service:3000/verifyCredentials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: player2Email, password: player2Password , otp: otp}),
+      body: JSON.stringify({ email: player2Email, password: player2Password, otp }),
     });
 
     if (!verifyRes.ok) {
       const errBody = await verifyRes.json().catch(() => ({}));
-      return reply
-        .code(400)
-        .send({ error: errBody.error || 'Invalid Player 2 credentials' });
+      return reply.code(400).send({ error: errBody.error || 'Invalid Player 2 credentials' });
     }
 
-    const player2 = await verifyRes.json(); // { status, id, email }
+    const player2 = await verifyRes.json();
 
-    // Optional: prevent playing vs yourself
     if (player2.id === me.id) {
-      return reply
-        .code(400)
-        .send({ error: 'Player 2 must be a different account' });
+      return reply.code(400).send({ error: 'Player 2 must be a different account' });
     }
 
-    // 3) Insert game session
     const db = openDb();
     const sessionId = await new Promise((resolve, reject) => {
       db.run(
@@ -101,7 +77,6 @@ fastify.post('/session/create', async (req, reply) => {
       );
     }).finally(() => db.close());
 
-    // 4) Return sessionId
     return reply.send({
       sessionId,
       player1: { id: me.id, email: me.email },
@@ -113,19 +88,11 @@ fastify.post('/session/create', async (req, reply) => {
   }
 });
 
-/**
- * Finish session: called by game_service
- * Body: { sessionId, scoreLeft, scoreRight, winnerIndex }
- */
 fastify.post('/session/finish', async (req, reply) => {
   const { sessionId, scoreLeft, scoreRight, winnerIndex } = req.body || {};
-
-  if (!sessionId) {
-    return reply.code(400).send({ error: 'sessionId is required' });
-  }
+  if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });
 
   const db = openDb();
-
   try {
     const row = await new Promise((resolve, reject) => {
       db.get(
@@ -135,9 +102,7 @@ fastify.post('/session/finish', async (req, reply) => {
       );
     });
 
-    if (!row) {
-      return reply.code(404).send({ error: 'Session not found' });
-    }
+    if (!row) return reply.code(404).send({ error: 'Session not found' });
 
     const winner_id = winnerIndex === 1 ? row.player1_id : row.player2_id;
 
@@ -163,16 +128,13 @@ fastify.post('/session/finish', async (req, reply) => {
   }
 });
 
-/**
- * Profile stats for current user
- * GET /profile/me
- */
 fastify.get('/profile/me', async (req, reply) => {
   try {
     const me = await getCurrentUser(req);
     if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
     const db = openDb();
+
     const stats = await new Promise((resolve, reject) => {
       db.get(
         `
@@ -185,11 +147,22 @@ fastify.get('/profile/me', async (req, reply) => {
         [me.id, me.id, me.id],
         (err, row) => (err ? reject(err) : resolve(row || {}))
       );
+    });
+
+    const tour = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT COUNT(*) AS tournaments_won
+         FROM tournaments
+         WHERE winner_id = ?`,
+        [me.id],
+        (err, row) => (err ? reject(err) : resolve(row || {}))
+      );
     }).finally(() => db.close());
 
     const gamesPlayed = stats.games_played || 0;
     const wins = stats.wins || 0;
-    const winrate = gamesPlayed > 0 ? (wins / gamesPlayed) : 0;
+    const winrate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
+    const tournamentsWon = tour.tournaments_won || 0;
 
     return reply.send({
       id: me.id,
@@ -197,6 +170,7 @@ fastify.get('/profile/me', async (req, reply) => {
       gamesPlayed,
       wins,
       winrate,
+      tournamentsWon,
     });
   } catch (err) {
     console.error('Error in /profile/me:', err);
@@ -204,10 +178,6 @@ fastify.get('/profile/me', async (req, reply) => {
   }
 });
 
-/**
- * Match history for current user
- * GET /profile/history
- */
 fastify.get('/profile/history', async (req, reply) => {
   try {
     const me = await getCurrentUser(req);
@@ -227,16 +197,19 @@ fastify.get('/profile/history', async (req, reply) => {
           gs.score2,
           gs.winner_id,
           gs.started_at,
-          gs.ended_at
+          gs.ended_at,
+          gs.tournament_id,
+          t.name AS tournament_name
         FROM game_sessions gs
         JOIN users u1 ON gs.player1_id = u1.id
         JOIN users u2 ON gs.player2_id = u2.id
+        LEFT JOIN tournaments t ON gs.tournament_id = t.id
         WHERE gs.player1_id = ? OR gs.player2_id = ?
         ORDER BY gs.started_at DESC
         LIMIT 50
         `,
         [me.id, me.id],
-        (err, rows) => (err ? reject(err) : resolve(rows || []))
+        (err, rows2) => (err ? reject(err) : resolve(rows2 || []))
       );
     }).finally(() => db.close());
 
@@ -247,7 +220,6 @@ fastify.get('/profile/history', async (req, reply) => {
   }
 });
 
-// Run the server
 fastify.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     fastify.log.error(err);
