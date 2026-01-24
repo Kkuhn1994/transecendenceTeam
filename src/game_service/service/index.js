@@ -26,9 +26,12 @@ async function getCurrentUser(req) {
 // -------------------- GAME LOOP --------------------
 
 fastify.post('/game', async function (request, reply) {
-  const me = await getCurrentUser(req);
-  if (!me)
+  const me = await getCurrentUser(request);
+  if (!me) {
+    console.log('wrong session');
     return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  }
+
   try {
     const body = request.body || {};
     const sessionId = body.sessionId;
