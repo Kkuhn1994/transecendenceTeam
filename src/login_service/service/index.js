@@ -194,6 +194,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
 
 fastify.post('/loginAccount', async (request, reply) => {
   // Validate and sanitize input
+  console.log('login 1');
   const validation = validateAuthRequest(request.body);
   console.log('login');
   if (!validation.isValid) {
@@ -228,7 +229,7 @@ fastify.post('/loginAccount', async (request, reply) => {
   console.log(res.status);
   console.log(data.id);
   const id = data.id;
-  console.log('login status not ok');
+
   if (res.status != 200) {
     console.log('login status not ok');
     db.close();
