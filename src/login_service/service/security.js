@@ -7,7 +7,7 @@ function sanitizeInput(input) {
   if (typeof input !== 'string') {
     return '';
   }
-  
+
   return input
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, '')
@@ -27,7 +27,7 @@ function validateEmail(email) {
   }
 
   const sanitized = sanitizeInput(email);
-  
+
   if (sanitized.length > 20) {
     return { isValid: false, error: 'Email is too long (max 254 characters)' };
   }
@@ -54,8 +54,33 @@ function validatePassword(password) {
   }
 
   if (password.length > 128) {
-    return { isValid: false, error: 'Password is too long (max 128 characters)' };
+    return {
+      isValid: false,
+      error: 'Password is too long (max 128 characters)',
+    };
   }
+
+  // if (password.length < 8) {
+  //   return {
+  //     isValid: false,
+  //     error: 'Password needs to be at least 8 characters',
+  //   };
+  // }
+  // if (!/\d/.test(password)) {
+  //   return { isValid: false, error: 'Password needs at least one number' };
+  // }
+  // if (!/[A-Z]/.test(password)) {
+  //   return {
+  //     isValid: false,
+  //     error: 'Password needs at least one uppercase letter',
+  //   };
+  // }
+  // if (!/[!@#$%^&*]/.test(password)) {
+  //   return {
+  //     isValid: false,
+  //     error: 'Password needs at least one special character',
+  //   };
+  // }
 
   return { isValid: true };
 }
@@ -86,7 +111,7 @@ function validateAuthRequest(body) {
   return {
     isValid: errors.length === 0,
     sanitizedData: errors.length === 0 ? sanitizedData : undefined,
-    errors
+    errors,
   };
 }
 
@@ -94,5 +119,5 @@ module.exports = {
   sanitizeInput,
   validateEmail,
   validatePassword,
-  validateAuthRequest
+  validateAuthRequest,
 };
