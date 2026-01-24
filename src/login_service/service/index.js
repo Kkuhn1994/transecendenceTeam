@@ -18,6 +18,20 @@ fastify.register(fastifyCookie, {
   secret: 'super_secret_key_32_chars',
 });
 
+async function getCurrentUser(req) {
+  const res = await fetch('http://login_service:3000/auth/me', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: req.headers.cookie || '',
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!res.ok) return null;
+  return await res.json(); // { id, email }
+}
+
 /**
  * Helper: open DB
  */
@@ -194,6 +208,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
 
 fastify.post('/loginAccount', async (request, reply) => {
   // Validate and sanitize input
+  console.log('login 1');
   const validation = validateAuthRequest(request.body);
   console.log('login');
   if (!validation.isValid) {
@@ -228,7 +243,7 @@ fastify.post('/loginAccount', async (request, reply) => {
   console.log(res.status);
   console.log(data.id);
   const id = data.id;
-  console.log('login status not ok');
+
   if (res.status != 200) {
     console.log('login status not ok');
     db.close();
@@ -406,7 +421,10 @@ fastify.post('/verifyCredentials', (request, reply) => {
  * Body: { nickname?, avatar? }
  * Requires authentication via session cookie
  */
-fastify.post('/user/update', (request, reply) => {
+fastify.post('/user/update', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const sessionCookie = request.cookies.session;
 
   if (!sessionCookie) {
@@ -466,7 +484,10 @@ fastify.post('/user/update', (request, reply) => {
  * Get user profile by ID
  * Query: ?userId=123
  */
-fastify.get('/user/profile', (request, reply) => {
+fastify.get('/user/profile', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const userId = request.query.userId;
 
   if (!userId) {
@@ -495,7 +516,10 @@ fastify.get('/user/profile', (request, reply) => {
  * Get friends list for current user
  * Returns array of friend profiles with online status
  */
-fastify.get('/user/friends', (request, reply) => {
+fastify.get('/user/friends', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const sessionCookie = request.cookies.session;
 
   if (!sessionCookie) {
@@ -539,7 +563,10 @@ fastify.get('/user/friends', (request, reply) => {
  * Add a friend
  * Body: { friendId } or { friendEmail }
  */
-fastify.post('/user/friends/add', (request, reply) => {
+fastify.post('/user/friends/add', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const sessionCookie = request.cookies.session;
   const { friendId, friendEmail } = request.body || {};
 
@@ -622,7 +649,10 @@ fastify.post('/user/friends/add', (request, reply) => {
  * Remove a friend
  * Body: { friendId }
  */
-fastify.post('/user/friends/remove', (request, reply) => {
+fastify.post('/user/friends/remove', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const sessionCookie = request.cookies.session;
   const { friendId } = request.body || {};
 
@@ -665,7 +695,10 @@ fastify.post('/user/friends/remove', (request, reply) => {
  * Get user stats (wins/losses)
  * Query: ?userId=123
  */
-fastify.get('/user/stats', (request, reply) => {
+fastify.get('/user/stats', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const userId = request.query.userId;
 
   if (!userId) {
@@ -699,7 +732,10 @@ fastify.get('/user/stats', (request, reply) => {
  * Get match history for user
  * Query: ?userId=123&limit=10
  */
-fastify.get('/user/matches', (request, reply) => {
+fastify.get('/user/matches', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   const userId = request.query.userId;
   const limit = parseInt(request.query.limit) || 10;
 

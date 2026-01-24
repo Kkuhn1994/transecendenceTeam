@@ -4,12 +4,12 @@ import { initTournamentUI } from './tournament';
 
 import { uiConfirm } from './ui_modal';
 
-const app = document.getElementById("app") as HTMLDivElement | null;
+const app = document.getElementById('app') as HTMLDivElement | null;
 
 type ViewMap = Record<string, string>;
 
 const views: ViewMap = {
-  "/": `
+  '/': `
     <div class="login-container">
       <h1>Pong Login</h1>
       <form id="loginForm" novalidate>
@@ -33,7 +33,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/register": `
+  '/register': `
     <div class="login-container">
       <h1>🎆 Create Account</h1>
       <form id="registerForm" novalidate>
@@ -56,7 +56,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/home": `
+  '/home': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -74,7 +74,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/play": `
+  '/play': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -90,7 +90,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/1v1": `
+  '/1v1': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -120,7 +120,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/game": `
+  '/game': `
     <div class="game-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -137,7 +137,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/profile": `
+  '/profile': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -153,7 +153,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/history": `
+  '/history': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -166,7 +166,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/tournament": `
+  '/tournament': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -212,7 +212,7 @@ const views: ViewMap = {
     </div>
   `,
 
-  "/tournament_bracket": `
+  '/tournament_bracket': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome">Home</button>
@@ -309,14 +309,18 @@ async function abandonProgressIfAny(): Promise<void> {
 
 async function guardedNavigate(targetHash: string): Promise<void> {
   const inGame = location.hash.startsWith('#/game');
-  const inProgress = inGame && (window.currentSessionId != null || window.currentTournamentId != null || hasPendingMatch());
+  const inProgress =
+    inGame &&
+    (window.currentSessionId != null ||
+      window.currentTournamentId != null ||
+      hasPendingMatch());
 
   if (inProgress) {
     const ok = await uiConfirm(
       'A match/tournament is in progress.\nIf you leave now, progress will be lost.',
       'Leave game?',
       'Leave',
-      'Stay'
+      'Stay',
     );
     if (!ok) return;
 
@@ -332,9 +336,12 @@ async function handleNavButtons() {
   const profileBtn = document.getElementById('navProfile');
   const logoutBtn = document.getElementById('navLogout');
 
-  if (homeBtn) homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
-  if (playBtn) playBtn.addEventListener('click', () => guardedNavigate('#/play'));
-  if (profileBtn) profileBtn.addEventListener('click', () => guardedNavigate('#/profile'));
+  if (homeBtn)
+    homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
+  if (playBtn)
+    playBtn.addEventListener('click', () => guardedNavigate('#/play'));
+  if (profileBtn)
+    profileBtn.addEventListener('click', () => guardedNavigate('#/profile'));
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -352,23 +359,43 @@ async function router() {
   const fullRoute = location.hash.replace('#', '') || '/';
   const route = fullRoute.split('?')[0];
 
-  app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
-
   if (route === '/' || route === '/register') {
+    app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
     await loadLoginModule();
+    return;
   }
-
+  const res = await fetch('/login_service/auth/me', { method: 'POST' });
+  if (!res.ok) {
+    app.innerHTML = `
+    <div class="error">
+      <h2>Access Denied</h2>
+      <p>You dont have a valid session</p>
+    </div>
+  `;
+    return;
+  }
+  app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
   if (route === '/home') {
     await handleNavButtons();
-    document.getElementById('goPlay')?.addEventListener('click', () => (location.hash = '#/play'));
-    document.getElementById('goProfile')?.addEventListener('click', () => (location.hash = '#/profile'));
-    document.getElementById('goFriends')?.addEventListener('click', () => (location.hash = '#/friends'));
+    document
+      .getElementById('goPlay')
+      ?.addEventListener('click', () => (location.hash = '#/play'));
+    document
+      .getElementById('goProfile')
+      ?.addEventListener('click', () => (location.hash = '#/profile'));
+    document
+      .getElementById('goFriends')
+      ?.addEventListener('click', () => (location.hash = '#/friends'));
   }
 
   if (route === '/play') {
     await handleNavButtons();
-    document.getElementById('go1v1')?.addEventListener('click', () => (location.hash = '#/1v1'));
-    document.getElementById('goTournament')?.addEventListener('click', () => (location.hash = '#/tournament'));
+    document
+      .getElementById('go1v1')
+      ?.addEventListener('click', () => (location.hash = '#/1v1'));
+    document
+      .getElementById('goTournament')
+      ?.addEventListener('click', () => (location.hash = '#/tournament'));
   }
 
   if (route === '/1v1') {
