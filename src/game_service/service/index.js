@@ -4,12 +4,31 @@ const fastify = require('fastify')({
 
 let currentSessionId = null;
 
-let ballSpeedX = 4, ballSpeedY = 4;
-let scoreLeft = 0, scoreRight = 0;
+let ballSpeedX = 4,
+  ballSpeedY = 4;
+let scoreLeft = 0,
+  scoreRight = 0;
+
+async function getCurrentUser(req) {
+  const res = await fetch('http://login_service:3000/auth/me', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: req.headers.cookie || '',
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!res.ok) return null;
+  return await res.json(); // { id, email }
+}
 
 // -------------------- GAME LOOP --------------------
 
 fastify.post('/game', async function (request, reply) {
+  const me = await getCurrentUser(req);
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   try {
     const body = request.body || {};
     const sessionId = body.sessionId;
@@ -49,8 +68,14 @@ fastify.post('/game', async function (request, reply) {
     if (upPressed) rightPaddleY -= paddleSpeed;
     if (downPressed) rightPaddleY += paddleSpeed;
 
-    leftPaddleY = Math.max(0, Math.min(canvasheight - paddleHeight, leftPaddleY));
-    rightPaddleY = Math.max(0, Math.min(canvasheight - paddleHeight, rightPaddleY));
+    leftPaddleY = Math.max(
+      0,
+      Math.min(canvasheight - paddleHeight, leftPaddleY),
+    );
+    rightPaddleY = Math.max(
+      0,
+      Math.min(canvasheight - paddleHeight, rightPaddleY),
+    );
 
     ballX += ballSpeedX;
     ballY += ballSpeedY;
