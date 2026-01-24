@@ -44,11 +44,8 @@ export async function initProfile() {
 
   const friendId = getUserIdFromHash();
 
-  // FRIEND PROFILE VIEW (no backend call needed)
   if (friendId) {
     const friend = readFriendFromSession();
-
-    // Hide history button for friend profiles
     if (actions) actions.style.display = 'none';
 
     if (!friend || friend.id !== friendId) {
@@ -95,7 +92,6 @@ export async function initProfile() {
     return;
   }
 
-  // MY PROFILE VIEW (your original logic)
   try {
     const res = await fetch('/profile/me');
     const data = await res.json();
@@ -112,6 +108,7 @@ export async function initProfile() {
       <p>Games played: ${data.gamesPlayed}</p>
       <p>Wins: ${data.wins}</p>
       <p>Winrate: ${winratePercent}%</p>
+      <p>Tournaments won: ${data.tournamentsWon ?? 0}</p>
     `;
   } catch (err) {
     console.error('Error loading profile:', err);
@@ -153,6 +150,8 @@ export async function initHistory() {
         <th>Player 2</th>
         <th>Score</th>
         <th>Winner</th>
+        <th>Tournament</th>
+        <th>Bracket</th>
         <th>Started</th>
         <th>Ended</th>
       </tr>
@@ -166,6 +165,14 @@ export async function initHistory() {
           ? m.player2_email
           : '–';
 
+      const tName = m.tournament_id
+        ? (m.tournament_name || `Tournament ${m.tournament_id}`)
+        : '–';
+
+      const bracketBtn = m.tournament_id
+        ? `<button class="btn btn-primary" data-tour="${m.tournament_id}">See tournament</button>`
+        : '–';
+
       html += `
         <tr>
           <td>${m.id}</td>
@@ -173,6 +180,8 @@ export async function initHistory() {
           <td>${m.player2_email}</td>
           <td>${m.score1} : ${m.score2}</td>
           <td>${winner}</td>
+          <td>${tName}</td>
+          <td>${bracketBtn}</td>
           <td>${m.started_at || ''}</td>
           <td>${m.ended_at || ''}</td>
         </tr>
@@ -181,6 +190,15 @@ export async function initHistory() {
 
     html += `</table>`;
     container.innerHTML = html;
+
+    container.querySelectorAll('button[data-tour]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = (btn as HTMLButtonElement).dataset.tour;
+        if (!id) return;
+          sessionStorage.setItem('bracketBackTo', '#/history');
+          location.hash = `#/tournament_bracket?tournamentId=${id}`;
+      });
+    });
   } catch (err) {
     console.error('Error loading history:', err);
     container.textContent = 'Network error.';

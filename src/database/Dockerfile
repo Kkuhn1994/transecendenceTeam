@@ -56,6 +56,22 @@ RUN sqlite3 /app/data/database.db " \
         winner_id INTEGER, \
         FOREIGN KEY (winner_id) REFERENCES users(id) \
     ); \
+    CREATE TABLE IF NOT EXISTS tournament_matches ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT, \
+        tournament_id INTEGER NOT NULL, \
+        round INTEGER NOT NULL, \
+        match_index INTEGER NOT NULL, \
+        player1_id INTEGER NOT NULL, \
+        player2_id INTEGER, \
+        session_id INTEGER, \
+        winner_id INTEGER,  \
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, \
+        FOREIGN KEY (tournament_id) REFERENCES tournaments(id), \
+        FOREIGN KEY (player1_id) REFERENCES users(id), \
+        FOREIGN KEY (player2_id) REFERENCES users(id), \
+        FOREIGN KEY (session_id) REFERENCES game_sessions(id), \
+        FOREIGN KEY (winner_id) REFERENCES users(id) \
+    ); \
 "
 
 

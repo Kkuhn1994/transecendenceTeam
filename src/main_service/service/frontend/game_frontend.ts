@@ -14,8 +14,76 @@ declare global {
   }
 }
 
+const TOURNAMENT_UI_KEY = 'tournament_ui_state_v1';
+
+type PendingMatch = {
+  tournamentId: number;
+  sessionId: number;
+  player1Id: number;
+  player2Id: number;
+};
+
 function nameOf(id: number): string {
   return window.tournamentPlayerMap?.[id] ?? `Player ${id}`;
+}
+
+function readTournamentUIState(): any | null {
+  try {
+    const raw = sessionStorage.getItem(TOURNAMENT_UI_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeTournamentUIState(next: any) {
+  sessionStorage.setItem(TOURNAMENT_UI_KEY, JSON.stringify(next));
+}
+
+function setPendingMatch(pending: PendingMatch | null) {
+  const cur = readTournamentUIState() || {};
+  cur.pendingMatch = pending;
+
+  // keep tournament id in sync (helps resume)
+  if (window.currentTournamentId != null) {
+    cur.currentTournamentId = Number(window.currentTournamentId);
+  }
+
+  writeTournamentUIState(cur);
+}
+
+
+function clearTournamentUIState() {
+  sessionStorage.removeItem(TOURNAMENT_UI_KEY);
+}
+
+async function deleteTournamentFromDB(tournamentId: number) {
+  try {
+    await fetch('/tournament_service/tournament/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournamentId }),
+    });
+  } catch {
+    // ignore; we still clear local state so UI doesn't get stuck
+  }
+}
+
+function clearTournamentGlobals() {
+  window.currentTournamentId = undefined;
+  window.currentSessionId = undefined;
+  window.currentMatchPlayer1Id = undefined;
+  window.currentMatchPlayer2Id = undefined;
+  window.tournamentPlayerMap = undefined;
+}
+
+async function abandonTournamentAndResetUI() {
+  const tid = window.currentTournamentId;
+  if (tid != null) await deleteTournamentFromDB(Number(tid));
+  clearTournamentGlobals();
+  clearTournamentUIState();
+  location.hash = '#/tournament';
 }
 
 export function startGame() {
@@ -134,8 +202,6 @@ export function startGame() {
 
     function drawPaddle(x: number, y: number) {
       ctx.save();
-      ctx.shadowColor = 'rgba(0, 255, 255, 0.4)';
-      ctx.shadowBlur = 6;
 
       const paddleGrad = ctx.createLinearGradient(x, y, x + paddleWidth, y + paddleHeight);
       paddleGrad.addColorStop(0, '#f0f0f0');
@@ -145,7 +211,7 @@ export function startGame() {
       ctx.fillStyle = paddleGrad;
       ctx.fillRect(x, y, paddleWidth, paddleHeight);
 
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.lineWidth = 1;
       ctx.strokeRect(x, y, paddleWidth, paddleHeight);
       ctx.restore();
@@ -164,7 +230,7 @@ export function startGame() {
     ctx.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
     ctx.fillStyle = ballGrad;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.closePath();
@@ -187,7 +253,7 @@ export function startGame() {
     for (const pid of byes) {
       const id = Number(pid);
       const n = Number.isFinite(id) ? nameOf(id) : 'One player';
-      await uiAlert(`Bye round:\n${n} advances automatically. Lucky you :)`, 'Bye round');
+      await uiAlert(`Bye round:\n${n} advances automatically.`, 'Bye round');
     }
   }
 
@@ -237,17 +303,23 @@ export function startGame() {
     location.hash = '#/play';
   }
 
-  async function askStartNextMatch(p1: string, p2: string): Promise<boolean> {
-    const choice = await uiDialog<'start' | 'back'>({
+  // ✅ this is the tournament popup after a match: Start / Back / Abandon
+  async function askStartNextMatch(pending: PendingMatch): Promise<'start' | 'back' | 'abandon'> {
+    const p1 = nameOf(pending.player1Id);
+    const p2 = nameOf(pending.player2Id);
+
+    const choice = await uiDialog<'start' | 'back' | 'abandon'>({
       title: 'Next match ready',
       message: `${p1} vs ${p2}`,
       buttons: [
         { id: 'start', text: 'Start match', variant: 'primary' },
-        { id: 'back', text: 'Abandon', variant: 'ghost' },
+        { id: 'back', text: 'Back', variant: 'ghost' },
+        { id: 'abandon', text: 'Abandon', variant: 'danger' },
       ],
       dismissible: true,
     });
-    return choice === 'start';
+
+    return choice;
   }
 
   async function getGameState() {
@@ -343,16 +415,16 @@ export function startGame() {
 
             await uiAlert(`🏆 Tournament finished!\nWinner: ${winName}`, 'Tournament finished');
 
-            window.currentTournamentId = undefined;
-            window.currentSessionId = undefined;
-            window.currentMatchPlayer1Id = undefined;
-            window.currentMatchPlayer2Id = undefined;
+            // ✅ full cleanup so tournament page resets
+            clearTournamentGlobals();
+            clearTournamentUIState();
 
             cleanup();
             location.hash = '#/tournament';
             return;
           }
 
+          // IMPORTANT: ask for next match, but persist it as "pending" BEFORE the user decides.
           const nextData = await requestNextMatchOrFinish();
 
           if (nextData.error) {
@@ -375,10 +447,8 @@ export function startGame() {
 
             await uiAlert(`🏆 Tournament finished!\nWinner: ${winName}`, 'Tournament finished');
 
-            window.currentTournamentId = undefined;
-            window.currentSessionId = undefined;
-            window.currentMatchPlayer1Id = undefined;
-            window.currentMatchPlayer2Id = undefined;
+            clearTournamentGlobals();
+            clearTournamentUIState();
 
             cleanup();
             location.hash = '#/tournament';
@@ -397,19 +467,42 @@ export function startGame() {
             return;
           }
 
-          const nextP1 = nameOf(nextData.player1Id);
-          const nextP2 = nameOf(nextData.player2Id);
+          const pending: PendingMatch = {
+            tournamentId: Number(window.currentTournamentId),
+            sessionId: Number(nextData.sessionId),
+            player1Id: Number(nextData.player1Id),
+            player2Id: Number(nextData.player2Id),
+          };
 
-          const ok = await askStartNextMatch(nextP1, nextP2);
-          if (!ok) {
+          // ✅ Persist pending so tournament.ts can resume without skipping
+          setPendingMatch(pending);
+
+          const choice = await askStartNextMatch(pending);
+
+          if (choice === 'abandon') {
+            cleanup();
+            await abandonTournamentAndResetUI();
+            return;
+          }
+
+          if (choice === 'back') {
+            // Pause tournament: clear current session/match globals but keep tournamentId + pending match in storage
+            window.currentSessionId = undefined;
+            window.currentMatchPlayer1Id = undefined;
+            window.currentMatchPlayer2Id = undefined;
+
             cleanup();
             location.hash = '#/tournament';
             return;
           }
 
-          window.currentSessionId = nextData.sessionId;
-          window.currentMatchPlayer1Id = nextData.player1Id;
-          window.currentMatchPlayer2Id = nextData.player2Id;
+          // Start next match
+          window.currentSessionId = pending.sessionId;
+          window.currentMatchPlayer1Id = pending.player1Id;
+          window.currentMatchPlayer2Id = pending.player2Id;
+
+          // ✅ Clear pending once match actually starts
+          setPendingMatch(null);
 
           resetLocalStateForNewMatch();
           window.pongInterval = setInterval(getGameState, 20);
