@@ -1,3 +1,9 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* ✅ never scroll the page */
+}
+
 /* Links */
 a {
   color: #7dd3fc;
@@ -28,17 +34,13 @@ nav {
 body {
   background: linear-gradient(135deg, #070a12 0%, #0b1222 50%, #0a1020 100%);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
   display: flex;
   justify-content: center;
+  align-items: center;
 
-  /* ✅ FIX: allow tall pages + scrolling */
-  align-items: flex-start;   /* was center */
-  min-height: 100vh;         /* was height: 100vh */
-  margin: 0;
-  padding: 20px 0;           /* gives breathing room */
-  overflow-y: auto;          /* was overflow: hidden */
-  overflow-x: hidden;
-
+  height: 100svh;      /* ✅ full screen without mobile glitches */
+  overflow: hidden;    /* ✅ hard lock scroll */
   color: #e5e7eb;
 }
 
@@ -78,9 +80,9 @@ small {
   width: 100%;
   margin: 0 auto;
 
-  /* ✅ FIX: keep nav visible even with huge history tables */
-  max-height: calc(100vh - 40px);
+  max-height: calc(100svh - 40px);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .profile-container {

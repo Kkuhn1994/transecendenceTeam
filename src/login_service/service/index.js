@@ -125,7 +125,7 @@ fastify.post('/createAccount', async (request, reply) => {
     console.error('DB insert error:', err);
 
     if (err.code === 'SQLITE_CONSTRAINT') {
-      return sendError(reply, 409, 'Email already exists');
+      return sendError(reply, 409, 'User already exists');
     }
 
     return sendError(reply, 500, 'Database error');
