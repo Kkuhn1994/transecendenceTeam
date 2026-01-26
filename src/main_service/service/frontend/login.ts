@@ -56,17 +56,12 @@ export async function loginUser(
       body: JSON.stringify(body),
       credentials: 'include',
     });
-    // alert('STATUS:' + response.status);
-    // alert('OK:' + response.ok);
-    // alert('CTYPE:' + response.headers.get('content-type'));
-
-    const raw = await response.text();
-    // alert('RAW:' + JSON.stringify(raw));
-    // alert(response.type);
+    alert(response.type);
+    const data = await response.json();
     if (response.status == 200) {
-      return { status: 'ok', error: String(response.status) };
+      return { status: 'ok', error: 'no error' };
     } else {
-      return { status: 'login fail', error: String(response.status) };
+      return { status: 'login fail', error: data.error };
     }
   } catch (err) {
     alert(err);
