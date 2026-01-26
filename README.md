@@ -30,12 +30,12 @@ Current TOTAL: 11/14 Points for 100%
 
 TO DO (mandatory part):
 
-1.HTTPS for backend
-2. move credentials to .env (work in progress Kevin)
+1.HTTPS for backend (DONE)
+2. move credentials to .env (DONE Kevin)   
 3. check no logs in frontend ("no errors should sho in the console")
 4. Privacy Policy + Terms of Service
 5. frontend responsivness
-6. test multiple users. --> Data races etc
+6. test multiple users. --> Data races etc   (work in progress Kevin)
 
 
 
