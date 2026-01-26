@@ -45,6 +45,7 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /game_service/ {
@@ -54,6 +55,7 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /tournament_service/ {
@@ -63,6 +65,7 @@ server {
     proxy_set_header Connection 'upgrade';
     proxy_set_header Host $host;
     proxy_cache_bypass $http_upgrade;
+    proxy_set_header X-Forwarded-Proto $scheme;
     }
 
 }
