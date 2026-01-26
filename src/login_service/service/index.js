@@ -249,6 +249,11 @@ fastify.post('/loginAccount', async (request, reply) => {
     db.close();
     return sendError(reply, 401, 'Wrong User Credentials');
   }
+  console.log('is active: ' + data.is_active);
+  if (data.is_active != 0) {
+    db.close();
+    return sendError(reply, 401, 'Already logged in');
+  }
   console.log('update sesssion');
   // console.log(row);
   // console.log('row:', row);
@@ -392,7 +397,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
   const hashed = hashPassword(password);
   console.log('DB call pre');
   db.get(
-    `SELECT id, email, secret FROM users WHERE email = ? AND password = ?`,
+    `SELECT id, email, secret, is_active FROM users WHERE email = ? AND password = ?`,
     [email, hashed],
     (err, row) => {
       db.close();
@@ -411,7 +416,12 @@ fastify.post('/verifyCredentials', (request, reply) => {
         return sendError(reply, 401, 'Invalid OTP');
       }
       console.log(row.id);
-      return reply.send({ status: 'ok', id: row.id, email: row.email });
+      return reply.send({
+        status: 'ok',
+        id: row.id,
+        email: row.email,
+        is_active: row.is_active,
+      });
     },
   );
 });

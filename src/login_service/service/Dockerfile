@@ -10,7 +10,13 @@ RUN apt-get update && apt-get install -y sqlite3
 
 RUN npm -y init
 
-RUN npm install sqlite3 fastify @fastify/cookie speakeasy qrcode npm thirty-two jsonwebtoken
+RUN npm install sqlite3 fastify \
+                @fastify/cookie \
+                speakeasy qrcode \
+                npm \
+                thirty-two \
+                jsonwebtoken \
+                dotenv
 
 
 
