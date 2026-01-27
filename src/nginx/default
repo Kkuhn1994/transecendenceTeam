@@ -59,7 +59,7 @@ server {
     }
 
     location /tournament_service/ {
-    proxy_pass http://tournament_service:3000/;
+    proxy_pass https://tournament_service:3000/;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection 'upgrade';
