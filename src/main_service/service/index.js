@@ -40,28 +40,42 @@ async function getCurrentUser(req) {
 fastify.post('/session/create', async (req, reply) => {
   try {
     const me = await getCurrentUser(req);
-    if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+    if (!me)
+      return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
     const { player2Email, player2Password, otp } = req.body || {};
     if (!player2Email || !player2Password || !otp) {
-      return reply.code(400).send({ error: 'Player 2 email, password and otp are required' });
+      return reply
+        .code(400)
+        .send({ error: 'Player 2 email, password and otp are required' });
     }
 
-    const verifyRes = await fetch('http://login_service:3000/verifyCredentials', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: player2Email, password: player2Password, otp }),
-    });
+    const verifyRes = await fetch(
+      'http://login_service:3000/verifyCredentials',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: player2Email,
+          password: player2Password,
+          otp,
+        }),
+      },
+    );
 
     if (!verifyRes.ok) {
       const errBody = await verifyRes.json().catch(() => ({}));
-      return reply.code(400).send({ error: errBody.error || 'Invalid Player 2 credentials' });
+      return reply
+        .code(400)
+        .send({ error: errBody.error || 'Invalid Player 2 credentials' });
     }
 
     const player2 = await verifyRes.json();
 
     if (player2.id === me.id) {
-      return reply.code(400).send({ error: 'Player 2 must be a different account' });
+      return reply
+        .code(400)
+        .send({ error: 'Player 2 must be a different account' });
     }
 
     const db = openDb();
@@ -73,7 +87,7 @@ fastify.post('/session/create', async (req, reply) => {
         function (err) {
           if (err) return reject(err);
           resolve(this.lastID);
-        }
+        },
       );
     }).finally(() => db.close());
 
@@ -90,7 +104,9 @@ fastify.post('/session/create', async (req, reply) => {
 
 fastify.post('/session/finish', async (req, reply) => {
   const { sessionId, scoreLeft, scoreRight, winnerIndex } = req.body || {};
-  if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });
+  console.log(req.body);
+  if (!sessionId)
+    return reply.code(400).send({ error: 'sessionId is required' });
 
   const db = openDb();
   try {
@@ -98,7 +114,7 @@ fastify.post('/session/finish', async (req, reply) => {
       db.get(
         `SELECT player1_id, player2_id FROM game_sessions WHERE id = ?`,
         [sessionId],
-        (err, data) => (err ? reject(err) : resolve(data))
+        (err, data) => (err ? reject(err) : resolve(data)),
       );
     });
 
@@ -115,7 +131,7 @@ fastify.post('/session/finish', async (req, reply) => {
              winner_id = ?
          WHERE id = ?`,
         [scoreLeft, scoreRight, winner_id, sessionId],
-        (err) => (err ? reject(err) : resolve())
+        (err) => (err ? reject(err) : resolve()),
       );
     });
 
@@ -145,7 +161,7 @@ fastify.get('/profile/me', async (req, reply) => {
         WHERE player1_id = ? OR player2_id = ?
         `,
         [me.id, me.id, me.id],
-        (err, row) => (err ? reject(err) : resolve(row || {}))
+        (err, row) => (err ? reject(err) : resolve(row || {})),
       );
     });
 
@@ -155,7 +171,7 @@ fastify.get('/profile/me', async (req, reply) => {
          FROM tournaments
          WHERE winner_id = ?`,
         [me.id],
-        (err, row) => (err ? reject(err) : resolve(row || {}))
+        (err, row) => (err ? reject(err) : resolve(row || {})),
       );
     }).finally(() => db.close());
 
@@ -209,7 +225,7 @@ fastify.get('/profile/history', async (req, reply) => {
         LIMIT 50
         `,
         [me.id, me.id],
-        (err, rows2) => (err ? reject(err) : resolve(rows2 || []))
+        (err, rows2) => (err ? reject(err) : resolve(rows2 || [])),
       );
     }).finally(() => db.close());
 

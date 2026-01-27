@@ -76,15 +76,6 @@ async function setup_newgame(sessionId, body, db) {
   );
 }
 
-function runAsync(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this); // this.lastID verfügbar
-    });
-  });
-}
-
 function getAsync(db, sql, params = []) {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
@@ -108,6 +99,7 @@ async function game_actions(sessionId, row, body, db) {
     scoreLeft,
     scoreRight,
   } = row;
+  console.log(row);
   let { upPressed, downPressed, wPressed, sPressed } = body;
   const paddleWidth = 10,
     paddleHeight = 100,
@@ -154,12 +146,15 @@ async function game_actions(sessionId, row, body, db) {
     ballY = canvasheight / 2;
     ballSpeedX = -4;
   }
+  console.log(scoreRight);
+  console.log(scoreLeft);
   let winnerIndex = null;
   if (scoreLeft >= 2) winnerIndex = 1;
   else if (scoreRight >= 2) winnerIndex = 2;
   const finalScoreLeft = scoreLeft;
   const finalScoreRight = scoreRight;
   if (winnerIndex) {
+    console.log(winnerIndex);
     try {
       await fetch('https://main_service:3000/session/finish', {
         method: 'POST',
@@ -174,8 +169,8 @@ async function game_actions(sessionId, row, body, db) {
     } catch (err) {
       fastify.log.error('Error calling /session/finish:', err);
     }
-    scoreLeft = 0;
-    scoreRight = 0;
+    // scoreLeft = 0;
+    // scoreRight = 0;
     ballSpeedX = 4;
     ballSpeedY = 4;
     ballX = canvaswidth / 2;
@@ -197,8 +192,8 @@ async function game_actions(sessionId, row, body, db) {
     WHERE sessionId = ?
     `,
       [
-        scoreLeft,
-        scoreRight,
+        0,
+        0,
         ballSpeedX,
         ballSpeedY,
         canvaswidth,
@@ -210,6 +205,17 @@ async function game_actions(sessionId, row, body, db) {
         sessionId,
       ],
     );
+    return {
+      ballX,
+      ballY,
+      ballSpeedX,
+      ballSpeedY,
+      leftPaddleY,
+      rightPaddleY,
+      scoreLeft,
+      scoreRight,
+      winnerIndex,
+    };
   }
   await db.run(
     `
@@ -320,8 +326,8 @@ fastify.post('/game', async function (request, reply) {
         rightPaddleY,
         ballX,
         ballY,
-        scoreLeft: scoreLeft,
-        scoreRight: scoreRight,
+        scoreLeft,
+        scoreRight,
         winnerIndex,
       });
     }

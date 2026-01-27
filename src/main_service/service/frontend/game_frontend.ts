@@ -1,5 +1,8 @@
 export {};
 
+let scoreLeft = 0;
+let scoreRight = 0;
+
 import { uiAlert, uiDialog } from './ui_modal';
 
 declare global {
@@ -52,7 +55,6 @@ function setPendingMatch(pending: PendingMatch | null) {
 
   writeTournamentUIState(cur);
 }
-
 
 function clearTournamentUIState() {
   sessionStorage.removeItem(TOURNAMENT_UI_KEY);
@@ -112,18 +114,18 @@ export function startGame() {
 
   let matchEnding = false;
   let endHandled = false; // winner flow should run once
-  let inFlight = false;   // avoid overlapping /game calls
+  let inFlight = false; // avoid overlapping /game calls
 
   // local state
   let leftPaddleY = canvas.height / 2;
   let rightPaddleY = canvas.height / 2;
   let ballX = canvas.width / 2;
   let ballY = canvas.height / 2;
-  let scoreLeft = 0;
-  let scoreRight = 0;
 
-  let upPressed = false, downPressed = false;
-  let wPressed = false, sPressed = false;
+  let upPressed = false,
+    downPressed = false;
+  let wPressed = false,
+    sPressed = false;
 
   const keydownHandler = (e: KeyboardEvent) => {
     if (e.key === 'ArrowUp') upPressed = true;
@@ -146,6 +148,7 @@ export function startGame() {
   let running = true;
 
   function cleanup() {
+    console.log('cleanup');
     running = false;
     if (rafId != null) cancelAnimationFrame(rafId);
     rafId = null;
@@ -179,7 +182,9 @@ export function startGame() {
       return;
     }
 
-    const paddleWidth = 12, paddleHeight = 100, ballSize = 8;
+    const paddleWidth = 12,
+      paddleHeight = 100,
+      ballSize = 8;
 
     // background
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -203,7 +208,12 @@ export function startGame() {
     function drawPaddle(x: number, y: number) {
       ctx.save();
 
-      const paddleGrad = ctx.createLinearGradient(x, y, x + paddleWidth, y + paddleHeight);
+      const paddleGrad = ctx.createLinearGradient(
+        x,
+        y,
+        x + paddleWidth,
+        y + paddleHeight,
+      );
       paddleGrad.addColorStop(0, '#f0f0f0');
       paddleGrad.addColorStop(0.5, '#d0d0d0');
       paddleGrad.addColorStop(1, '#f0f0f0');
@@ -222,7 +232,14 @@ export function startGame() {
 
     // ball
     ctx.save();
-    const ballGrad = ctx.createRadialGradient(ballX, ballY, 0, ballX, ballY, ballSize);
+    const ballGrad = ctx.createRadialGradient(
+      ballX,
+      ballY,
+      0,
+      ballX,
+      ballY,
+      ballSize,
+    );
     ballGrad.addColorStop(0, '#ffffff');
     ballGrad.addColorStop(1, '#e0e0e0');
 
@@ -280,6 +297,9 @@ export function startGame() {
   }
 
   async function handle1v1End(winnerIndex: number) {
+    console.log('1vs1 ' + winnerIndex);
+    console.log('1vs1 ' + scoreLeft);
+    console.log('1vs1 ' + scoreRight);
     const winner = winnerIndex === 1 ? 'Left Player' : 'Right Player';
 
     const choice = await uiDialog<'again' | 'lobby'>({
@@ -304,7 +324,9 @@ export function startGame() {
   }
 
   // ✅ this is the tournament popup after a match: Start / Back / Abandon
-  async function askStartNextMatch(pending: PendingMatch): Promise<'start' | 'back' | 'abandon'> {
+  async function askStartNextMatch(
+    pending: PendingMatch,
+  ): Promise<'start' | 'back' | 'abandon'> {
     const p1 = nameOf(pending.player1Id);
     const p2 = nameOf(pending.player2Id);
 
@@ -342,10 +364,6 @@ export function startGame() {
       sPressed,
       canvasheight: canvas.height,
       canvaswidth: canvas.width,
-      leftPaddleY,
-      rightPaddleY,
-      ballX,
-      ballY,
       sessionId,
     };
 
@@ -361,14 +379,20 @@ export function startGame() {
         console.error('game_service/game error:', response);
         return;
       }
+      console.log(JSON.stringify(response, null, 2));
+      console.log(response.scoreLeft);
 
       leftPaddleY = response.leftPaddleY;
       rightPaddleY = response.rightPaddleY;
       ballX = response.ballX;
       ballY = response.ballY;
 
-      if (response.scoreLeft !== undefined) scoreLeft = response.scoreLeft;
-      if (response.scoreRight !== undefined) scoreRight = response.scoreRight;
+      scoreLeft = response.scoreLeft;
+      scoreRight = response.scoreRight;
+      console.log('Response ' + response.scoreLeft);
+      console.log('Response ' + response.scoreRight);
+      console.log('Response ' + scoreLeft);
+      console.log('Response ' + scoreRight);
 
       const winnerIndex = response.winnerIndex;
 
@@ -390,30 +414,39 @@ export function startGame() {
 
           await uiAlert(
             `✅ Match finished!\n${p1Name} vs ${p2Name}\nFinal score: ${scoreLeft} - ${scoreRight}\n🏅 Winner: ${winnerName}`,
-            'Match finished'
+            'Match finished',
           );
 
-          const finishRes = await fetch('/tournament_service/tournament/match-finished', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sessionId: window.currentSessionId,
-              winnerIndex,
-            }),
-          });
+          const finishRes = await fetch(
+            '/tournament_service/tournament/match-finished',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: window.currentSessionId,
+                winnerIndex,
+              }),
+            },
+          );
 
           const finishData = await finishRes.json().catch(() => ({}));
           if (!finishRes.ok) {
-            await uiAlert(finishData.error || `match-finished failed (${finishRes.status})`, 'Error');
+            await uiAlert(
+              finishData.error || `match-finished failed (${finishRes.status})`,
+              'Error',
+            );
             cleanup();
             return;
           }
 
           if (finishData.tournamentFinished) {
             const winId = finishData.winnerId;
-            const winName = (winId != null) ? nameOf(winId) : winnerName;
+            const winName = winId != null ? nameOf(winId) : winnerName;
 
-            await uiAlert(`🏆 Tournament finished!\nWinner: ${winName}`, 'Tournament finished');
+            await uiAlert(
+              `🏆 Tournament finished!\nWinner: ${winName}`,
+              'Tournament finished',
+            );
 
             // ✅ full cleanup so tournament page resets
             clearTournamentGlobals();
@@ -428,7 +461,10 @@ export function startGame() {
           const nextData = await requestNextMatchOrFinish();
 
           if (nextData.error) {
-            await uiAlert(`${nextData.error} (${nextData.status ?? ''})`, 'Error');
+            await uiAlert(
+              `${nextData.error} (${nextData.status ?? ''})`,
+              'Error',
+            );
 
             window.currentSessionId = undefined;
             window.currentMatchPlayer1Id = undefined;
@@ -443,9 +479,12 @@ export function startGame() {
 
           if (nextData.tournamentFinished) {
             const winId = nextData.winnerId;
-            const winName = (winId != null) ? nameOf(winId) : winnerName;
+            const winName = winId != null ? nameOf(winId) : winnerName;
 
-            await uiAlert(`🏆 Tournament finished!\nWinner: ${winName}`, 'Tournament finished');
+            await uiAlert(
+              `🏆 Tournament finished!\nWinner: ${winName}`,
+              'Tournament finished',
+            );
 
             clearTournamentGlobals();
             clearTournamentUIState();
@@ -455,8 +494,15 @@ export function startGame() {
             return;
           }
 
-          if (!nextData.sessionId || !nextData.player1Id || !nextData.player2Id) {
-            await uiAlert('No match to play (tournament state is not ready).', 'Error');
+          if (
+            !nextData.sessionId ||
+            !nextData.player1Id ||
+            !nextData.player2Id
+          ) {
+            await uiAlert(
+              'No match to play (tournament state is not ready).',
+              'Error',
+            );
 
             window.currentSessionId = undefined;
             window.currentMatchPlayer1Id = undefined;
@@ -510,6 +556,7 @@ export function startGame() {
         }
 
         // 1v1 flow
+        // alert('pre 1vs1 scorelft ' + scoreLeft);
         await handle1v1End(Number(winnerIndex));
       }
     } catch (err) {
