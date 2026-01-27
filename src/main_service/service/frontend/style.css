@@ -270,14 +270,25 @@ h1 {
   flex-direction: column;
   align-items: center;
   padding: 20px;
+
+  width: min(900px, 92vw);
 }
 
+/*  wrapper that controls width */
+.game-stage {
+  width: 100%;
+}
+
+
 #pongCanvas {
+  display: block;
+  width: 100%;            /* JS sets internal resolution, CSS controls display size */
+  height: auto;
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 12px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   background: rgba(2, 6, 23, 0.55);
-  margin: 20px;
+  margin: 0 auto;
 }
 
 .game-title {
@@ -285,9 +296,32 @@ h1 {
   font-size: 2.5rem;
   font-weight: bold;
   text-shadow: none;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   text-align: center;
 }
+
+/* ✅ now matches canvas automatically */
+.player-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin: 10px auto 6px auto;
+  padding: 0 6px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.player-name {
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-name.left { text-align: left; }
+.player-name.right { text-align: right; }
 
 .game-controls {
   color: #e5e7eb;
@@ -296,6 +330,7 @@ h1 {
   font-size: 0.9rem;
   opacity: 0.85;
 }
+
 
 /* Utility classes */
 .text-center { text-align: center; }

@@ -1,3 +1,12 @@
+export{};
+
+declare global {
+  interface Window {
+    currentMatchPlayer1Name?: string;
+    currentMatchPlayer2Name?: string;
+  }
+}
+
 export function init1v1Setup() {
   const form = document.getElementById('player2Form') as HTMLFormElement | null;
   const emailInput = document.getElementById('player2Email') as HTMLInputElement | null;
@@ -7,23 +16,40 @@ export function init1v1Setup() {
 
   if (!form || !emailInput || !passwordInput || !otpInput) return;
 
+  async function getMeEmail(): Promise<string | null> {
+    try {
+      const res = await fetch('/login_service/auth/me', { method: 'POST' });
+      if (!res.ok) return null;
+      const me = await res.json().catch(() => ({}));
+      return typeof me?.email === 'string' ? me.email : null;
+    } catch {
+      return null;
+    }
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (errorEl) errorEl.textContent = '';
 
     const player2Email = emailInput.value.trim();
     const player2Password = passwordInput.value;
-    const otp = otpInput!.value;
-
+    const otp = otpInput.value.trim();
 
     try {
+      //  store player2 name right away (we already know it)
+      window.currentMatchPlayer2Name = player2Email || 'Player 2';
+
+      //  fetch player1 name (logged-in user)
+      const meEmail = await getMeEmail();
+      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+
       const response = await fetch('/session/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ player2Email, player2Password, otp }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         if (errorEl) errorEl.textContent = data.error || 'Could not create session';
@@ -35,7 +61,7 @@ export function init1v1Setup() {
         return;
       }
 
-      (window as any).currentSessionId = data.sessionId;
+      window.currentSessionId = data.sessionId;
 
       // Go to game
       location.hash = '#/game';
@@ -45,3 +71,4 @@ export function init1v1Setup() {
     }
   });
 }
+

@@ -120,22 +120,34 @@ const views: ViewMap = {
     </div>
   `,
 
-  '/game': `
-    <div class="game-container">
-      <div class="nav">
-        <button id="navHome">Home</button>
-        <button id="navPlay">Play</button>
-        <button id="navProfile">Profile</button>
-        <button id="navLogout">Logout</button>
-      </div>
-      <h1 class="game-title">PONG</h1>
-      <canvas id="pongCanvas" width="800" height="400"></canvas>
-      <div class="game-controls">
-        <p>Player 1: W/S keys | Player 2: ↑/↓ arrow keys</p>
-        <p>First to 11 points wins!</p>
-      </div>
+'/game': `
+  <div class="game-container">
+    <div class="nav">
+      <button id="navHome">Home</button>
+      <button id="navPlay">Play</button>
+      <button id="navProfile">Profile</button>
+      <button id="navLogout">Logout</button>
     </div>
-  `,
+
+    <h1 class="game-title">PONG</h1>
+
+    <div class="game-stage">
+      <div class="player-bar">
+        <div id="playerLeftName" class="player-name left">Player 1</div>
+        <div id="playerRightName" class="player-name right">Player 2</div>
+      </div>
+
+      <canvas id="pongCanvas"></canvas>
+    </div>
+
+    <div class="game-controls">
+      <p>Player 1: W/S keys | Player 2: ↑/↓ arrow keys</p>
+      <p>First to 11 points wins!</p>
+    </div>
+  </div>
+`,
+
+
 
   '/profile': `
     <div class="page-container">
@@ -234,6 +246,9 @@ declare global {
     pongInterval: any;
     currentSessionId?: number;
     currentTournamentId?: number;
+
+    currentMatchPlayer1Name?: string;
+    currentMatchPlayer2Name?: string;
   }
 }
 
@@ -297,6 +312,8 @@ async function abandonProgressIfAny(): Promise<void> {
     (window as any).currentMatchPlayer1Id = undefined;
     (window as any).currentMatchPlayer2Id = undefined;
     (window as any).tournamentPlayerMap = undefined;
+    window.currentMatchPlayer1Name = undefined;
+    window.currentMatchPlayer2Name = undefined;
     sessionStorage.removeItem(TOURNAMENT_UI_KEY);
     return;
   }

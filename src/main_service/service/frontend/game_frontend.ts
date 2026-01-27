@@ -14,6 +14,9 @@ declare global {
     tournamentPlayerMap?: Record<number, string>;
     currentMatchPlayer1Id?: number;
     currentMatchPlayer2Id?: number;
+
+    currentMatchPlayer1Name?: string;
+    currentMatchPlayer2Name?: string;
   }
 }
 
@@ -85,6 +88,8 @@ async function abandonTournamentAndResetUI() {
   if (tid != null) await deleteTournamentFromDB(Number(tid));
   clearTournamentGlobals();
   clearTournamentUIState();
+  window.currentMatchPlayer1Name = undefined;
+  window.currentMatchPlayer2Name = undefined;
   location.hash = '#/tournament';
 }
 
@@ -106,6 +111,58 @@ export function startGame() {
   const ctx: CanvasRenderingContext2D = ctx0;
   const canvas: HTMLCanvasElement = canvasEl;
 
+  //  Fixed logical game size (physics stays consistent everywhere)
+  const LOGICAL_W = 800;
+  const LOGICAL_H = 400;
+  const PADDLE_W = 10;
+  const PADDLE_H = 100;
+  const BALL_SIZE = 10;
+
+  function fitCanvasToStage() {
+    const stage = canvas.parentElement as HTMLElement | null;
+    if (!stage) return;
+
+    const rectW = stage.getBoundingClientRect().width;
+    const availableW = Math.min(900, window.innerWidth - 40); // 20px padding each side
+    const baseW = rectW > 200 ? rectW : availableW;           // fallback if layout is tiny
+    const cssW = Math.max(320, Math.min(900, baseW));
+    const cssH = Math.round(cssW / 2);
+
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+
+    const scaleX = cssW / LOGICAL_W;
+    const scaleY = cssH / LOGICAL_H;
+
+    ctx.setTransform(scaleX * dpr, 0, 0, scaleY * dpr, 0, 0);
+  } 
+
+  fitCanvasToStage();
+  window.addEventListener('resize', fitCanvasToStage);
+
+  //  player names above the canvas
+  const leftNameEl = document.getElementById('playerLeftName');
+  const rightNameEl = document.getElementById('playerRightName');
+
+  if (leftNameEl && rightNameEl) {
+    if (window.currentTournamentId != null &&
+        window.currentMatchPlayer1Id != null &&
+        window.currentMatchPlayer2Id != null) {
+      leftNameEl.textContent = nameOf(window.currentMatchPlayer1Id);
+      rightNameEl.textContent = nameOf(window.currentMatchPlayer2Id);
+    } else {
+      // 1v1 fallback (until we store actual usernames for both)
+        leftNameEl.textContent = window.currentMatchPlayer1Name || 'Player 1';
+        rightNameEl.textContent = window.currentMatchPlayer2Name || 'Player 2';
+    }
+  }
+
+
   // prevent multiple loops
   if (window.pongInterval) {
     clearInterval(window.pongInterval);
@@ -117,10 +174,12 @@ export function startGame() {
   let inFlight = false; // avoid overlapping /game calls
 
   // local state
-  let leftPaddleY = canvas.height / 2;
-  let rightPaddleY = canvas.height / 2;
-  let ballX = canvas.width / 2;
-  let ballY = canvas.height / 2;
+  let leftPaddleY = (LOGICAL_H - PADDLE_H) / 2;
+  let rightPaddleY = (LOGICAL_H - PADDLE_H) / 2;
+  let ballX = LOGICAL_W / 2;
+  let ballY = LOGICAL_H / 2;
+  let scoreLeft = 0;
+  let scoreRight = 0;
 
   let upPressed = false,
     downPressed = false;
@@ -155,6 +214,7 @@ export function startGame() {
 
     document.removeEventListener('keydown', keydownHandler);
     document.removeEventListener('keyup', keyupHandler);
+    window.removeEventListener('resize', fitCanvasToStage);
 
     if (window.pongInterval) {
       clearInterval(window.pongInterval);
@@ -163,10 +223,10 @@ export function startGame() {
   }
 
   function resetLocalStateForNewMatch() {
-    leftPaddleY = canvas.height / 2;
-    rightPaddleY = canvas.height / 2;
-    ballX = canvas.width / 2;
-    ballY = canvas.height / 2;
+    leftPaddleY = (LOGICAL_H - PADDLE_H) / 2;
+    rightPaddleY = (LOGICAL_H - PADDLE_H) / 2;
+    ballX = LOGICAL_W / 2;
+    ballY = LOGICAL_H / 2;
     scoreLeft = 0;
     scoreRight = 0;
     upPressed = downPressed = wPressed = sPressed = false;
@@ -182,17 +242,17 @@ export function startGame() {
       return;
     }
 
-    const paddleWidth = 12,
-      paddleHeight = 100,
-      ballSize = 8;
+    const paddleWidth = PADDLE_W;
+    const paddleHeight = PADDLE_H;
+    const ballSize = BALL_SIZE;
 
     // background
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, LOGICAL_H);
     gradient.addColorStop(0, '#0a0a0a');
     gradient.addColorStop(0.5, '#1a1a1a');
     gradient.addColorStop(1, '#0a0a0a');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
 
     // center line
     ctx.save();
@@ -200,8 +260,8 @@ export function startGame() {
     ctx.lineWidth = 1;
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
-    ctx.moveTo(canvas.width / 2, 0);
-    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.moveTo(LOGICAL_W / 2, 0);
+    ctx.lineTo(LOGICAL_W / 2, LOGICAL_H);
     ctx.stroke();
     ctx.restore();
 
@@ -228,23 +288,16 @@ export function startGame() {
     }
 
     drawPaddle(0, leftPaddleY);
-    drawPaddle(canvas.width - paddleWidth, rightPaddleY);
+    drawPaddle(LOGICAL_W - paddleWidth, rightPaddleY);
 
     // ball
     ctx.save();
-    const ballGrad = ctx.createRadialGradient(
-      ballX,
-      ballY,
-      0,
-      ballX,
-      ballY,
-      ballSize,
-    );
+    const ballGrad = ctx.createRadialGradient(ballX, ballY, 0, ballX, ballY, ballSize / 2);
     ballGrad.addColorStop(0, '#ffffff');
     ballGrad.addColorStop(1, '#e0e0e0');
 
     ctx.beginPath();
-    ctx.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
+    ctx.arc(ballX, ballY, ballSize / 2, 0, Math.PI * 2);
     ctx.fillStyle = ballGrad;
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
@@ -258,8 +311,8 @@ export function startGame() {
     ctx.font = 'bold 48px "Courier New", monospace';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
-    ctx.fillText(scoreLeft.toString(), canvas.width / 4, 60);
-    ctx.fillText(scoreRight.toString(), (3 * canvas.width) / 4, 60);
+    ctx.fillText(scoreLeft.toString(), LOGICAL_W / 4, 60);
+    ctx.fillText(scoreRight.toString(), (3 * LOGICAL_W) / 4, 60);
     ctx.restore();
 
     rafId = requestAnimationFrame(draw);
@@ -319,14 +372,14 @@ export function startGame() {
     }
 
     window.currentSessionId = undefined;
+    window.currentMatchPlayer1Name = undefined;
+    window.currentMatchPlayer2Name = undefined;
     cleanup();
     location.hash = '#/play';
   }
 
-  // ✅ this is the tournament popup after a match: Start / Back / Abandon
-  async function askStartNextMatch(
-    pending: PendingMatch,
-  ): Promise<'start' | 'back' | 'abandon'> {
+  //  this is the tournament popup after a match: Start / Back / Abandon
+  async function askStartNextMatch(pending: PendingMatch): Promise<'start' | 'back' | 'abandon'> {
     const p1 = nameOf(pending.player1Id);
     const p2 = nameOf(pending.player2Id);
 
@@ -362,8 +415,12 @@ export function startGame() {
       downPressed,
       wPressed,
       sPressed,
-      canvasheight: canvas.height,
-      canvaswidth: canvas.width,
+      canvasheight: LOGICAL_H,
+      canvaswidth: LOGICAL_W,
+      leftPaddleY,
+      rightPaddleY,
+      ballX,
+      ballY,
       sessionId,
     };
 
@@ -448,7 +505,7 @@ export function startGame() {
               'Tournament finished',
             );
 
-            // ✅ full cleanup so tournament page resets
+            //  full cleanup so tournament page resets
             clearTournamentGlobals();
             clearTournamentUIState();
 
@@ -520,7 +577,7 @@ export function startGame() {
             player2Id: Number(nextData.player2Id),
           };
 
-          // ✅ Persist pending so tournament.ts can resume without skipping
+          //  Persist pending so tournament.ts can resume without skipping
           setPendingMatch(pending);
 
           const choice = await askStartNextMatch(pending);
@@ -547,7 +604,13 @@ export function startGame() {
           window.currentMatchPlayer1Id = pending.player1Id;
           window.currentMatchPlayer2Id = pending.player2Id;
 
-          // ✅ Clear pending once match actually starts
+          const leftNameEl2 = document.getElementById('playerLeftName');
+          const rightNameEl2 = document.getElementById('playerRightName');
+          if (leftNameEl2 && rightNameEl2) {
+            leftNameEl2.textContent = nameOf(pending.player1Id);
+            rightNameEl2.textContent = nameOf(pending.player2Id);
+          }
+          // Clear pending once match actually starts
           setPendingMatch(null);
 
           resetLocalStateForNewMatch();
