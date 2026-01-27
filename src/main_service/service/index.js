@@ -103,6 +103,8 @@ fastify.post('/session/create', async (req, reply) => {
 });
 
 fastify.post('/session/finish', async (req, reply) => {
+  console.log('/session/finish');
+  console.log(req.body);
   const { sessionId, scoreLeft, scoreRight, winnerIndex } = req.body || {};
   console.log(req.body);
   if (!sessionId)

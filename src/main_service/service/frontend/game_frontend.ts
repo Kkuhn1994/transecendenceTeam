@@ -297,9 +297,9 @@ export function startGame() {
   }
 
   async function handle1v1End(winnerIndex: number) {
-    console.log('1vs1 ' + winnerIndex);
-    console.log('1vs1 ' + scoreLeft);
-    console.log('1vs1 ' + scoreRight);
+    // console.log('1vs1 ' + winnerIndex);
+    // console.log('1vs1 ' + scoreLeft);
+    // console.log('1vs1 ' + scoreRight);
     const winner = winnerIndex === 1 ? 'Left Player' : 'Right Player';
 
     const choice = await uiDialog<'again' | 'lobby'>({
@@ -379,8 +379,8 @@ export function startGame() {
         console.error('game_service/game error:', response);
         return;
       }
-      console.log(JSON.stringify(response, null, 2));
-      console.log(response.scoreLeft);
+      // console.log(JSON.stringify(response, null, 2));
+      // console.log(response.scoreLeft);
 
       leftPaddleY = response.leftPaddleY;
       rightPaddleY = response.rightPaddleY;
@@ -389,10 +389,10 @@ export function startGame() {
 
       scoreLeft = response.scoreLeft;
       scoreRight = response.scoreRight;
-      console.log('Response ' + response.scoreLeft);
-      console.log('Response ' + response.scoreRight);
-      console.log('Response ' + scoreLeft);
-      console.log('Response ' + scoreRight);
+      // console.log('Response ' + response.scoreLeft);
+      // console.log('Response ' + response.scoreRight);
+      // console.log('Response ' + scoreLeft);
+      // console.log('Response ' + scoreRight);
 
       const winnerIndex = response.winnerIndex;
 

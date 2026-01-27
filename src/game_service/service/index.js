@@ -155,8 +155,9 @@ async function game_actions(sessionId, row, body, db) {
   const finalScoreRight = scoreRight;
   if (winnerIndex) {
     console.log(winnerIndex);
+    console.log('winnerIndex');
     try {
-      await fetch('https://main_service:3000/session/finish', {
+      await fetch('http://main_service:3000/session/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,8 +170,7 @@ async function game_actions(sessionId, row, body, db) {
     } catch (err) {
       fastify.log.error('Error calling /session/finish:', err);
     }
-    // scoreLeft = 0;
-    // scoreRight = 0;
+
     ballSpeedX = 4;
     ballSpeedY = 4;
     ballX = canvaswidth / 2;
