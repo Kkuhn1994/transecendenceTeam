@@ -1,8 +1,18 @@
-const fastify = require('fastify')({ logger: false });
+const Fastify = require('fastify');
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
 const fastifyCookie = require('@fastify/cookie');
 const sqlite3 = require('sqlite3');
+const https = require('https');
+const fs = require('fs');
+
+const fastify = Fastify({
+  logger: true,
+  https: {
+    key: fs.readFileSync('/service/service.key'),
+    cert: fs.readFileSync('/service/service.crt'),
+  },
+});
 
 const DB_PATH = '/app/data/database.db';
 
@@ -104,7 +114,7 @@ fastify.post('/session/create', async (req, reply) => {
 
 fastify.post('/session/finish', async (req, reply) => {
   console.log('/session/finish');
-  console.log(req.body);
+  // console.log(req.body);
   const { sessionId, scoreLeft, scoreRight, winnerIndex } = req.body || {};
   console.log(req.body);
   if (!sessionId)

@@ -8,6 +8,15 @@ function openDb() {
   return new sqlite3.Database(DB_PATH);
 }
 
+const https = require('https');
+const { Agent } = require('undici');
+
+const dispatcher = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
+});
+
 async function getCurrentUser(req) {
   const res = await fetch('http://login_service:3000/auth/me', {
     method: 'POST',
@@ -157,8 +166,9 @@ async function game_actions(sessionId, row, body, db) {
     console.log(winnerIndex);
     console.log('winnerIndex');
     try {
-      await fetch('http://main_service:3000/session/finish', {
+      await fetch('https://main_service:3000/session/finish', {
         method: 'POST',
+        dispatcher,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
@@ -168,6 +178,7 @@ async function game_actions(sessionId, row, body, db) {
         }),
       });
     } catch (err) {
+      console.log('error');
       fastify.log.error('Error calling /session/finish:', err);
     }
 

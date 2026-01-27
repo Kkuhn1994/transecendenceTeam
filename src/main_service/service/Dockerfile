@@ -9,7 +9,14 @@ COPY package.json package.json
 COPY tsconfig.json tsconfig.json
 
 # Install dependencies (including devDependencies for build)
-RUN npm install sqlite3 fastify @fastify/cookie
+RUN npm install sqlite3 fastify @fastify/cookie https fs
+
+RUN openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout service.key \
+  -out service.crt \
+  -subj "/CN=main_service"
+
 
 
 # Quellcode kopieren
