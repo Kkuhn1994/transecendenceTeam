@@ -14,6 +14,14 @@ const fastify = Fastify({
   },
 });
 
+const { Agent } = require('undici');
+
+const dispatcher = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
+});
+
 const DB_PATH = '/app/data/database.db';
 
 fastify.register(fastifyStatic, {
@@ -34,8 +42,9 @@ function openDb() {
 }
 
 async function getCurrentUser(req) {
-  const res = await fetch('http://login_service:3000/auth/me', {
+  const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
+    dispatcher,
     headers: {
       'Content-Type': 'application/json',
       Cookie: req.headers.cookie || '',
@@ -61,9 +70,10 @@ fastify.post('/session/create', async (req, reply) => {
     }
 
     const verifyRes = await fetch(
-      'http://login_service:3000/verifyCredentials',
+      'https://login_service:3000/verifyCredentials',
       {
         method: 'POST',
+        dispatcher,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: player2Email,

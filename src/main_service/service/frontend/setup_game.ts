@@ -1,4 +1,4 @@
-export{};
+export {};
 
 declare global {
   interface Window {
@@ -9,10 +9,16 @@ declare global {
 
 export function init1v1Setup() {
   const form = document.getElementById('player2Form') as HTMLFormElement | null;
-  const emailInput = document.getElementById('player2Email') as HTMLInputElement | null;
-  const passwordInput = document.getElementById('player2Password') as HTMLInputElement | null;
+  const emailInput = document.getElementById(
+    'player2Email',
+  ) as HTMLInputElement | null;
+  const passwordInput = document.getElementById(
+    'player2Password',
+  ) as HTMLInputElement | null;
   const otpInput = document.getElementById('otp') as HTMLInputElement | null;
-  const errorEl = document.getElementById('player2Error') as HTMLParagraphElement | null;
+  const errorEl = document.getElementById(
+    'player2Error',
+  ) as HTMLParagraphElement | null;
 
   if (!form || !emailInput || !passwordInput || !otpInput) return;
 
@@ -23,6 +29,7 @@ export function init1v1Setup() {
       const me = await res.json().catch(() => ({}));
       return typeof me?.email === 'string' ? me.email : null;
     } catch {
+      console.log('auth me fail');
       return null;
     }
   }
@@ -52,7 +59,8 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (errorEl) errorEl.textContent = data.error || 'Could not create session';
+        if (errorEl)
+          errorEl.textContent = data.error || 'Could not create session';
         return;
       }
 
@@ -71,4 +79,3 @@ export function init1v1Setup() {
     }
   });
 }
-

@@ -1,14 +1,24 @@
-const fastify = require('fastify')({
-  logger: false,
-});
+const Fastify = require('fastify');
 const DB_PATH = '/app/data/database.db';
 const sqlite3 = require('sqlite3');
+
+const https = require('https');
+const fs = require('fs');
+
+const fastify = Fastify({
+  logger: true,
+  https: {
+    key: fs.readFileSync('/service/service.key'),
+    cert: fs.readFileSync('/service/service.crt'),
+  },
+});
 
 function openDb() {
   return new sqlite3.Database(DB_PATH);
 }
 
-const https = require('https');
+// const https = require('https');
+
 const { Agent } = require('undici');
 
 const dispatcher = new Agent({
@@ -18,8 +28,9 @@ const dispatcher = new Agent({
 });
 
 async function getCurrentUser(req) {
-  const res = await fetch('http://login_service:3000/auth/me', {
+  const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
+    dispatcher,
     headers: {
       'Content-Type': 'application/json',
       Cookie: req.headers.cookie || '',
