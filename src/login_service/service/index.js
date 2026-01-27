@@ -243,11 +243,11 @@ fastify.post('/loginAccount', async (request, reply) => {
     db.close();
     return sendError(reply, 401, 'Wrong User Credentials');
   }
-  console.log('is active: ' + data.is_active);
-  if (data.is_active != 0) {
-    db.close();
-    return sendError(reply, 401, 'Already logged in');
-  }
+  // console.log('is active: ' + data.is_active);
+  // if (data.is_active != 0) {
+  //   db.close();
+  //   return sendError(reply, 401, 'Already logged in');
+  // }
   console.log('update sesssion');
   // console.log(row);
   // console.log('row:', row);

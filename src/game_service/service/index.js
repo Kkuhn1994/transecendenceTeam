@@ -4,11 +4,6 @@ const fastify = require('fastify')({
 const DB_PATH = '/app/data/database.db';
 const sqlite3 = require('sqlite3');
 
-let ballSpeedX = 4,
-  ballSpeedY = 4;
-let scoreLeft = 0,
-  scoreRight = 0;
-
 function openDb() {
   return new sqlite3.Database(DB_PATH);
 }
@@ -101,8 +96,18 @@ function getAsync(db, sql, params = []) {
 
 async function game_actions(sessionId, row, body, db) {
   // console.log(row);
-  let { canvasheight, canvaswidth, leftPaddleY, rightPaddleY, ballX, ballY } =
-    row;
+  let {
+    canvasheight,
+    canvaswidth,
+    leftPaddleY,
+    rightPaddleY,
+    ballX,
+    ballY,
+    ballSpeedX,
+    ballSpeedY,
+    scoreLeft,
+    scoreRight,
+  } = row;
   let { upPressed, downPressed, wPressed, sPressed } = body;
   const paddleWidth = 10,
     paddleHeight = 100,
