@@ -72,7 +72,23 @@ RUN sqlite3 /app/data/database.db " \
         FOREIGN KEY (session_id) REFERENCES game_sessions(id), \
         FOREIGN KEY (winner_id) REFERENCES users(id) \
     ); \
+    CREATE TABLE IF NOT EXISTS game_data ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT, \
+        sessionId INTEGER NOT NULL, \
+        scoreLeft INTEGER, \
+        scoreRight INTEGER, \
+        ballSpeedX INTEGER, \
+        ballSpeedY INTEGER, \
+        canvaswidth INTEGER, \
+        canvasheight INTEGER, \
+        rightPaddleY INTEGER, \
+        leftPaddleY INTEGER, \
+        ballX INTEGER, \
+        ballY INTEGER \
+    ); \
 "
+
+
 
 
 

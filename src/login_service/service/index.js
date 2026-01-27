@@ -65,17 +65,13 @@ function getAsync(db, sql, params = []) {
 }
 
 function getJWTToken(refresh_token, db) {
-  console.log('get Token');
   return new Promise((resolve, reject) => {
-    console.log('get Token');
     db.get(
       `SELECT * FROM users WHERE session_cookie = ?`,
       [refresh_token],
       (err, row) => {
         if (err) return reject(err);
         if (!row) return reject(new Error('Wrong Refresh Token'));
-
-        console.log('get Token2');
 
         const token = jwt.sign(
           {
@@ -88,8 +84,6 @@ function getJWTToken(refresh_token, db) {
           process.env.JWT_SECRET,
           { expiresIn: '5m' },
         );
-
-        console.log('get Token3', token);
 
         resolve(token); // ✅ Hier wird das Promise erfüllt
       },
@@ -249,11 +243,11 @@ fastify.post('/loginAccount', async (request, reply) => {
     db.close();
     return sendError(reply, 401, 'Wrong User Credentials');
   }
-  console.log('is active: ' + data.is_active);
-  if (data.is_active != 0) {
-    db.close();
-    return sendError(reply, 401, 'Already logged in');
-  }
+  // console.log('is active: ' + data.is_active);
+  // if (data.is_active != 0) {
+  //   db.close();
+  //   return sendError(reply, 401, 'Already logged in');
+  // }
   console.log('update sesssion');
   // console.log(row);
   // console.log('row:', row);
@@ -343,7 +337,7 @@ fastify.post('/auth/me', async (request, reply) => {
   // console.log('token: ' + token.JWT);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(decoded);
+    // console.log(decoded);
     return reply.send({
       id: decoded.id,
       email: decoded.email,
@@ -354,9 +348,10 @@ fastify.post('/auth/me', async (request, reply) => {
   } catch (err) {
     try {
       const db = openDb();
-      console.log(request.cookies.session);
+      // console.log(request.cookies.session);
       token = await getJWTToken(request.cookies.session, db);
       console.log('token refresh');
+      // console.log(err);
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       return reply
         .setCookie('JWT', token, {
