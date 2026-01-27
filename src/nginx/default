@@ -25,7 +25,7 @@ server {
     " always;
 
     location / {
-        proxy_pass http://main_service:3000;  # Containername + Port, kein "localhost"!
+        proxy_pass https://main_service:3000;  # Containername + Port, kein "localhost"!
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -39,7 +39,7 @@ server {
     }
 
     location /login_service/ {
-        proxy_pass http://login_service:3000/;  # Containername + Port, kein "localhost"!
+        proxy_pass https://login_service:3000/;  # Containername + Port, kein "localhost"!
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -49,7 +49,7 @@ server {
     }
 
     location /game_service/ {
-        proxy_pass http://game_service:3000/;  # Containername + Port, kein "localhost"!
+        proxy_pass https://game_service:3000/;  # Containername + Port, kein "localhost"!
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -59,7 +59,7 @@ server {
     }
 
     location /tournament_service/ {
-    proxy_pass http://tournament_service:3000/;
+    proxy_pass https://tournament_service:3000/;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection 'upgrade';

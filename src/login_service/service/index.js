@@ -1,5 +1,14 @@
-const fastify = require('fastify')({
-  logger: false,
+const Fastify = require('fastify');
+
+const https = require('https');
+const fs = require('fs');
+
+const fastify = Fastify({
+  logger: true,
+  https: {
+    key: fs.readFileSync('/service/service.key'),
+    cert: fs.readFileSync('/service/service.crt'),
+  },
 });
 
 const sqlite3 = require('sqlite3');
