@@ -18,7 +18,8 @@ RUN npm install sqlite3 fastify \
                 jsonwebtoken \
                 dotenv \
                 https \
-                fs
+                fs \
+                undici
 
 RUN openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \

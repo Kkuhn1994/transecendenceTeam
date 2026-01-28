@@ -27,9 +27,18 @@ fastify.register(fastifyCookie, {
   secret: 'super_secret_key_32_chars',
 });
 
+const { Agent } = require('undici');
+
+const dispatcher = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
+});
+
 async function getCurrentUser(req) {
-  const res = await fetch('http://login_service:3000/auth/me', {
+  const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
+    dispatcher,
     headers: {
       'Content-Type': 'application/json',
       Cookie: req.headers.cookie || '',
@@ -235,8 +244,9 @@ fastify.post('/loginAccount', async (request, reply) => {
   //   return sendError(reply, 401, 'Wrong User Credentials');
   // }
   // console.log(request.body.type);
-  const res = await fetch('http://localhost:3000/verifyCredentials', {
+  const res = await fetch('https://localhost:3000/verifyCredentials', {
     method: 'POST',
+    dispatcher,
     headers: {
       'Content-Type': 'application/json',
     },
