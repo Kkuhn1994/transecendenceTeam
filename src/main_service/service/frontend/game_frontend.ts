@@ -367,10 +367,22 @@ export function startGame() {
 
     if (choice === 'again') {
       resetLocalStateForNewMatch();
+      try {
+        await fetch('/game_service/game/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: window.currentSessionId,
+            canvaswidth: LOGICAL_W,
+            canvasheight: LOGICAL_H,
+          }),
+        });
+      } catch {
+        // ignore
+      }
       window.pongInterval = setInterval(getGameState, 20);
       return;
     }
-
     window.currentSessionId = undefined;
     window.currentMatchPlayer1Name = undefined;
     window.currentMatchPlayer2Name = undefined;

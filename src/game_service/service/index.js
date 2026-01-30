@@ -45,56 +45,48 @@ async function getCurrentUser(req) {
 // -------------------- GAME LOOP --------------------
 
 async function setup_newgame(sessionId, body, db) {
-  console.log(sessionId);
-  const canvasheight = body.canvasheight;
-  const canvaswidth = body.canvaswidth;
-  const ballX = body.canvaswidth / 2;
-  const ballY = body.canvasheight / 2;
-  const leftPaddleY = body.canvasheight / 2;
-  const rightPaddleY = body.canvasheight / 2;
-  await db.run(
-    `INSERT INTO game_data \
-    (sessionId, \
-    scoreLeft, \
-    scoreRight, \
-    ballSpeedx, \
-    ballSpeedY, \
-    canvaswidth, \
-    canvasheight, \
-    leftPaddleY, \
-    rightPaddleY,\
-    ballX, \
-    ballY) VALUES (?, 0, 0, 4, 4, ?, ?, ? ,? ,?, ?)`,
-    [
-      sessionId,
-      canvaswidth,
-      canvasheight,
-      leftPaddleY,
-      rightPaddleY,
-      ballX,
-      ballY,
-    ],
-    function (err) {
-      if (err) {
-        db.close();
-        console.error('Error updating profile:', err);
-        return;
-      }
-    },
-  );
-  console.log('new game added');
-  await db.get(
-    `SELECT * FROM game_data WHERE sessionId = ?`,
-    [sessionId],
-    (err, row) => {
-      if (err) {
-        return;
-      }
-      // console.log(row);
-      return row;
-    },
-  );
+  const canvasheight = Number(body.canvasheight);
+  const canvaswidth = Number(body.canvaswidth);
+
+  const paddleHeight = 100;
+
+  const ballX = canvaswidth / 2;
+  const ballY = canvasheight / 2;
+
+  const leftPaddleY = (canvasheight - paddleHeight) / 2;
+  const rightPaddleY = (canvasheight - paddleHeight) / 2;
+
+  // IMPORTANT: DB schema uses ballSpeedX / ballSpeedY (capital X/Y)
+  const ballSpeedX = 4;
+  const ballSpeedY = 4;
+
+  await new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO game_data
+        (sessionId, scoreLeft, scoreRight, ballSpeedX, ballSpeedY,
+         canvaswidth, canvasheight, leftPaddleY, rightPaddleY, ballX, ballY)
+       VALUES (?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        sessionId,
+        ballSpeedX,
+        ballSpeedY,
+        canvaswidth,
+        canvasheight,
+        leftPaddleY,
+        rightPaddleY,
+        ballX,
+        ballY,
+      ],
+      (err) => (err ? reject(err) : resolve(null)),
+    );
+  });
+
+  // Return the created row so game_actions gets real numbers
+  return await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
+    sessionId,
+  ]);
 }
+
 
 function getAsync(db, sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -284,79 +276,103 @@ async function game_actions(sessionId, row, body, db) {
 
 fastify.post('/game', async function (request, reply) {
   console.log('game service');
+
   const me = await getCurrentUser(request);
-  console.log('game service 2');
-  const db = openDb();
-  console.log('game service 2');
   if (!me) {
     console.log('wrong session');
     return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   }
-  console.log('game service 2');
+
+  const db = openDb();
   try {
     const body = request.body || {};
-    console.log(body.sessionId);
     const sessionId = body.sessionId;
-    console.log('game service 3');
+
     if (!sessionId) {
       console.log('no session ID');
       return reply.code(400).send({ error: 'sessionId is required' });
     }
 
-    const row = await getAsync(
-      db,
-      `SELECT * FROM game_data WHERE sessionId = ?`,
-      [sessionId],
-    );
+    // 1) get row
+    let row = await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
+      sessionId,
+    ]);
 
+    // 2) if missing, create & fetch row
     if (!row) {
       console.log('new game');
-      const row = await setup_newgame(sessionId, body, db);
-      // console.log(row);
-      const {
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft,
-        scoreRight,
-        winnerIndex,
-      } = await game_actions(sessionId, row, body, db);
-      return reply.send({
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft: scoreLeft,
-        scoreRight: scoreRight,
-        winnerIndex,
-      });
+      row = await setup_newgame(sessionId, body, db);
     } else {
       console.log('old game');
-
-      const {
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft,
-        scoreRight,
-        winnerIndex,
-      } = await game_actions(sessionId, row, body, db);
-      return reply.send({
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        scoreLeft,
-        scoreRight,
-        winnerIndex,
-      });
     }
+
+    // 3) step simulation
+    const out = await game_actions(sessionId, row, body, db);
+
+    return reply.send({
+      leftPaddleY: out.leftPaddleY,
+      rightPaddleY: out.rightPaddleY,
+      ballX: out.ballX,
+      ballY: out.ballY,
+      scoreLeft: out.scoreLeft,
+      scoreRight: out.scoreRight,
+      winnerIndex: out.winnerIndex,
+    });
   } catch (err) {
     console.log('error in game route');
     fastify.log.error('Error in /game route:', err);
     return reply.code(500).send({ error: 'Game service error' });
+  } finally {
+    db.close();
+  }
+});
+
+fastify.post('/game/reset', async (request, reply) => {
+  const me = await getCurrentUser(request);
+  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+
+  const db = openDb();
+  try {
+    const body = request.body || {};
+    const sessionId = body.sessionId;
+    if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });
+
+    const canvaswidth = Number(body.canvaswidth) || 800;
+    const canvasheight = Number(body.canvasheight) || 400;
+
+    const paddleHeight = 100;
+
+    const leftPaddleY = (canvasheight - paddleHeight) / 2;
+    const rightPaddleY = (canvasheight - paddleHeight) / 2;
+
+    const ballX = canvaswidth / 2;
+    const ballY = canvasheight / 2;
+
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE game_data
+         SET scoreLeft = 0,
+             scoreRight = 0,
+             ballSpeedX = 4,
+             ballSpeedY = 4,
+             canvaswidth = ?,
+             canvasheight = ?,
+             leftPaddleY = ?,
+             rightPaddleY = ?,
+             ballX = ?,
+             ballY = ?
+         WHERE sessionId = ?`,
+        [canvaswidth, canvasheight, leftPaddleY, rightPaddleY, ballX, ballY, sessionId],
+        (err) => (err ? reject(err) : resolve(null))
+      );
+    });
+
+    return reply.send({ status: 'ok' });
+  } catch (err) {
+    fastify.log.error(err);
+    return reply.code(500).send({ error: 'reset failed' });
+  } finally {
+    db.close();
   }
 });
 
