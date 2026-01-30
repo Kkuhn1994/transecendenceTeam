@@ -26,7 +26,7 @@ Game Customization Options (1 Point)
 Support for multiple languages (at least 3 languages) (1 Point)
 
 
-Current TOTAL: 11/14 Points for 100% 
+Current TOTAL: 12/14 Points for 100% 
 
 TO DO (mandatory part):
 
