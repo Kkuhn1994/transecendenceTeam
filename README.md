@@ -12,13 +12,13 @@ Game statistics and match history (1 Point)
 
 - Gaming and user experience:
 Complete web-based game (2 Points)
+Tournament system (1 Point)
 
 - Devops:
 Backend as microservices (2 Points)
 
 Work In Progress:
 
-Tournament system (1 Point)
 Opponent AI (2 Points)
 
 Possible Modules:
