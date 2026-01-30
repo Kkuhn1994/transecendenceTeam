@@ -1,8 +1,5 @@
 export {};
 
-let scoreLeft = 0;
-let scoreRight = 0;
-
 import { uiAlert, uiDialog } from './ui_modal';
 
 declare global {
@@ -17,6 +14,11 @@ declare global {
 
     currentMatchPlayer1Name?: string;
     currentMatchPlayer2Name?: string;
+
+    lastP2Email?: string;
+    lastP2Password?: string;
+    lastP2Otp?: string;
+    lastPairingToken?: string;
   }
 }
 
@@ -110,6 +112,23 @@ export function startGame() {
 
   const ctx: CanvasRenderingContext2D = ctx0;
   const canvas: HTMLCanvasElement = canvasEl;
+
+  // ---- countdown (per match) ----
+  const COUNTDOWN_MS = 3000;
+  let countdownStart = performance.now();
+  let countdownDone = false;
+
+  function startCountdown() {
+    countdownStart = performance.now();
+    countdownDone = false;
+  }
+
+  function countdownText(): string {
+    const elapsed = performance.now() - countdownStart;
+    const remaining = Math.max(0, COUNTDOWN_MS - elapsed);
+    if (remaining <= 0) return 'GO!';
+    return String(Math.ceil(remaining / 1000));
+  }
 
   //  Fixed logical game size (physics stays consistent everywhere)
   const LOGICAL_W = 800;
@@ -233,6 +252,8 @@ export function startGame() {
     matchEnding = false;
     endHandled = false;
     inFlight = false;
+
+    startCountdown();
   }
 
   function draw() {
@@ -315,6 +336,28 @@ export function startGame() {
     ctx.fillText(scoreRight.toString(), (3 * LOGICAL_W) / 4, 60);
     ctx.restore();
 
+    // ---- countdown overlay (start of match) ----
+    if (!countdownDone) {
+      const elapsed = performance.now() - countdownStart;
+      const remaining = Math.max(0, COUNTDOWN_MS - elapsed);
+
+      const text = remaining <= 150 ? 'GO!' : countdownText();
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.40)';
+      ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+      ctx.font = 'bold 80px "Courier New", monospace';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, LOGICAL_W / 2, LOGICAL_H / 2);
+
+      ctx.restore();
+
+      if (remaining <= 150) {
+        countdownDone = true;
+      }
+    }
     rafId = requestAnimationFrame(draw);
   }
 
@@ -353,7 +396,9 @@ export function startGame() {
     // console.log('1vs1 ' + winnerIndex);
     // console.log('1vs1 ' + scoreLeft);
     // console.log('1vs1 ' + scoreRight);
-    const winner = winnerIndex === 1 ? 'Left Player' : 'Right Player';
+    const p1 = window.currentMatchPlayer1Name || 'Player 1';
+    const p2 = window.currentMatchPlayer2Name || 'Player 2';
+    const winner = winnerIndex === 1 ? p1 : p2;
 
     const choice = await uiDialog<'again' | 'lobby'>({
       title: '🏁 Game finished!',
@@ -366,23 +411,36 @@ export function startGame() {
     });
 
     if (choice === 'again') {
-      resetLocalStateForNewMatch();
-      try {
-        await fetch('/game_service/game/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: window.currentSessionId,
-            canvaswidth: LOGICAL_W,
-            canvasheight: LOGICAL_H,
-          }),
-        });
-      } catch {
-        // ignore
+      const pairingToken = window.lastPairingToken;
+
+      if (!pairingToken) {
+        await uiAlert(
+          'Can’t start a rematch because the pairing token is missing.\nGo back to lobby and start a new 1v1.',
+          'Rematch unavailable'
+        );
+        return;
       }
-      window.pongInterval = setInterval(getGameState, 20);
-      return;
-    }
+
+      const res = await fetch('/session/rematch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pairingToken }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.sessionId) {
+        await uiAlert(data.error || 'Failed to create rematch session', 'Error');
+        return;
+      }
+
+    window.currentSessionId = Number(data.sessionId);
+
+    resetLocalStateForNewMatch();
+    window.pongInterval = setInterval(getGameState, 20);
+    return;
+  }
+
+
     window.currentSessionId = undefined;
     window.currentMatchPlayer1Name = undefined;
     window.currentMatchPlayer2Name = undefined;
@@ -419,6 +477,8 @@ export function startGame() {
 
     const sessionId = window.currentSessionId;
     if (!sessionId) return;
+
+    if (!countdownDone) return;
 
     inFlight = true;
 
@@ -641,6 +701,7 @@ export function startGame() {
     }
   }
 
+  startCountdown();
   rafId = requestAnimationFrame(draw);
   window.pongInterval = setInterval(getGameState, 20);
 }

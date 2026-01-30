@@ -97,8 +97,15 @@ function getAsync(db, sql, params = []) {
   });
 }
 
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function speedOf(vx, vy) {
+  return Math.sqrt(vx * vx + vy * vy);
+}
+
 async function game_actions(sessionId, row, body, db) {
-  // console.log(row);
   let {
     canvasheight,
     canvaswidth,
@@ -111,12 +118,21 @@ async function game_actions(sessionId, row, body, db) {
     scoreLeft,
     scoreRight,
   } = row;
-  console.log(row);
   let { upPressed, downPressed, wPressed, sPressed } = body;
   const paddleWidth = 10,
     paddleHeight = 100,
     paddleSpeed = 4,
     ballSize = 10;
+  const BASE_SPEED = 4;
+  const MAX_SPEED = 10;
+  const SPEEDUP_PER_HIT = 1.06;     // 6% faster each paddle contact
+  const MAX_BOUNCE_ANGLE = Math.PI / 3; // 60 degrees
+  const SPIN = 1.2; // how much paddle movement affects Y on impact
+
+  // paddleDY is -paddleSpeed, 0, or +paddleSpeed depending on keys
+  const leftDY = (sPressed ? paddleSpeed : 0) + (wPressed ? -paddleSpeed : 0);
+  const rightDY = (downPressed ? paddleSpeed : 0) + (upPressed ? -paddleSpeed : 0);
+
   if (wPressed) leftPaddleY -= paddleSpeed;
   if (sPressed) leftPaddleY += paddleSpeed;
   if (upPressed) rightPaddleY -= paddleSpeed;
@@ -128,38 +144,89 @@ async function game_actions(sessionId, row, body, db) {
   );
   ballX += ballSpeedX;
   ballY += ballSpeedY;
-  if (ballY <= 0 || ballY + ballSize >= canvasheight) {
+  if (ballY <= 0) {
+    ballY = 0;
     ballSpeedY *= -1;
   }
+  if (ballY + ballSize >= canvasheight) {
+    ballY = canvasheight - ballSize;
+    ballSpeedY *= -1;
+  }
+
+  // prevent boring perfectly flat shots
+  if (Math.abs(ballSpeedY) < 0.25) {
+    ballSpeedY = ballSpeedY < 0 ? -0.25 : 0.25;
+  }
+
+  const ballCenterY = ballY + ballSize / 2;
+
+  // LEFT paddle collision
   if (
     ballX <= paddleWidth &&
+    ballX >= 0 && // avoid weird multi-bounce when already behind
     ballY + ballSize >= leftPaddleY &&
     ballY <= leftPaddleY + paddleHeight
   ) {
-    ballSpeedX *= -1;
+    // Where did we hit the paddle? (-1 top, 0 middle, +1 bottom)
+    const paddleCenterY = leftPaddleY + paddleHeight / 2;
+    const rel = (ballCenterY - paddleCenterY) / (paddleHeight / 2);
+    const hit = clamp(rel, -1, 1);
+
+    // Convert hit location to bounce angle
+    const angle = hit * MAX_BOUNCE_ANGLE;
+
+    // Increase speed over rally
+    let s = speedOf(ballSpeedX, ballSpeedY);
+    s = clamp(s * SPEEDUP_PER_HIT, BASE_SPEED, MAX_SPEED);
+
+    // Apply spin from paddle movement
+    const spinY = (leftDY / paddleSpeed) * SPIN; // -SPIN..+SPIN
+
+    ballSpeedX = Math.cos(angle) * s;          // to the right
+    ballSpeedY = Math.sin(angle) * s + spinY;  // angle + spin
+
+    // push ball outside paddle to prevent sticking
     ballX = paddleWidth;
   }
-  if (
+  // RIGHT paddle collision
+  else if (
     ballX + ballSize >= canvaswidth - paddleWidth &&
+    ballX + ballSize <= canvaswidth && // avoid weird multi-bounce when already past edge
     ballY + ballSize >= rightPaddleY &&
     ballY <= rightPaddleY + paddleHeight
   ) {
-    ballSpeedX *= -1;
+    const paddleCenterY = rightPaddleY + paddleHeight / 2;
+    const rel = (ballCenterY - paddleCenterY) / (paddleHeight / 2);
+    const hit = clamp(rel, -1, 1);
+
+    const angle = hit * MAX_BOUNCE_ANGLE;
+
+    let s = speedOf(ballSpeedX, ballSpeedY);
+    s = clamp(s * SPEEDUP_PER_HIT, BASE_SPEED, MAX_SPEED);
+
+    const spinY = (rightDY / paddleSpeed) * SPIN;
+
+    ballSpeedX = -Math.cos(angle) * s;         // to the left
+    ballSpeedY = Math.sin(angle) * s + spinY;
+
     ballX = canvaswidth - paddleWidth - ballSize;
   }
   if (ballX < 0) {
     scoreRight++;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
-    ballSpeedX = 4;
+
+    // serve toward the player who conceded (to keep it fair-ish)
+    ballSpeedX = BASE_SPEED;
+    ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * (BASE_SPEED * 0.6);
   } else if (ballX > canvaswidth) {
     scoreLeft++;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
-    ballSpeedX = -4;
+
+    ballSpeedX = -BASE_SPEED;
+    ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * (BASE_SPEED * 0.6);
   }
-  console.log(scoreRight);
-  console.log(scoreLeft);
   let winnerIndex = null;
   if (scoreLeft >= 2) winnerIndex = 1;
   else if (scoreRight >= 2) winnerIndex = 2;

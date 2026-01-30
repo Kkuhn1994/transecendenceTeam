@@ -5,6 +5,7 @@ const fastifyCookie = require('@fastify/cookie');
 const sqlite3 = require('sqlite3');
 const https = require('https');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const fastify = Fastify({
   logger: true,
@@ -59,8 +60,9 @@ async function getCurrentUser(req) {
 fastify.post('/session/create', async (req, reply) => {
   try {
     const me = await getCurrentUser(req);
-    if (!me)
+    if (!me) {
       return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+    }
 
     const { player2Email, player2Password, otp } = req.body || {};
     if (!player2Email || !player2Password || !otp) {
@@ -80,7 +82,7 @@ fastify.post('/session/create', async (req, reply) => {
           password: player2Password,
           otp,
         }),
-      },
+      }
     );
 
     if (!verifyRes.ok) {
@@ -99,28 +101,45 @@ fastify.post('/session/create', async (req, reply) => {
     }
 
     const db = openDb();
-    const sessionId = await new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO game_sessions (player1_id, player2_id)
-         VALUES (?, ?)`,
-        [me.id, player2.id],
-        function (err) {
-          if (err) return reject(err);
-          resolve(this.lastID);
-        },
-      );
-    }).finally(() => db.close());
+    try {
+      const sessionId = await new Promise((resolve, reject) => {
+        db.run(
+          `INSERT INTO game_sessions (player1_id, player2_id)
+           VALUES (?, ?)`,
+          [me.id, player2.id],
+          function (err) {
+            if (err) return reject(err);
+            resolve(this.lastID);
+          }
+        );
+      });
 
-    return reply.send({
-      sessionId,
-      player1: { id: me.id, email: me.email },
-      player2: { id: player2.id, email: player2.email },
-    });
+      const pairingToken = crypto.randomBytes(32).toString('hex');
+
+      await new Promise((resolve, reject) => {
+        db.run(
+          `INSERT INTO session_pairings (player1_id, player2_id, token)
+           VALUES (?, ?, ?)`,
+          [me.id, player2.id, pairingToken],
+          (err) => (err ? reject(err) : resolve(null))
+        );
+      });
+
+      return reply.send({
+        sessionId,
+        pairingToken,
+        player1: { id: me.id, email: me.email },
+        player2: { id: player2.id, email: player2.email },
+      });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('Error in /session/create:', err);
     return reply.code(500).send({ error: 'Internal server error' });
   }
 });
+
 
 fastify.post('/session/finish', async (req, reply) => {
   console.log('/session/finish');
@@ -165,6 +184,55 @@ fastify.post('/session/finish', async (req, reply) => {
     db.close();
   }
 });
+
+fastify.post('/session/rematch', async (req, reply) => {
+  const me = await getCurrentUser(req);
+  if (!me) return reply.code(401).send({ error: 'Not authenticated' });
+
+  const { pairingToken } = req.body || {};
+  if (!pairingToken) {
+    return reply.code(400).send({ error: 'pairingToken required' });
+  }
+
+  const db = openDb();
+  try {
+    const pairing = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT player1_id, player2_id FROM session_pairings WHERE token = ?`,
+        [pairingToken],
+        (err, row) => (err ? reject(err) : resolve(row))
+      );
+    });
+
+    if (!pairing) {
+      return reply.code(403).send({ error: 'Invalid pairing token' });
+    }
+
+    if (Number(pairing.player1_id) !== Number(me.id)) {
+      return reply.code(403).send({ error: 'Pairing does not belong to you' });
+    }
+
+    const sessionId = await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO game_sessions (player1_id, player2_id)
+         VALUES (?, ?)`,
+        [pairing.player1_id, pairing.player2_id],
+        function (err) {
+          if (err) return reject(err);
+          resolve(this.lastID);
+        }
+      );
+    });
+
+    return reply.send({ sessionId });
+  } catch (err) {
+    fastify.log.error(err);
+    return reply.code(500).send({ error: 'Rematch failed' });
+  } finally {
+    db.close();
+  }
+});
+
 
 fastify.get('/profile/me', async (req, reply) => {
   try {

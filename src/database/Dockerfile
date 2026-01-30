@@ -84,7 +84,21 @@ RUN sqlite3 /app/data/database.db " \
         rightPaddleY INTEGER, \
         leftPaddleY INTEGER, \
         ballX INTEGER, \
-        ballY INTEGER \
+        ballY INTEGER, \
+        serveUntilMs INTEGER DEFAULT 0, \
+        serveVX REAL DEFAULT 0, \
+        serveVY REAL DEFAULT 0, \
+        rallyCount INTEGER DEFAULT 0 \
+     ); \
+    CREATE TABLE IF NOT EXISTS session_pairings ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT, \
+        player1_id INTEGER NOT NULL, \
+        player2_id INTEGER NOT NULL, \
+        token TEXT UNIQUE NOT NULL, \
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, \
+        expires_at DATETIME, \
+        FOREIGN KEY (player1_id) REFERENCES users(id), \
+        FOREIGN KEY (player2_id) REFERENCES users(id) \
     ); \
 "
 

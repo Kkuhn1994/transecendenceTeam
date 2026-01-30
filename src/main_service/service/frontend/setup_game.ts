@@ -2,10 +2,19 @@ export {};
 
 declare global {
   interface Window {
+    currentSessionId?: number;
+
     currentMatchPlayer1Name?: string;
     currentMatchPlayer2Name?: string;
+
+    lastPairingToken?: string;
+
+    lastP2Email?: string;
+    lastP2Password?: string;
+    lastP2Otp?: string;
   }
 }
+
 
 export function init1v1Setup() {
   const form = document.getElementById('player2Form') as HTMLFormElement | null;
@@ -69,8 +78,16 @@ export function init1v1Setup() {
         return;
       }
 
-      window.currentSessionId = data.sessionId;
+      if (!data.pairingToken) {
+        if (errorEl) errorEl.textContent = 'No pairingToken returned';
+        return;
+      }
 
+      window.currentSessionId = data.sessionId;
+      window.lastPairingToken = String(data.pairingToken);
+
+      window.lastP2Email = player2Email;
+      window.lastP2Password = player2Password;
       // Go to game
       location.hash = '#/game';
     } catch (err) {
