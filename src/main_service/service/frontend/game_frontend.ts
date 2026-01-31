@@ -14,6 +14,7 @@ declare global {
 
     currentMatchPlayer1Name?: string;
     currentMatchPlayer2Name?: string;
+    currentSessionIsAI?: boolean;
 
     lastP2Email?: string;
     lastP2Password?: string;
@@ -494,6 +495,7 @@ export function startGame() {
       ballX,
       ballY,
       sessionId,
+      isAI: window.currentSessionIsAI || false
     };
 
     try {

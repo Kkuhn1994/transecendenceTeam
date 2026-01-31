@@ -140,6 +140,41 @@ fastify.post('/session/create', async (req, reply) => {
   }
 });
 
+fastify.post('/session/create_ai', async (req, reply) => {
+  try {
+    const me = await getCurrentUser(req);
+    if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+
+    const db = openDb();
+    try {
+      const sessionId = await new Promise((resolve, reject) => {
+        // Use player2_id = 0 to indicate AI opponent
+        db.run(
+          `INSERT INTO game_sessions (player1_id, player2_id)
+           VALUES (?, 0)`,
+          [me.id],
+          function (err) {
+            if (err) return reject(err);
+            resolve(this.lastID);
+          }
+        );
+      });
+
+      return reply.send({
+        sessionId,
+        player1: { id: me.id, email: me.email },
+        ai: { type: 'basic' },
+        isAI: true
+      });
+    } finally {
+      db.close();
+    }
+  } catch (err) {
+    console.error('Error in /session/create_ai:', err);
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+});
+
 
 fastify.post('/session/finish', async (req, reply) => {
   console.log('/session/finish');

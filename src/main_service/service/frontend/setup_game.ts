@@ -6,6 +6,7 @@ declare global {
 
     currentMatchPlayer1Name?: string;
     currentMatchPlayer2Name?: string;
+    currentSessionIsAI?: boolean;
 
     lastPairingToken?: string;
 
@@ -28,6 +29,28 @@ export function init1v1Setup() {
   const errorEl = document.getElementById(
     'player2Error',
   ) as HTMLParagraphElement | null;
+
+  // AI Match Elements
+  const humanMatchRadio = document.getElementById('humanMatch') as HTMLInputElement | null;
+  const aiMatchRadio = document.getElementById('aiMatch') as HTMLInputElement | null;
+  const humanMatchSection = document.getElementById('humanMatchSection') as HTMLDivElement | null;
+  const aiMatchSection = document.getElementById('aiMatchSection') as HTMLDivElement | null;
+  const startAiMatchBtn = document.getElementById('startAiMatch') as HTMLButtonElement | null;
+
+  // Toggle between human and AI match sections
+  function toggleMatchType() {
+    if (humanMatchRadio?.checked) {
+      if (humanMatchSection) humanMatchSection.style.display = 'block';
+      if (aiMatchSection) aiMatchSection.style.display = 'none';
+    } else if (aiMatchRadio?.checked) {
+      if (humanMatchSection) humanMatchSection.style.display = 'none';
+      if (aiMatchSection) aiMatchSection.style.display = 'block';
+    }
+  }
+
+  // Add event listeners for radio buttons
+  humanMatchRadio?.addEventListener('change', toggleMatchType);
+  aiMatchRadio?.addEventListener('change', toggleMatchType);
 
   if (!form || !emailInput || !passwordInput || !otpInput) return;
 
@@ -84,6 +107,7 @@ export function init1v1Setup() {
       }
 
       window.currentSessionId = data.sessionId;
+      window.currentSessionIsAI = false;
       window.lastPairingToken = String(data.pairingToken);
 
       window.lastP2Email = player2Email;
@@ -93,6 +117,46 @@ export function init1v1Setup() {
     } catch (err) {
       console.error('Error creating session:', err);
       if (errorEl) errorEl.textContent = 'Network error while creating session';
+    }
+  });
+
+  // AI Match Handler
+  startAiMatchBtn?.addEventListener('click', async () => {
+    try {
+      if (errorEl) errorEl.textContent = '';
+      
+      // Get player 1 name
+      const meEmail = await getMeEmail();
+      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+      window.currentMatchPlayer2Name = 'AI Bot';
+      
+      // Create AI session
+      const response = await fetch('/session/create_ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (errorEl) errorEl.textContent = data.error || 'Could not create AI session';
+        return;
+      }
+
+      if (!data.sessionId) {
+        if (errorEl) errorEl.textContent = 'No sessionId returned';
+        return;
+      }
+
+      window.currentSessionId = data.sessionId;
+      window.currentSessionIsAI = true;
+      
+      // Go to game
+      location.hash = '#/game';
+    } catch (err) {
+      console.error('Error creating AI session:', err);
+      if (errorEl) errorEl.textContent = 'Network error while creating AI session';
     }
   });
 }

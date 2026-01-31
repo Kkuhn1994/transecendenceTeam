@@ -100,22 +100,50 @@ const views: ViewMap = {
       </div>
       <h1>⚔️ 1v1 Match Setup</h1>
       <p>Player 1 is the currently logged in user.</p>
-      <p>Player 2 must log in here:</p>
-      <form id="player2Form">
-        <div class="mb-3">
-          <label for="player2Email" class="form-label">Player 2 username</label>
-          <input id="player2Email" class="form-control" placeholder="Enter Player 2's username" required />
+      
+      <!-- Match Type Selection -->
+      <div class="mb-4">
+        <h5>Choose your opponent:</h5>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="matchType" id="humanMatch" value="human" checked>
+          <label class="form-check-label" for="humanMatch">
+            👥 Play against another player
+          </label>
         </div>
-        <div class="mb-3">
-          <label for="player2Password" class="form-label">Player 2 Password</label>
-          <input type="password" id="player2Password" class="form-control" placeholder="Enter Player 2's password" required />
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="matchType" id="aiMatch" value="ai">
+          <label class="form-check-label" for="aiMatch">
+            🤖 Play against AI opponent
+          </label>
         </div>
-        <div class="mb-3">
-          <label for="playerOTP" class="form-label">OTP</label>
-          <input id="otp" class="form-control" placeholder="Enter Player 2's OTP" required />
-        </div>
-        <button type="submit" class="btn btn-primary">🚀 Start Match</button>
-      </form>
+      </div>
+
+      <!-- Human Player Section -->
+      <div id="humanMatchSection">
+        <p>Player 2 must log in here:</p>
+        <form id="player2Form">
+          <div class="mb-3">
+            <label for="player2Email" class="form-label">Player 2 username</label>
+            <input id="player2Email" class="form-control" placeholder="Enter Player 2's username" required />
+          </div>
+          <div class="mb-3">
+            <label for="player2Password" class="form-label">Player 2 Password</label>
+            <input type="password" id="player2Password" class="form-control" placeholder="Enter Player 2's password" required />
+          </div>
+          <div class="mb-3">
+            <label for="playerOTP" class="form-label">OTP</label>
+            <input id="otp" class="form-control" placeholder="Enter Player 2's OTP" required />
+          </div>
+          <button type="submit" class="btn btn-primary">🚀 Start Match vs Player</button>
+        </form>
+      </div>
+
+      <!-- AI Match Section -->
+      <div id="aiMatchSection" style="display: none;">
+        <p>Ready to challenge our AI opponent?</p>
+        <button id="startAiMatch" class="btn btn-success">🤖 Start Match vs AI</button>
+      </div>
+
       <p id="player2Error" style="color:#ff6b6b;" class="mt-3"></p>
     </div>
   `,

@@ -1,6 +1,10 @@
 const Fastify = require('fastify');
 const DB_PATH = '/app/data/database.db';
 const sqlite3 = require('sqlite3');
+const { PongAI } = require('./opponent_ai.js');
+
+// Game session storage for AI opponents
+const gameSessions = new Map();
 
 const https = require('https');
 const fs = require('fs');
@@ -47,6 +51,26 @@ async function getCurrentUser(req) {
 async function setup_newgame(sessionId, body, db) {
   const canvasheight = Number(body.canvasheight);
   const canvaswidth = Number(body.canvaswidth);
+  const isAI = body.isAI || false;
+
+  // For AI games, use session-based storage alongside database
+  if (isAI && !gameSessions.has(sessionId)) {
+    const gameSession = {
+      currentSessionId: sessionId,
+      ballSpeedX: 4,
+      ballSpeedY: 4,
+      scoreLeft: 0,
+      scoreRight: 0,
+      ballX: canvaswidth / 2,
+      ballY: canvasheight / 2,
+      leftPaddleY: (canvasheight - 100) / 2,
+      rightPaddleY: (canvasheight - 100) / 2,
+      isAI: true,
+      ai: new PongAI(),
+      aiUpdateCounter: 0,
+    };
+    gameSessions.set(sessionId, gameSession);
+  }
 
   const paddleHeight = 100;
 
@@ -119,6 +143,35 @@ async function game_actions(sessionId, row, body, db) {
     scoreRight,
   } = row;
   let { upPressed, downPressed, wPressed, sPressed } = body;
+  const isAI = body.isAI || false;
+  
+  // AI opponent logic
+  if (isAI && gameSessions.has(sessionId)) {
+    const gameSession = gameSessions.get(sessionId);
+    gameSession.aiUpdateCounter++;
+    
+    // Update AI every 5 frames for performance
+    if (gameSession.aiUpdateCounter % 5 === 0) {
+      const aiGameState = {
+        ballX,
+        ballY,
+        ballSpeedX,
+        ballSpeedY,
+        rightPaddleY,
+        canvasWidth: canvaswidth,
+        canvasHeight: canvasheight,
+        paddleHeight: 100,
+        paddleWidth: 10
+      };
+      
+      gameSession.ai.update(aiGameState);
+    }
+    
+    // Override AI player input (right paddle)
+    upPressed = gameSession.ai.shouldMoveUp(rightPaddleY, 100);
+    downPressed = gameSession.ai.shouldMoveDown(rightPaddleY, 100);
+  }
+  
   const paddleWidth = 10,
     paddleHeight = 100,
     paddleSpeed = 4,
