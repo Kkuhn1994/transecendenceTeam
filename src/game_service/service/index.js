@@ -270,15 +270,17 @@ async function game_actions(sessionId, row, body, db) {
     ballY = canvasheight / 2;
 
     // serve toward the player who conceded (to keep it fair-ish)
+    // Use same initial speed as game start: √(4² + 4²) ≈ 5.66
     ballSpeedX = BASE_SPEED;
-    ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * (BASE_SPEED * 0.6);
+    ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * BASE_SPEED;
   } else if (ballX > canvaswidth) {
     scoreLeft++;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
 
+    // Use same initial speed as game start: √(4² + 4²) ≈ 5.66
     ballSpeedX = -BASE_SPEED;
-    ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * (BASE_SPEED * 0.6);
+    ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * BASE_SPEED;
   }
   let winnerIndex = null;
   if (scoreLeft >= 2) winnerIndex = 1;
