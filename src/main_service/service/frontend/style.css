@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   overflow: hidden; /* ✅ never scroll the page */
@@ -33,23 +34,29 @@ nav {
 /* Page background */
 body {
   background: linear-gradient(135deg, #070a12 0%, #0b1222 50%, #0a1020 100%);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
   display: flex;
   justify-content: center;
   align-items: center;
 
-  height: 100svh;      /* ✅ full screen without mobile glitches */
-  overflow: hidden;    /* ✅ hard lock scroll */
+  height: 100svh; /* ✅ full screen without mobile glitches */
+  overflow: hidden; /* ✅ hard lock scroll */
   color: #e5e7eb;
 }
 
 /* Text */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: #f8fafc;
   text-shadow: none;
 }
-p, label {
+p,
+label {
   color: #e5e7eb;
 }
 small {
@@ -65,16 +72,17 @@ small {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 12px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .login-container {
-  width: 100%;
+  width: 80%;
   max-width: 450px;
-  padding: 2rem;
-  margin-top: 50px;
+  padding: 10px;
+  margin: 20px;
 }
-
-.page-container {
+*/ .page-container {
   padding: 2rem;
   max-width: 800px;
   width: 100%;
@@ -140,7 +148,11 @@ h1 {
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.12s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
   user-select: none;
 }
 
@@ -155,12 +167,20 @@ h1 {
 
 /* Primary */
 .btn-primary {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.95), rgba(56, 189, 248, 0.85));
+  background: linear-gradient(
+    180deg,
+    rgba(125, 211, 252, 0.95),
+    rgba(56, 189, 248, 0.85)
+  );
   color: #06101d;
   border-color: rgba(125, 211, 252, 0.35);
 }
 .btn-primary:hover {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 1), rgba(56, 189, 248, 0.92));
+  background: linear-gradient(
+    180deg,
+    rgba(125, 211, 252, 1),
+    rgba(56, 189, 248, 0.92)
+  );
 }
 
 /* Secondary */
@@ -172,22 +192,38 @@ h1 {
 
 /* Success */
 .btn-success {
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.82));
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 0.92),
+    rgba(22, 163, 74, 0.82)
+  );
   color: #06101d;
   border-color: rgba(34, 197, 94, 0.35);
 }
 .btn-success:hover {
-  background: linear-gradient(180deg, rgba(34, 197, 94, 1), rgba(22, 163, 74, 0.9));
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 1),
+    rgba(22, 163, 74, 0.9)
+  );
 }
 
 /* Danger */
 .btn-danger {
-  background: linear-gradient(180deg, rgba(248, 113, 113, 0.95), rgba(239, 68, 68, 0.85));
+  background: linear-gradient(
+    180deg,
+    rgba(248, 113, 113, 0.95),
+    rgba(239, 68, 68, 0.85)
+  );
   color: #1a0b0b;
   border-color: rgba(248, 113, 113, 0.35);
 }
 .btn-danger:hover {
-  background: linear-gradient(180deg, rgba(248, 113, 113, 1), rgba(239, 68, 68, 0.92));
+  background: linear-gradient(
+    180deg,
+    rgba(248, 113, 113, 1),
+    rgba(239, 68, 68, 0.92)
+  );
 }
 
 /* Outline Danger */
@@ -252,7 +288,10 @@ h1 {
   border: 1px solid rgba(148, 163, 184, 0.22);
   background: rgba(148, 163, 184, 0.12);
   color: #e5e7eb;
-  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.12s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .nav button:hover {
@@ -279,10 +318,9 @@ h1 {
   width: 100%;
 }
 
-
 #pongCanvas {
   display: block;
-  width: 100%;            /* JS sets internal resolution, CSS controls display size */
+  width: 100%; /* JS sets internal resolution, CSS controls display size */
   height: auto;
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 12px;
@@ -320,8 +358,12 @@ h1 {
   white-space: nowrap;
 }
 
-.player-name.left { text-align: left; }
-.player-name.right { text-align: right; }
+.player-name.left {
+  text-align: left;
+}
+.player-name.right {
+  text-align: right;
+}
 
 .game-controls {
   color: #e5e7eb;
@@ -331,18 +373,37 @@ h1 {
   opacity: 0.85;
 }
 
-
 /* Utility classes */
-.text-center { text-align: center; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-3 { margin-bottom: 1rem; }
-.mb-4 { margin-bottom: 1.5rem; }
-.mt-3 { margin-top: 1rem; }
-.mt-4 { margin-top: 1.5rem; }
-.w-100 { width: 100%; }
-.d-flex { display: flex; }
-.gap-3 { gap: 1rem; }
-.justify-content-center { justify-content: center; }
+.text-center {
+  text-align: center;
+}
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+.mb-3 {
+  margin-bottom: 1rem;
+}
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+.mt-3 {
+  margin-top: 1rem;
+}
+.mt-4 {
+  margin-top: 1.5rem;
+}
+.w-100 {
+  width: 100%;
+}
+.d-flex {
+  display: flex;
+}
+.gap-3 {
+  gap: 1rem;
+}
+.justify-content-center {
+  justify-content: center;
+}
 
 /* ---------- Custom Modal (ui_modal.ts) ---------- */
 #modal-root {
@@ -367,7 +428,7 @@ h1 {
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.92);
   border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
   padding: 18px 18px 14px 18px;
 }
 
@@ -379,7 +440,7 @@ h1 {
 }
 
 .ui-modal-body {
-  color: rgba(226,232,240,0.92);
+  color: rgba(226, 232, 240, 0.92);
   line-height: 1.35;
   font-size: 14.5px;
   margin-bottom: 14px;
@@ -397,7 +458,11 @@ h1 {
   padding: 10px 14px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.12s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .ui-btn:active {
@@ -405,7 +470,11 @@ h1 {
 }
 
 .ui-btn-primary {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.95), rgba(56, 189, 248, 0.85));
+  background: linear-gradient(
+    180deg,
+    rgba(125, 211, 252, 0.95),
+    rgba(56, 189, 248, 0.85)
+  );
   color: #06101d;
   border-color: rgba(125, 211, 252, 0.35);
 }
@@ -417,7 +486,11 @@ h1 {
 }
 
 .ui-btn-danger {
-  background: linear-gradient(180deg, rgba(248, 113, 113, 0.95), rgba(239, 68, 68, 0.85));
+  background: linear-gradient(
+    180deg,
+    rgba(248, 113, 113, 0.95),
+    rgba(239, 68, 68, 0.85)
+  );
   color: #1a0b0b;
   border-color: rgba(248, 113, 113, 0.35);
 }
@@ -425,7 +498,7 @@ h1 {
 .ui-btn-ghost {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.25);
-  color: rgba(226,232,240,0.95);
+  color: rgba(226, 232, 240, 0.95);
 }
 
 .ui-btn:hover {
