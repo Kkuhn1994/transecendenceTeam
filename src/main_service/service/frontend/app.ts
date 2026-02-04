@@ -445,6 +445,20 @@ function hasPendingMatch(): boolean {
 }
 
 async function abandonProgressIfAny(): Promise<void> {
+  // Abandon any active game session on the backend
+  const sessionId = window.currentSessionId;
+  if (sessionId != null) {
+    try {
+      await fetch('/session/abandon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+    } catch {
+      // ignore - best effort
+    }
+  }
+
   // Tournament abandon = real abandon (delete DB + clear everything)
   if (window.currentTournamentId != null) {
     try {
@@ -520,9 +534,21 @@ async function handleNavButtons() {
     });
   }
 
-  // Logout on window close/refresh to prevent session lockout
+  // Abandon game sessions and logout on window close/refresh
   window.addEventListener('beforeunload', () => {
-    // Use sendBeacon for reliable logout on page unload
+    // Use sendBeacon for reliable cleanup on page unload
+    // Abandon any active game session first
+    if (window.currentSessionId != null) {
+      const abandonData = new Blob(
+        [JSON.stringify({ sessionId: window.currentSessionId })],
+        { type: 'application/json' }
+      );
+      navigator.sendBeacon('/session/abandon', abandonData);
+    } else {
+      // Abandon all sessions for this user (fallback)
+      const abandonAll = new Blob([JSON.stringify({})], { type: 'application/json' });
+      navigator.sendBeacon('/session/abandon', abandonAll);
+    }
     navigator.sendBeacon('/login_service/logout');
   });
 }

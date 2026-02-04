@@ -6,6 +6,43 @@ const { PongAI } = require('./opponent_ai.js');
 // Game session storage for AI opponents
 const gameSessions = new Map();
 
+// Per-session locks to prevent overlapping requests for the same session
+const sessionLocks = new Map();
+
+/**
+ * Acquire a lock for a specific session to prevent race conditions.
+ * Requests for the same sessionId will queue up and execute sequentially.
+ */
+async function withSessionLock(sessionId, fn) {
+  // Wait for any existing operation on this session to complete
+  while (sessionLocks.has(sessionId)) {
+    try {
+      await sessionLocks.get(sessionId);
+    } catch (e) {
+      // Previous operation failed, that's okay, we can proceed
+    }
+  }
+  
+  // Create our lock promise
+  let resolveLock, rejectLock;
+  const lockPromise = new Promise((resolve, reject) => {
+    resolveLock = resolve;
+    rejectLock = reject;
+  });
+  sessionLocks.set(sessionId, lockPromise);
+  
+  try {
+    const result = await fn();
+    resolveLock();
+    return result;
+  } catch (err) {
+    rejectLock(err);
+    throw err;
+  } finally {
+    sessionLocks.delete(sessionId);
+  }
+}
+
 const https = require('https');
 const fs = require('fs');
 
@@ -427,41 +464,38 @@ fastify.post('/game', async function (request, reply) {
     return reply.code(401).send({ error: 'Not authenticated as Player 1' });
   }
 
-  const db = openDb();
-  try {
-    const body = request.body || {};
-    const sessionId = body.sessionId;
+  const body = request.body || {};
+  const sessionId = body.sessionId;
 
-    if (!sessionId) {
-      console.log('no session ID');
-      return reply.code(400).send({ error: 'sessionId is required' });
-    }
+  if (!sessionId) {
+    console.log('no session ID');
+    return reply.code(400).send({ error: 'sessionId is required' });
+  }
 
-    // Verify user is player1 in this game session
-    const gameSession = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT player1_id, player2_id FROM game_sessions WHERE id = ?',
-        [sessionId],
-        (err, row) => (err ? reject(err) : resolve(row))
-      );
-    });
-
-    if (!gameSession) {
-      console.log('Game session not found:', sessionId);
-      return reply.code(404).send({ error: 'Game session not found' });
-    }
-
-    if (gameSession.player1_id !== me.id) {
-      console.log('User', me.id, 'is not player1 (', gameSession.player1_id, ') in session', sessionId);
-      return reply.code(403).send({ error: 'You are not player1 in this game' });
-    }
-
-    // Begin transaction for atomic read-modify-write
-    await new Promise((resolve, reject) => {
-      db.run('BEGIN IMMEDIATE', (err) => (err ? reject(err) : resolve()));
-    });
-
+  // Use session lock to prevent overlapping requests for the same session
+  // This prevents the read-compute-write race condition that causes rubberbanding
+  return withSessionLock(sessionId, async () => {
+    const db = openDb();
     try {
+      // Verify user is player1 in this game session
+      const gameSessionRecord = await new Promise((resolve, reject) => {
+        db.get(
+          'SELECT player1_id, player2_id FROM game_sessions WHERE id = ?',
+          [sessionId],
+          (err, row) => (err ? reject(err) : resolve(row))
+        );
+      });
+
+      if (!gameSessionRecord) {
+        console.log('Game session not found:', sessionId);
+        return reply.code(404).send({ error: 'Game session not found' });
+      }
+
+      if (gameSessionRecord.player1_id !== me.id) {
+        console.log('User', me.id, 'is not player1 (', gameSessionRecord.player1_id, ') in session', sessionId);
+        return reply.code(403).send({ error: 'You are not player1 in this game' });
+      }
+
       // 1) get row
       let row = await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
         sessionId,
@@ -478,7 +512,7 @@ fastify.post('/game', async function (request, reply) {
         // Handle AI session mismatch for existing games
         if (isAI && !gameSessions.has(sessionId)) {
           // AI game but no AI session - create one
-          const gameSession = {
+          const aiSession = {
             currentSessionId: sessionId,
             ballSpeedX: 4,
             ballSpeedY: 4,
@@ -492,7 +526,7 @@ fastify.post('/game', async function (request, reply) {
             ai: new PongAI(),
             aiUpdateCounter: 0,
           };
-          gameSessions.set(sessionId, gameSession);
+          gameSessions.set(sessionId, aiSession);
           console.log('Recreated AI session for existing game, sessionId:', sessionId);
         } else if (!isAI && gameSessions.has(sessionId)) {
           // Non-AI game but has AI session - clean it up
@@ -503,11 +537,6 @@ fastify.post('/game', async function (request, reply) {
 
       // 3) step simulation
       const out = await game_actions(sessionId, row, body, db);
-      
-      // Commit transaction
-      await new Promise((resolve, reject) => {
-        db.run('COMMIT', (err) => (err ? reject(err) : resolve()));
-      });
 
       return reply.send({
         leftPaddleY: out.leftPaddleY,
@@ -519,19 +548,13 @@ fastify.post('/game', async function (request, reply) {
         winnerIndex: out.winnerIndex,
       });
     } catch (err) {
-      // Rollback transaction on error
-      await new Promise((resolve) => {
-        db.run('ROLLBACK', () => resolve());
-      });
-      throw err;
+      console.log('error in game route');
+      fastify.log.error('Error in /game route:', err);
+      return reply.code(500).send({ error: 'Game service error' });
+    } finally {
+      db.close();
     }
-  } catch (err) {
-    console.log('error in game route');
-    fastify.log.error('Error in /game route:', err);
-    return reply.code(500).send({ error: 'Game service error' });
-  } finally {
-    db.close();
-  }
+  });
 });
 
 fastify.post('/game/reset', async (request, reply) => {

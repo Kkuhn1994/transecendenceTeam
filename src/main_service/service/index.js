@@ -104,6 +104,10 @@ fastify.post('/session/create', async (req, reply) => {
 
     const db = openDb();
     try {
+      // Clean up stale sessions first (handles crashed browsers, etc.)
+      await cleanupStaleSessions(db, me.id);
+      await cleanupStaleSessions(db, player2.id);
+
       // Check if either player is already in an active game (no winner yet)
       const activeGame1 = await new Promise((resolve, reject) => {
         db.get(
@@ -174,6 +178,9 @@ fastify.post('/session/create_ai', async (req, reply) => {
 
     const db = openDb();
     try {
+      // Clean up stale sessions first (handles crashed browsers, etc.)
+      await cleanupStaleSessions(db, me.id);
+
       // Check if player is already in an active game
       const activeGame = await new Promise((resolve, reject) => {
         db.get(
@@ -307,6 +314,77 @@ fastify.post('/session/rematch', async (req, reply) => {
     db.close();
   }
 });
+
+// Abandon a game session (when player leaves early)
+// This marks the session as ended so players can start new games
+fastify.post('/session/abandon', async (req, reply) => {
+  const me = await getCurrentUser(req);
+  if (!me) return reply.code(401).send({ error: 'Not authenticated' });
+
+  const { sessionId } = req.body || {};
+  
+  const db = openDb();
+  try {
+    // If sessionId is provided, abandon that specific session
+    if (sessionId) {
+      const session = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT id, player1_id, player2_id FROM game_sessions WHERE id = ? AND winner_id IS NULL`,
+          [sessionId],
+          (err, row) => (err ? reject(err) : resolve(row))
+        );
+      });
+
+      if (session && (session.player1_id === me.id || session.player2_id === me.id)) {
+        await new Promise((resolve, reject) => {
+          db.run(
+            `UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 WHERE id = ?`,
+            [sessionId],
+            (err) => (err ? reject(err) : resolve())
+          );
+        });
+        console.log(`Session ${sessionId} abandoned by user ${me.id}`);
+      }
+    } else {
+      // Abandon ALL active sessions for this user
+      await new Promise((resolve, reject) => {
+        db.run(
+          `UPDATE game_sessions 
+           SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
+           WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
+          [me.id, me.id],
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+      console.log(`All active sessions abandoned for user ${me.id}`);
+    }
+
+    return reply.send({ ok: true });
+  } catch (err) {
+    console.error('Error in /session/abandon:', err);
+    return reply.code(500).send({ error: 'Database error' });
+  } finally {
+    db.close();
+  }
+});
+
+// Cleanup stale sessions (sessions that have been inactive for too long)
+// This is called before creating new sessions to prevent stuck states
+async function cleanupStaleSessions(db, userId) {
+  // Mark sessions as abandoned if they've been active for more than 10 minutes without finishing
+  // This handles cases where beforeunload didn't fire (crash, force quit, etc.)
+  await new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE game_sessions 
+       SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
+       WHERE (player1_id = ? OR player2_id = ?) 
+         AND winner_id IS NULL 
+         AND started_at < datetime('now', '-10 minutes')`,
+      [userId, userId],
+      (err) => (err ? reject(err) : resolve())
+    );
+  });
+}
 
 
 fastify.get('/profile/me', async (req, reply) => {

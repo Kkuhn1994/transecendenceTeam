@@ -78,6 +78,21 @@ async function deleteTournamentFromDB(tournamentId: number) {
   }
 }
 
+async function abandonCurrentSession() {
+  const sessionId = window.currentSessionId;
+  if (sessionId != null) {
+    try {
+      await fetch('/session/abandon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+    } catch {
+      // ignore - best effort
+    }
+  }
+}
+
 function clearTournamentGlobals() {
   window.currentTournamentId = undefined;
   window.currentSessionId = undefined;
@@ -88,6 +103,8 @@ function clearTournamentGlobals() {
 
 async function abandonTournamentAndResetUI() {
   const tid = window.currentTournamentId;
+  // Abandon the current game session first
+  await abandonCurrentSession();
   if (tid != null) await deleteTournamentFromDB(Number(tid));
   clearTournamentGlobals();
   clearTournamentUIState();

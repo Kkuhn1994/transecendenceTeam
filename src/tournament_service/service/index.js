@@ -44,6 +44,18 @@ function dbAll(sql, params = []) {
   });
 }
 
+// Cleanup stale sessions for a player (sessions inactive for more than 10 minutes)
+async function cleanupStaleSessions(playerId) {
+  await dbRun(
+    `UPDATE game_sessions 
+     SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
+     WHERE (player1_id = ? OR player2_id = ?) 
+       AND winner_id IS NULL 
+       AND started_at < datetime('now', '-10 minutes')`,
+    [playerId, playerId]
+  );
+}
+
 async function insertRoundMatches(tournamentId, round, pairs) {
   // pairs: Array<[p1, p2|null]>
   for (let i = 0; i < pairs.length; i++) {
@@ -216,6 +228,11 @@ fastify.post('/tournament/create', async (request, reply) => {
 
     const cleanName =
       name && String(name).trim() ? String(name).trim() : 'Tournament';
+
+    // Clean up stale sessions for all players first
+    for (const playerId of playerIds) {
+      await cleanupStaleSessions(playerId);
+    }
 
     // Check if any player is already in an active game
     for (const playerId of playerIds) {
