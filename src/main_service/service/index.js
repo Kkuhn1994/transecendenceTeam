@@ -283,7 +283,8 @@ fastify.get('/profile/me', async (req, reply) => {
           COUNT(*) AS games_played,
           SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) AS wins
         FROM game_sessions
-        WHERE player1_id = ? OR player2_id = ?
+        WHERE (player1_id = ? OR player2_id = ?)
+          AND player2_id != 0
         `,
         [me.id, me.id, me.id],
         (err, row) => (err ? reject(err) : resolve(row || {})),
@@ -343,9 +344,10 @@ fastify.get('/profile/history', async (req, reply) => {
           t.name AS tournament_name
         FROM game_sessions gs
         JOIN users u1 ON gs.player1_id = u1.id
-        JOIN users u2 ON gs.player2_id = u2.id
+        LEFT JOIN users u2 ON gs.player2_id = u2.id
         LEFT JOIN tournaments t ON gs.tournament_id = t.id
-        WHERE gs.player1_id = ? OR gs.player2_id = ?
+        WHERE (gs.player1_id = ? OR gs.player2_id = ?)
+          AND gs.player2_id != 0
         ORDER BY gs.started_at DESC
         LIMIT 50
         `,
