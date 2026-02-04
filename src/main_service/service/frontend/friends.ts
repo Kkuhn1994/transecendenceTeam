@@ -147,20 +147,22 @@ export async function initFriends(): Promise<void> {
                      alt="Avatar"
                      class="friend-avatar"
                      onerror="this.style.display='none';" />
-                <div class="friend-info" style="flex:1;">
+                <div class="friend-info" style="flex:1; margin-right: 15px;">
                   <h3 style="margin:0;">${displayName}</h3>
                   <p style="margin:5px 0; color:#888;">${statusLine}</p>
                 </div>
 
-                <div class="friend-actions">
+                <div class="friend-actions" style="display: flex; gap: 10px; align-items: center;">
                   <button class="view-profile-btn btn btn-primary"
-                          data-friend='${friendPayload}'>
-                    👤 See profile
+                          data-friend='${friendPayload}'
+                          style="margin-top: 0; height: 38px; min-width: 120px;">
+                    View Profile
                   </button>
 
                   <button class="remove-friend-btn btn btn-danger"
-                          data-friend-id="${f.id}">
-                    🗑 Remove
+                          data-friend-id="${f.id}"
+                          style="margin-top: 0; height: 38px; min-width: 100px;">
+                    Remove
                   </button>
                 </div>
               </div>
@@ -175,9 +177,9 @@ export async function initFriends(): Promise<void> {
       <div class="add-friend" style="margin:20px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <input type="text" id="friendEmailInput"
                class="form-control"
-               placeholder="Enter friend's Username"
+               placeholder="Enter friend's username"
                style="width:250px;" />
-        <button id="addFriendBtn" class="btn btn-primary">➕ Add Friend</button>
+        <button id="addFriendBtn" class="btn btn-primary" style="margin-top: 0; height: 38px;">Add Friend</button>
       </div>
 
       <div class="friends-list">
