@@ -141,7 +141,7 @@ const views: ViewMap = {
       <!-- AI Match Section -->
       <div id="aiMatchSection" style="display: none;">
         <p>Ready to challenge our AI opponent?</p>
-        <button id="startAiMatch" class="btn btn-success">🤖 Start Match vs AI</button>
+        <button id="startAiMatch" class="btn btn-primary">🤖 Start Match vs AI</button>
       </div>
 
       <p id="player2Error" style="color:#ff6b6b;" class="mt-3"></p>

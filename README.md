@@ -6,6 +6,14 @@
 
 A secure, multiplayer web-based Pong game featuring JWT authentication, 2FA, HTTPS encryption, user management, tournaments, and AI opponents.
 
+## Team Information
+
+**Emil:**  Project Owner, Developer  
+**Kevin:**  Technical Lead, Developer  
+**Rasmus:** Project Manager, Developer  
+
+---
+
 **Key Features:**
 
 *Mandatory:*
@@ -29,12 +37,6 @@ A secure, multiplayer web-based Pong game featuring JWT authentication, 2FA, HTT
 - Tournament brackets
 - JWT authentication
 - Microservices architecture
-
----
-
-## Team Information
-
-TODO: roles, responsibilities, member contributions
 
 ---
 
@@ -74,14 +76,13 @@ tournament_players: tournament_id, user_id
 
 | Feature | Description | Contributors |
 |---------|-------------|--------------|
-| User Registration/Login | Signup, login, JWT tokens | rwegat |
-| User Profiles | Display name, avatar, stats | rwegat |
-| Friends System | Add/remove friends, status | rwegat |
-| Match History | Game records, win/loss | rwegat |
-| 2FA | TOTP-based two-factor auth | |
-| Pong Game | Canvas-based multiplayer pong | |
-| AI Opponent | Difficulty-based computer player | rwegat |
-| Tournaments | Bracket system, matchmaking | |
+| Docker Deployment | Single-command containerized deployment | |
+| Multi-user Support | Concurrent users, real-time updates, no race conditions | |
+| Responsive Frontend | Chrome-compatible, mobile-friendly interface | |
+| Secure Authentication | Hashed passwords, HTTPS everywhere | |
+| Input Validation | Frontend and backend validation on all forms | |
+| Privacy & Terms | Accessible Privacy Policy and Terms of Service | |
+| Database Schema | SQLite schema with clear relations | |
 
 ---
 
@@ -103,10 +104,10 @@ tournament_players: tournament_id, user_id
 ---
 
 ## Individual Contributions
-
-**kkuhn:**
-**temil-da:**
-**rwegat:** User profiles, friends system, match history, AI opponent module, frontend profile/friends pages, UI
+//subject wants a lot more here  
+**kkuhn:**  
+**temil-da:**  
+**rwegat:** User profiles, friends system, match history, AI opponent module, UI
 
 ---
 
