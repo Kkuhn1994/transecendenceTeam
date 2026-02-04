@@ -519,6 +519,12 @@ async function handleNavButtons() {
       window.currentTournamentId = undefined;
     });
   }
+
+  // Logout on window close/refresh to prevent session lockout
+  window.addEventListener('beforeunload', () => {
+    // Use sendBeacon for reliable logout on page unload
+    navigator.sendBeacon('/login_service/logout');
+  });
 }
 
 async function router() {

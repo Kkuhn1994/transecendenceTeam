@@ -2,6 +2,7 @@ const Fastify = require('fastify');
 
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('/app/data/database.db');
+db.run('PRAGMA journal_mode = WAL');
 
 let activeTournament = null;
 
@@ -215,6 +216,17 @@ fastify.post('/tournament/create', async (request, reply) => {
 
     const cleanName =
       name && String(name).trim() ? String(name).trim() : 'Tournament';
+
+    // Check if any player is already in an active game
+    for (const playerId of playerIds) {
+      const activeGame = await dbGet(
+        'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+        [playerId, playerId]
+      );
+      if (activeGame) {
+        return reply.code(400).send({ error: `Player ${playerId} is already in an active game` });
+      }
+    }
 
     const result = await dbRun('INSERT INTO tournaments (name) VALUES (?)', [
       cleanName,

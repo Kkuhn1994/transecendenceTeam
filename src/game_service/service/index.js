@@ -18,7 +18,9 @@ const fastify = Fastify({
 });
 
 function openDb() {
-  return new sqlite3.Database(DB_PATH);
+  const db = new sqlite3.Database(DB_PATH);
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
 }
 
 // const https = require('https');
@@ -53,8 +55,14 @@ async function setup_newgame(sessionId, body, db) {
   const canvaswidth = Number(body.canvaswidth);
   const isAI = body.isAI || false;
 
-  // For AI games, use session-based storage alongside database
-  if (isAI && !gameSessions.has(sessionId)) {
+  // Always clean up any existing AI session for this sessionId first
+  if (gameSessions.has(sessionId)) {
+    gameSessions.delete(sessionId);
+    console.log('Cleaned up existing AI session for sessionId:', sessionId);
+  }
+
+  // For AI games, create a fresh AI session
+  if (isAI) {
     const gameSession = {
       currentSessionId: sessionId,
       ballSpeedX: 4,
@@ -70,6 +78,7 @@ async function setup_newgame(sessionId, body, db) {
       aiUpdateCounter: 0,
     };
     gameSessions.set(sessionId, gameSession);
+    console.log('Created new AI session for sessionId:', sessionId);
   }
 
   const paddleHeight = 100;
@@ -318,36 +327,39 @@ async function game_actions(sessionId, row, body, db) {
     ballSpeedY = 4;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
-    await db.run(
-      `
-    UPDATE game_data
-    SET
-      scoreLeft = ?,
-      scoreRight = ?,
-      ballSpeedX = ?,
-      ballSpeedY = ?,
-      canvaswidth = ?,
-      canvasheight = ?,
-      leftPaddleY = ?,
-      rightPaddleY = ?,
-      ballX = ?,
-      ballY = ?
-    WHERE sessionId = ?
-    `,
-      [
-        0,
-        0,
-        ballSpeedX,
-        ballSpeedY,
-        canvaswidth,
-        canvasheight,
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        sessionId,
-      ],
-    );
+    await new Promise((resolve, reject) => {
+      db.run(
+        `
+      UPDATE game_data
+      SET
+        scoreLeft = ?,
+        scoreRight = ?,
+        ballSpeedX = ?,
+        ballSpeedY = ?,
+        canvaswidth = ?,
+        canvasheight = ?,
+        leftPaddleY = ?,
+        rightPaddleY = ?,
+        ballX = ?,
+        ballY = ?
+      WHERE sessionId = ?
+      `,
+        [
+          0,
+          0,
+          ballSpeedX,
+          ballSpeedY,
+          canvaswidth,
+          canvasheight,
+          leftPaddleY,
+          rightPaddleY,
+          ballX,
+          ballY,
+          sessionId,
+        ],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
     return {
       ballX,
       ballY,
@@ -360,36 +372,39 @@ async function game_actions(sessionId, row, body, db) {
       winnerIndex,
     };
   }
-  await db.run(
-    `
-    UPDATE game_data
-    SET
-      scoreLeft = ?,
-      scoreRight = ?,
-      ballSpeedX = ?,
-      ballSpeedY = ?,
-      canvaswidth = ?,
-      canvasheight = ?,
-      leftPaddleY = ?,
-      rightPaddleY = ?,
-      ballX = ?,
-      ballY = ?
-    WHERE sessionId = ?
-    `,
-    [
-      scoreLeft,
-      scoreRight,
-      ballSpeedX,
-      ballSpeedY,
-      canvaswidth,
-      canvasheight,
-      leftPaddleY,
-      rightPaddleY,
-      ballX,
-      ballY,
-      sessionId,
-    ],
-  );
+  await new Promise((resolve, reject) => {
+    db.run(
+      `
+      UPDATE game_data
+      SET
+        scoreLeft = ?,
+        scoreRight = ?,
+        ballSpeedX = ?,
+        ballSpeedY = ?,
+        canvaswidth = ?,
+        canvasheight = ?,
+        leftPaddleY = ?,
+        rightPaddleY = ?,
+        ballX = ?,
+        ballY = ?
+      WHERE sessionId = ?
+      `,
+      [
+        scoreLeft,
+        scoreRight,
+        ballSpeedX,
+        ballSpeedY,
+        canvaswidth,
+        canvasheight,
+        leftPaddleY,
+        rightPaddleY,
+        ballX,
+        ballY,
+        sessionId,
+      ],
+      (err) => (err ? reject(err) : resolve())
+    );
+  });
   return {
     ballX,
     ballY,
@@ -422,31 +437,94 @@ fastify.post('/game', async function (request, reply) {
       return reply.code(400).send({ error: 'sessionId is required' });
     }
 
-    // 1) get row
-    let row = await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
-      sessionId,
-    ]);
+    // Verify user is player1 in this game session
+    const gameSession = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT player1_id, player2_id FROM game_sessions WHERE id = ?',
+        [sessionId],
+        (err, row) => (err ? reject(err) : resolve(row))
+      );
+    });
 
-    // 2) if missing, create & fetch row
-    if (!row) {
-      console.log('new game');
-      row = await setup_newgame(sessionId, body, db);
-    } else {
-      console.log('old game');
+    if (!gameSession) {
+      console.log('Game session not found:', sessionId);
+      return reply.code(404).send({ error: 'Game session not found' });
     }
 
-    // 3) step simulation
-    const out = await game_actions(sessionId, row, body, db);
+    if (gameSession.player1_id !== me.id) {
+      console.log('User', me.id, 'is not player1 (', gameSession.player1_id, ') in session', sessionId);
+      return reply.code(403).send({ error: 'You are not player1 in this game' });
+    }
 
-    return reply.send({
-      leftPaddleY: out.leftPaddleY,
-      rightPaddleY: out.rightPaddleY,
-      ballX: out.ballX,
-      ballY: out.ballY,
-      scoreLeft: out.scoreLeft,
-      scoreRight: out.scoreRight,
-      winnerIndex: out.winnerIndex,
+    // Begin transaction for atomic read-modify-write
+    await new Promise((resolve, reject) => {
+      db.run('BEGIN IMMEDIATE', (err) => (err ? reject(err) : resolve()));
     });
+
+    try {
+      // 1) get row
+      let row = await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
+        sessionId,
+      ]);
+
+      // 2) if missing, create & fetch row
+      if (!row) {
+        console.log('new game');
+        row = await setup_newgame(sessionId, body, db);
+      } else {
+        console.log('old game');
+        const isAI = body.isAI || false;
+        
+        // Handle AI session mismatch for existing games
+        if (isAI && !gameSessions.has(sessionId)) {
+          // AI game but no AI session - create one
+          const gameSession = {
+            currentSessionId: sessionId,
+            ballSpeedX: 4,
+            ballSpeedY: 4,
+            scoreLeft: 0,
+            scoreRight: 0,
+            ballX: row.canvaswidth / 2,
+            ballY: row.canvasheight / 2,
+            leftPaddleY: row.leftPaddleY,
+            rightPaddleY: row.rightPaddleY,
+            isAI: true,
+            ai: new PongAI(),
+            aiUpdateCounter: 0,
+          };
+          gameSessions.set(sessionId, gameSession);
+          console.log('Recreated AI session for existing game, sessionId:', sessionId);
+        } else if (!isAI && gameSessions.has(sessionId)) {
+          // Non-AI game but has AI session - clean it up
+          gameSessions.delete(sessionId);
+          console.log('Removed AI session from non-AI game, sessionId:', sessionId);
+        }
+      }
+
+      // 3) step simulation
+      const out = await game_actions(sessionId, row, body, db);
+      
+      // Commit transaction
+      await new Promise((resolve, reject) => {
+        db.run('COMMIT', (err) => (err ? reject(err) : resolve()));
+      });
+
+      return reply.send({
+        leftPaddleY: out.leftPaddleY,
+        rightPaddleY: out.rightPaddleY,
+        ballX: out.ballX,
+        ballY: out.ballY,
+        scoreLeft: out.scoreLeft,
+        scoreRight: out.scoreRight,
+        winnerIndex: out.winnerIndex,
+      });
+    } catch (err) {
+      // Rollback transaction on error
+      await new Promise((resolve) => {
+        db.run('ROLLBACK', () => resolve());
+      });
+      throw err;
+    }
   } catch (err) {
     console.log('error in game route');
     fastify.log.error('Error in /game route:', err);

@@ -39,7 +39,9 @@ fastify.get('/', (req, reply) => {
 });
 
 function openDb() {
-  return new sqlite3.Database(DB_PATH);
+  const db = new sqlite3.Database(DB_PATH);
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
 }
 
 async function getCurrentUser(req) {
@@ -102,6 +104,31 @@ fastify.post('/session/create', async (req, reply) => {
 
     const db = openDb();
     try {
+      // Check if either player is already in an active game (no winner yet)
+      const activeGame1 = await new Promise((resolve, reject) => {
+        db.get(
+          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+          [me.id, me.id],
+          (err, row) => (err ? reject(err) : resolve(row))
+        );
+      });
+      
+      if (activeGame1) {
+        return reply.code(400).send({ error: 'You are already in an active game' });
+      }
+      
+      const activeGame2 = await new Promise((resolve, reject) => {
+        db.get(
+          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+          [player2.id, player2.id],
+          (err, row) => (err ? reject(err) : resolve(row))
+        );
+      });
+      
+      if (activeGame2) {
+        return reply.code(400).send({ error: 'Player 2 is already in an active game' });
+      }
+
       const sessionId = await new Promise((resolve, reject) => {
         db.run(
           `INSERT INTO game_sessions (player1_id, player2_id)
@@ -147,6 +174,19 @@ fastify.post('/session/create_ai', async (req, reply) => {
 
     const db = openDb();
     try {
+      // Check if player is already in an active game
+      const activeGame = await new Promise((resolve, reject) => {
+        db.get(
+          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+          [me.id, me.id],
+          (err, row) => (err ? reject(err) : resolve(row))
+        );
+      });
+      
+      if (activeGame) {
+        return reply.code(400).send({ error: 'You are already in an active game' });
+      }
+
       const sessionId = await new Promise((resolve, reject) => {
         // Use player2_id = 0 to indicate AI opponent
         db.run(

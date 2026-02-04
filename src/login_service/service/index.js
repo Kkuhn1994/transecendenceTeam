@@ -48,7 +48,9 @@ async function getCurrentUser(req) {
 
 /** Helper: open DB */
 function openDb() {
-  return new sqlite3.Database(DB_PATH);
+  const db = new sqlite3.Database(DB_PATH);
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
 }
 
 /** Helper: respond with JSON error */
@@ -238,6 +240,47 @@ fastify.post('/loginAccount', async (request, reply) => {
 
   console.log('update session');
 
+  // Check if user already has an active session
+  const existingUser = await getAsync(
+    db,
+    'SELECT session_cookie, is_active, last_login, datetime(last_login) as last_login_dt FROM users WHERE id = ?',
+    [id]
+  );
+  
+  if (existingUser && existingUser.session_cookie && existingUser.is_active) {
+    // Check if session is stale (inactive for more than 5 minutes)
+    // SQLite datetime is stored as UTC string, need to parse it
+    let lastLoginTime = 0;
+    if (existingUser.last_login) {
+      // Parse SQLite datetime (format: 'YYYY-MM-DD HH:MM:SS')
+      const lastLoginDate = new Date(existingUser.last_login.replace(' ', 'T') + 'Z');
+      lastLoginTime = lastLoginDate.getTime();
+    }
+    
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    const timeSinceLastLogin = now - lastLoginTime;
+    
+    console.log('Session check:', {
+      lastLogin: existingUser.last_login,
+      lastLoginTime,
+      now,
+      timeSinceLastLogin,
+      threshold: fiveMinutes,
+      isStale: timeSinceLastLogin >= fiveMinutes
+    });
+    
+    if (timeSinceLastLogin < fiveMinutes) {
+      // Active session exists, reject new login
+      console.log('User already has an active session - REJECTING LOGIN');
+      db.close();
+      return sendError(reply, 409, 'Account is already logged in elsewhere');
+    } else {
+      // Session is stale, allow login (old session abandoned)
+      console.log('Stale session detected, allowing new login');
+    }
+  }
+
   sessionCookie = crypto.randomBytes(32).toString('hex');
 
   try {
@@ -330,6 +373,15 @@ fastify.post('/auth/me', async (request, reply) => {
       console.log('token refresh');
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Update last_login to track activity
+      await runAsync(
+        db,
+        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+        [decoded.id]
+      ).catch(err => console.error('Failed to update last_login:', err));
+      
+      db.close();
 
       return reply
         .setCookie('JWT', token, {
