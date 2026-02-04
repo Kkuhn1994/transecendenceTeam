@@ -113,7 +113,7 @@ const views: ViewMap = {
       </div>
 
       <h1>🏠 Home</h1>
-      <p>Welcome to Pong! Choose what you want to do:</p>
+      <p>Choose what you want to do:</p>
 
       <div class="d-flex gap-3 justify-content-center mt-4">
         <button id="goPlay" class="btn btn-primary">🎮 Play Game</button>
@@ -323,7 +323,7 @@ const views: ViewMap = {
         <input
           id="tournamentName"
           class="form-control"
-          placeholder="Crazy Tournament"
+          placeholder="Tournament name"
           maxlength="40"
         />
       </div>
