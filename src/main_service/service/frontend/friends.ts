@@ -1,7 +1,6 @@
 /**
  * Friends List and User Management
  */
-
 import { uiAlert, uiConfirm } from './ui_modal';
 
 interface Friend {
@@ -16,32 +15,76 @@ interface Friend {
 
 async function getFriends(): Promise<Friend[]> {
   try {
-    const response = await fetch('/login_service/user/friends', {
+    const response = await fetch(`/login_service/user/friends?t=${Date.now()}`, {
       credentials: 'include',
+      cache: 'no-store',
     });
 
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.friends || [];
-  } catch (err) {
+    const raw = await response.text();
+    let data: any = null;
+
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+
+    console.log('GET FRIENDS', {
+      status: response.status,
+      rawPreview: raw.slice(0, 200),
+      data,
+    });
+
+    if (!response.ok) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+
+    return data?.friends || [];
+  } catch (err: any) {
     console.error('Failed to get friends:', err);
+    await uiAlert(`Failed to load friends: ${err.message || err}`, 'Error');
     return [];
   }
 }
 
-async function addFriendByEmail(friendEmail: string): Promise<boolean> {
+async function addFriendByEmail(friendEmail: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch('/login_service/user/friends/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ friendEmail }),
+      cache: 'no-store',
     });
 
-    return response.ok;
+    const contentType = response.headers.get('content-type') || '';
+    const raw = await response.text();
+
+    console.log('ADD FRIEND RESPONSE', {
+      status: response.status,
+      ok: response.ok,
+      contentType,
+      rawPreview: raw.slice(0, 300),
+    });
+
+    let data: any = null;
+    if (contentType.includes('application/json')) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (data?.status === 'ok') return { ok: true };
+    if (data?.status === 'error' || data?.error) {
+      return { ok: false, error: data.error || 'Request failed' };
+    }
+
+    return { ok: false, error: `Non-JSON response (HTTP ${response.status})` };
   } catch (err) {
     console.error('Failed to add friend:', err);
-    return false;
+    return { ok: false, error: 'Network error' };
   }
 }
 
@@ -61,108 +104,150 @@ async function removeFriend(friendId: number): Promise<boolean> {
   }
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function initFriends(): Promise<void> {
   const friends = await getFriends();
 
   const container = document.getElementById('app');
   if (!container) return;
 
+  const friendsHtml =
+    friends.length === 0
+      ? '<p>No friends yet. Add some!</p>'
+      : friends
+          .map((f) => {
+            const displayName = escapeHtml(f.nickname || f.email);
+            const avatar = f.avatar || '';
+            const statusLine = f.is_active
+              ? '🟢 Online'
+              : `⚫ Last seen ${
+                  f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'
+                }`;
+
+            const friendPayload = encodeURIComponent(
+              JSON.stringify({
+                id: f.id,
+                email: f.email,
+                nickname: f.nickname,
+                avatar: f.avatar,
+              })
+            );
+
+            return `
+              <div class="friend-item card-row">
+                <img src="${avatar}"
+                     alt="Avatar"
+                     class="friend-avatar"
+                     onerror="this.style.display='none';" />
+                <div class="friend-info" style="flex:1;">
+                  <h3 style="margin:0;">${displayName}</h3>
+                  <p style="margin:5px 0; color:#888;">${statusLine}</p>
+                </div>
+
+                <div class="friend-actions">
+                  <button class="view-profile-btn btn btn-primary"
+                          data-friend='${friendPayload}'>
+                    👤 See profile
+                  </button>
+
+                  <button class="remove-friend-btn btn btn-danger"
+                          data-friend-id="${f.id}">
+                    🗑 Remove
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
   container.innerHTML = `
-    <div class="friends-container" style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <div class="friends-container" style="max-width:800px; margin:0 auto; padding:20px;">
       <h1>Friends List</h1>
 
-      <div class="add-friend" style="margin: 20px 0;">
-        <input type="email" id="friendEmailInput" placeholder="Enter friend's Username" style="padding: 8px; margin-right: 10px; width: 250px;">
-        <button id="addFriendBtn" style="padding: 8px 16px;">Add Friend</button>
+      <div class="add-friend" style="margin:20px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="friendEmailInput"
+               class="form-control"
+               placeholder="Enter friend's Username"
+               style="width:250px;" />
+        <button id="addFriendBtn" class="btn btn-primary">➕ Add Friend</button>
       </div>
 
       <div class="friends-list">
-        ${friends.length === 0 ? '<p>No friends yet. Add some!</p>' : friends.map(f => `
-          <div class="friend-item" style="display: flex; align-items: center; padding: 15px; border: 1px solid #333; margin: 10px 0; border-radius: 8px;">
-            <img 
-              src="${f.avatar || ''}" 
-              alt="Avatar" 
-              style="width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; background:#222;"
-              onerror="this.style.display='none';"
-            >
-            <div class="friend-info" style="flex: 1;">
-              <h3 style="margin: 0;">${f.nickname || f.email}</h3>
-              <p style="margin: 5px 0; color: #888;">
-                ${f.is_active ? '🟢 Online' : `⚫ Last seen ${f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'}`}
-              </p>
-            </div>
-
-            <div style="display:flex; gap:10px;">
-              <button 
-                class="view-profile-btn" 
-                data-friend='${JSON.stringify({ id: f.id, email: f.email, nickname: f.nickname, avatar: f.avatar })}'
-                style="padding: 6px 12px; background: #00bcd4; color: black; border: none; border-radius: 4px; cursor: pointer;">
-                See profile
-              </button>
-
-              <button 
-                class="remove-friend-btn" 
-                data-friend-id="${f.id}" 
-                style="padding: 6px 12px; background: #d9534f; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                Remove
-              </button>
-            </div>
-          </div>
-        `).join('')}
+        ${friendsHtml}
       </div>
 
-      <div style="margin-top: 20px;">
-        <button onclick="location.hash='#/home'" style="padding: 10px 20px;">Back to Home</button>
+      <div style="margin-top:20px;">
+        <button id="backHomeBtn" class="btn btn-secondary">Back to Home</button>
       </div>
     </div>
   `;
 
+  document.getElementById('backHomeBtn')?.addEventListener('click', () => {
+    location.hash = '#/home';
+  });
+
   const addBtn = document.getElementById('addFriendBtn');
-  const friendEmailInput = document.getElementById('friendEmailInput') as HTMLInputElement;
+  const friendEmailInput = document.getElementById('friendEmailInput') as HTMLInputElement | null;
 
   addBtn?.addEventListener('click', async () => {
-    const friendEmail = friendEmailInput.value.trim();
+    const friendEmail = (friendEmailInput?.value || '').trim();
 
     if (!friendEmail) {
-      await uiAlert('Please enter an email address', 'Missing info');
+      await uiAlert('Please enter a valid username', 'Missing info');
       return;
     }
 
-    const success = await addFriendByEmail(friendEmail);
+    const result = await addFriendByEmail(friendEmail);
 
-    if (success) {
+    if (result.ok) {
       await uiAlert('Friend added!', 'Success');
-      initFriends();
+      if (friendEmailInput) friendEmailInput.value = '';
+      await initFriends();
     } else {
-      await uiAlert('Failed to add friend. They may not exist or already be your friend.', 'Error');
+      await uiAlert(result.error || 'Failed to add friend.', 'Error');
     }
   });
 
   // See profile
-  document.querySelectorAll('.view-profile-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const el = e.currentTarget as HTMLElement;
+  document.querySelectorAll('.view-profile-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const el = btn as HTMLElement;
       const raw = el.dataset.friend || '';
-      try {
-        sessionStorage.setItem('friendProfile', raw);
-      } catch (err) {
-        console.error('sessionStorage failed:', err);
-      }
 
       try {
-        const parsed = JSON.parse(raw);
+        const decoded = decodeURIComponent(raw);
+        const parsed = JSON.parse(decoded);
         const friendId = parsed?.id;
+
+        // optional cache
+        sessionStorage.setItem('friendProfile', decoded);
+
         location.hash = `#/profile?userId=${friendId}`;
-      } catch {
+      } catch (err) {
+        console.error('Bad friend payload:', err);
         location.hash = '#/profile';
       }
     });
   });
 
   // Remove friend
-  document.querySelectorAll('.remove-friend-btn').forEach(btn => {
+  document.querySelectorAll('.remove-friend-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
-      const friendId = parseInt((e.target as HTMLElement).dataset.friendId || '0');
+      const target = e.currentTarget as HTMLElement;
+      const friendId = parseInt(target.dataset.friendId || '0', 10);
+
+      if (!friendId) {
+        await uiAlert('Invalid friend id', 'Error');
+        return;
+      }
 
       const ok = await uiConfirm('Remove this friend?', 'Confirm', 'Remove', 'Cancel');
       if (!ok) return;
@@ -171,7 +256,7 @@ export async function initFriends(): Promise<void> {
 
       if (success) {
         await uiAlert('Friend removed', 'Done');
-        initFriends();
+        await initFriends();
       } else {
         await uiAlert('Failed to remove friend', 'Error');
       }

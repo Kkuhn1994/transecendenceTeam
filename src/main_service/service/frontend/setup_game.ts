@@ -56,7 +56,11 @@ export function init1v1Setup() {
 
   async function getMeEmail(): Promise<string | null> {
     try {
-      const res = await fetch('/login_service/auth/me', { method: 'POST' });
+      const res = await fetch('/login_service/auth/me', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      });
       if (!res.ok) return null;
       const me = await res.json().catch(() => ({}));
       return typeof me?.email === 'string' ? me.email : null;

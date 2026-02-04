@@ -103,7 +103,7 @@ small {
   max-width: 450px;
 }
 
-*/ .page-container {
+.page-container {
   /* max-width: 800px; */
   margin: 0 auto;
 
@@ -512,7 +512,7 @@ h1 {
   border-color: rgba(148, 163, 184, 0.22);
   color: #e5e7eb;
 }
-s .ui-btn-danger {
+.ui-btn-danger {
   background: linear-gradient(
     180deg,
     rgba(248, 113, 113, 0.95),
@@ -530,6 +530,35 @@ s .ui-btn-danger {
 
 .ui-btn:hover {
   border-color: rgba(125, 211, 252, 0.25);
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.6);
+  margin: 10px 0;
+  border-radius: 12px;
+}
+
+.friend-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+  object-fit: cover;
+  background: #222;
+}
+
+.friend-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.friend-actions .btn {
+  margin-top: 0;
 }
 
 /* .app {
