@@ -477,11 +477,39 @@ fastify.post('/tournament/delete', async (request, reply) => {
       return reply.code(400).send({ error: 'Invalid tournamentId' });
     }
 
+    // First, get all unfinished sessions for this tournament and end them
+    const unfinishedSessions = await dbAll(
+      `SELECT id FROM game_sessions WHERE tournament_id = ? AND winner_id IS NULL`,
+      [id]
+    );
+
+    // End all unfinished tournament sessions (mark as abandoned)
+    await dbRun(
+      `UPDATE game_sessions 
+       SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
+       WHERE tournament_id = ? AND winner_id IS NULL`,
+      [id]
+    );
+
+    // Cleanup AI sessions in game_service for each ended session
+    for (const session of unfinishedSessions) {
+      try {
+        await fetch('https://game_service:3000/game/cleanup', {
+          method: 'POST',
+          dispatcher,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session.id }),
+        });
+      } catch (err) {
+        console.log('Failed to cleanup game_service session:', err.message);
+      }
+    }
+
     // Delete in the right order (FK safety)
     await dbRun('DELETE FROM tournament_matches WHERE tournament_id = ?', [id]);
     await dbRun('DELETE FROM tournaments WHERE id = ?', [id]);
 
-    // Optional cleanup: detach sessions from this tournament (so history still exists)
+    // Detach sessions from this tournament (so history still exists)
     await dbRun(
       'UPDATE game_sessions SET tournament_id = NULL WHERE tournament_id = ?',
       [id],
@@ -492,7 +520,8 @@ fastify.post('/tournament/delete', async (request, reply) => {
       activeTournament = null;
     }
 
-    return reply.send({ ok: true });
+    console.log(`Tournament ${id} deleted, ended ${unfinishedSessions.length} unfinished sessions`);
+    return reply.send({ ok: true, endedSessions: unfinishedSessions.length });
   } catch (err) {
     console.error('Tournament delete failed', err);
     return reply.code(500).send({ error: 'Internal server error' });
