@@ -682,8 +682,9 @@ fastify.get('/user/matches', async (request, reply) => {
         u2.nickname as player2_nickname, u2.avatar as player2_avatar, u2.email as player2_email
       FROM game_sessions gs
       JOIN users u1 ON gs.player1_id = u1.id
-      JOIN users u2 ON gs.player2_id = u2.id
-      WHERE gs.player1_id = ? OR gs.player2_id = ?
+      LEFT JOIN users u2 ON gs.player2_id = u2.id
+      WHERE (gs.player1_id = ? OR gs.player2_id = ?)
+      AND gs.player2_id != 0
       ORDER BY gs.started_at DESC
       LIMIT ?
       `,
@@ -720,8 +721,8 @@ fastify.get('/user/summary', async (request, reply) => {
         SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) AS wins,
         SUM(CASE WHEN winner_id IS NOT NULL AND winner_id != ? THEN 1 ELSE 0 END) AS losses
       FROM game_sessions
-      WHERE player1_id = ? OR player2_id = ?
-      `,
+      WHERE (player1_id = ? OR player2_id = ?)
+       AND player2_id != 0`,
       [uid, uid, uid, uid]
     );
 
