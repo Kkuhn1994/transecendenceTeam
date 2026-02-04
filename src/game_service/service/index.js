@@ -290,6 +290,13 @@ async function game_actions(sessionId, row, body, db) {
   if (winnerIndex) {
     console.log(winnerIndex);
     console.log('winnerIndex');
+    
+    // Clean up AI session if it exists
+    if (gameSessions.has(sessionId)) {
+      gameSessions.delete(sessionId);
+      console.log('AI session cleaned up for sessionId:', sessionId);
+    }
+    
     try {
       await fetch('https://main_service:3000/session/finish', {
         method: 'POST',
