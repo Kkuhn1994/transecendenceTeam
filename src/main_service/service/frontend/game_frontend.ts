@@ -96,6 +96,7 @@ async function abandonCurrentSession() {
 function clearTournamentGlobals() {
   window.currentTournamentId = undefined;
   window.currentSessionId = undefined;
+  window.currentSessionIsAI = undefined; // Reset AI flag to prevent AI persisting to next game
   window.currentMatchPlayer1Id = undefined;
   window.currentMatchPlayer2Id = undefined;
   window.tournamentPlayerMap = undefined;
@@ -460,6 +461,7 @@ export function startGame() {
 
 
     window.currentSessionId = undefined;
+    window.currentSessionIsAI = undefined; // Reset AI flag on game end
     window.currentMatchPlayer1Name = undefined;
     window.currentMatchPlayer2Name = undefined;
     cleanup();
@@ -525,6 +527,15 @@ export function startGame() {
       const response = await res.json().catch(() => ({}));
       if (!res.ok) {
         console.error('game_service/game error:', response);
+        // Show error to user and stop the game loop
+        if (window.pongInterval) {
+          clearInterval(window.pongInterval);
+          window.pongInterval = null;
+        }
+        matchEnding = true;
+        await uiAlert(response.error || `Game error (${res.status})`, 'Game Error');
+        cleanup();
+        location.hash = '#/play';
         return;
       }
       // console.log(JSON.stringify(response, null, 2));

@@ -1,5 +1,7 @@
 export {};
 
+import { uiConfirm } from './ui_modal';
+
 declare global {
   interface Window {
     currentSessionId?: number;
@@ -14,6 +16,41 @@ declare global {
     lastP2Password?: string;
     lastP2Otp?: string;
   }
+}
+
+// Helper to check if error is "already in active game" and offer to force-end
+async function handleActiveGameError(errorMessage: string, errorEl: HTMLParagraphElement | null): Promise<boolean> {
+  if (errorMessage.toLowerCase().includes('already in an active game') || 
+      errorMessage.toLowerCase().includes('already in a game')) {
+    const shouldForceEnd = await uiConfirm(
+      'You or the other player have an unfinished game session.\n\nDo you want to end all active sessions and start fresh?',
+      'Active Session Found',
+      'End Sessions & Continue',
+      'Cancel'
+    );
+    
+    if (shouldForceEnd) {
+      try {
+        const res = await fetch('/session/force-end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (res.ok) {
+          return true; // Signal to retry the operation
+        } else {
+          const data = await res.json().catch(() => ({}));
+          if (errorEl) errorEl.textContent = data.error || 'Failed to end sessions';
+        }
+      } catch (err) {
+        if (errorEl) errorEl.textContent = 'Network error while ending sessions';
+      }
+    }
+    return false;
+  }
+  
+  if (errorEl) errorEl.textContent = errorMessage;
+  return false;
 }
 
 
@@ -78,13 +115,11 @@ export function init1v1Setup() {
     const player2Password = passwordInput.value;
     const otp = otpInput.value.trim();
 
-    try {
-      //  store player2 name right away (we already know it)
-      window.currentMatchPlayer2Name = player2Email || 'Player 2';
-
-      //  fetch player1 name (logged-in user)
-      const meEmail = await getMeEmail();
-      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+    async function tryCreateSession(retryCount = 0): Promise<boolean> {
+      if (retryCount > 2) {
+        if (errorEl) errorEl.textContent = 'Failed after multiple attempts. Please try again later.';
+        return false;
+      }
 
       const response = await fetch('/session/create', {
         method: 'POST',
@@ -95,19 +130,21 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (errorEl)
-          errorEl.textContent = data.error || 'Could not create session';
-        return;
+        const shouldRetry = await handleActiveGameError(data.error || 'Could not create session', errorEl);
+        if (shouldRetry) {
+          return tryCreateSession(retryCount + 1); // Retry after force-ending sessions
+        }
+        return false;
       }
 
       if (!data.sessionId) {
         if (errorEl) errorEl.textContent = 'No sessionId returned';
-        return;
+        return false;
       }
 
       if (!data.pairingToken) {
         if (errorEl) errorEl.textContent = 'No pairingToken returned';
-        return;
+        return false;
       }
 
       window.currentSessionId = data.sessionId;
@@ -116,8 +153,22 @@ export function init1v1Setup() {
 
       window.lastP2Email = player2Email;
       window.lastP2Password = player2Password;
-      // Go to game
-      location.hash = '#/game';
+      return true;
+    }
+
+    try {
+      //  store player2 name right away (we already know it)
+      window.currentMatchPlayer2Name = player2Email || 'Player 2';
+
+      //  fetch player1 name (logged-in user)
+      const meEmail = await getMeEmail();
+      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+
+      const success = await tryCreateSession();
+      if (success) {
+        // Go to game
+        location.hash = '#/game';
+      }
     } catch (err) {
       console.error('Error creating session:', err);
       if (errorEl) errorEl.textContent = 'Network error while creating session';
@@ -126,15 +177,14 @@ export function init1v1Setup() {
 
   // AI Match Handler
   startAiMatchBtn?.addEventListener('click', async () => {
-    try {
-      if (errorEl) errorEl.textContent = '';
-      
-      // Get player 1 name
-      const meEmail = await getMeEmail();
-      window.currentMatchPlayer1Name = meEmail || 'Player 1';
-      window.currentMatchPlayer2Name = 'AI Bot';
-      
-      // Create AI session
+    if (errorEl) errorEl.textContent = '';
+    
+    async function tryCreateAISession(retryCount = 0): Promise<boolean> {
+      if (retryCount > 2) {
+        if (errorEl) errorEl.textContent = 'Failed after multiple attempts. Please try again later.';
+        return false;
+      }
+
       const response = await fetch('/session/create_ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,20 +194,34 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (errorEl) errorEl.textContent = data.error || 'Could not create AI session';
-        return;
+        const shouldRetry = await handleActiveGameError(data.error || 'Could not create AI session', errorEl);
+        if (shouldRetry) {
+          return tryCreateAISession(retryCount + 1); // Retry after force-ending sessions
+        }
+        return false;
       }
 
       if (!data.sessionId) {
         if (errorEl) errorEl.textContent = 'No sessionId returned';
-        return;
+        return false;
       }
 
       window.currentSessionId = data.sessionId;
       window.currentSessionIsAI = true;
+      return true;
+    }
+
+    try {
+      // Get player 1 name
+      const meEmail = await getMeEmail();
+      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+      window.currentMatchPlayer2Name = 'AI Bot';
       
-      // Go to game
-      location.hash = '#/game';
+      const success = await tryCreateAISession();
+      if (success) {
+        // Go to game
+        location.hash = '#/game';
+      }
     } catch (err) {
       console.error('Error creating AI session:', err);
       if (errorEl) errorEl.textContent = 'Network error while creating AI session';

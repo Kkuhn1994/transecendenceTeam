@@ -491,9 +491,11 @@ fastify.post('/game', async function (request, reply) {
         return reply.code(404).send({ error: 'Game session not found' });
       }
 
-      if (gameSessionRecord.player1_id !== me.id) {
-        console.log('User', me.id, 'is not player1 (', gameSessionRecord.player1_id, ') in session', sessionId);
-        return reply.code(403).send({ error: 'You are not player1 in this game' });
+      // Allow either player1 OR player2 to control the game
+      // This is needed for tournament matches where logged-in user might be player2
+      if (gameSessionRecord.player1_id !== me.id && gameSessionRecord.player2_id !== me.id) {
+        console.log('User', me.id, 'is not a player in session', sessionId);
+        return reply.code(403).send({ error: 'You are not a player in this game' });
       }
 
       // 1) get row
@@ -601,6 +603,64 @@ fastify.post('/game/reset', async (request, reply) => {
   } catch (err) {
     fastify.log.error(err);
     return reply.code(500).send({ error: 'reset failed' });
+  } finally {
+    db.close();
+  }
+});
+
+// Cleanup AI session from memory (called when a game is abandoned)
+fastify.post('/game/cleanup', async (request, reply) => {
+  const body = request.body || {};
+  const sessionId = body.sessionId;
+  
+  if (sessionId && gameSessions.has(sessionId)) {
+    gameSessions.delete(sessionId);
+    console.log(`AI session cleaned up for sessionId: ${sessionId}`);
+  }
+  
+  // Also clean up session lock if it exists
+  if (sessionId && sessionLocks.has(sessionId)) {
+    sessionLocks.delete(sessionId);
+  }
+  
+  return reply.send({ ok: true });
+});
+
+// Cleanup ALL AI sessions for a specific user (called when user logs out or abandons all)
+fastify.post('/game/cleanup-user', async (request, reply) => {
+  const body = request.body || {};
+  const userId = body.userId;
+  
+  if (!userId) {
+    return reply.code(400).send({ error: 'userId required' });
+  }
+  
+  const db = openDb();
+  try {
+    // Get all sessions for this user
+    const sessions = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?)`,
+        [userId, userId],
+        (err, rows) => (err ? reject(err) : resolve(rows || []))
+      );
+    });
+    
+    // Clean up AI sessions for all of them
+    for (const session of sessions) {
+      if (gameSessions.has(session.id)) {
+        gameSessions.delete(session.id);
+        console.log(`AI session cleaned up for sessionId: ${session.id}`);
+      }
+      if (sessionLocks.has(session.id)) {
+        sessionLocks.delete(session.id);
+      }
+    }
+    
+    return reply.send({ ok: true, cleanedSessions: sessions.length });
+  } catch (err) {
+    console.error('Error in /game/cleanup-user:', err);
+    return reply.code(500).send({ error: 'cleanup failed' });
   } finally {
     db.close();
   }

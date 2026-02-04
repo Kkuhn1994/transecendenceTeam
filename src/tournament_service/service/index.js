@@ -9,6 +9,12 @@ let activeTournament = null;
 const https = require('https');
 const fs = require('fs');
 
+// For making HTTPS requests to other services with self-signed certs
+const { Agent, fetch } = require('undici');
+const dispatcher = new Agent({
+  connect: { rejectUnauthorized: false },
+});
+
 const fastify = Fastify({
   logger: true,
   https: {
@@ -54,6 +60,40 @@ async function cleanupStaleSessions(playerId) {
        AND started_at < datetime('now', '-10 minutes')`,
     [playerId, playerId]
   );
+}
+
+// Force-end all active sessions for a player (regardless of age)
+async function forceEndPlayerSessions(playerId) {
+  // Get session IDs first for game_service cleanup
+  const sessions = await dbAll(
+    `SELECT id FROM game_sessions 
+     WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
+    [playerId, playerId]
+  );
+
+  // Mark all as abandoned
+  await dbRun(
+    `UPDATE game_sessions 
+     SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
+     WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
+    [playerId, playerId]
+  );
+
+  // Cleanup AI sessions in game_service
+  for (const session of sessions) {
+    try {
+      await fetch('https://game_service:3000/game/cleanup', {
+        method: 'POST',
+        dispatcher,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+    } catch (err) {
+      console.log('Failed to cleanup game_service session:', err.message);
+    }
+  }
+
+  return sessions.length;
 }
 
 async function insertRoundMatches(tournamentId, round, pairs) {
@@ -455,6 +495,32 @@ fastify.post('/tournament/delete', async (request, reply) => {
     return reply.send({ ok: true });
   } catch (err) {
     console.error('Tournament delete failed', err);
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+});
+
+// Force-end all active sessions for specified players (used before creating tournament)
+fastify.post('/tournament/force-end-sessions', async (request, reply) => {
+  try {
+    const { playerIds } = request.body || {};
+
+    if (!Array.isArray(playerIds)) {
+      return reply.code(400).send({ error: 'playerIds must be an array' });
+    }
+
+    const validIds = playerIds
+      .map(Number)
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    let totalEnded = 0;
+    for (const playerId of validIds) {
+      const ended = await forceEndPlayerSessions(playerId);
+      totalEnded += ended;
+    }
+
+    return reply.send({ ok: true, endedSessions: totalEnded });
+  } catch (err) {
+    console.error('Force-end sessions failed', err);
     return reply.code(500).send({ error: 'Internal server error' });
   }
 });

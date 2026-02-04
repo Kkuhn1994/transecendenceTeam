@@ -344,9 +344,31 @@ fastify.post('/session/abandon', async (req, reply) => {
           );
         });
         console.log(`Session ${sessionId} abandoned by user ${me.id}`);
+        
+        // Clean up AI session in game_service
+        try {
+          await fetch('https://game_service:3000/game/cleanup', {
+            method: 'POST',
+            dispatcher,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId }),
+          });
+        } catch (err) {
+          console.log('Failed to cleanup game_service session:', err.message);
+        }
       }
     } else {
       // Abandon ALL active sessions for this user
+      // First get all active sessions
+      const activeSessions = await new Promise((resolve, reject) => {
+        db.all(
+          `SELECT id FROM game_sessions 
+           WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
+          [me.id, me.id],
+          (err, rows) => (err ? reject(err) : resolve(rows || []))
+        );
+      });
+      
       await new Promise((resolve, reject) => {
         db.run(
           `UPDATE game_sessions 
@@ -357,11 +379,81 @@ fastify.post('/session/abandon', async (req, reply) => {
         );
       });
       console.log(`All active sessions abandoned for user ${me.id}`);
+      
+      // Clean up all AI sessions in game_service
+      for (const session of activeSessions) {
+        try {
+          await fetch('https://game_service:3000/game/cleanup', {
+            method: 'POST',
+            dispatcher,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: session.id }),
+          });
+        } catch (err) {
+          console.log('Failed to cleanup game_service session:', err.message);
+        }
+      }
     }
 
     return reply.send({ ok: true });
   } catch (err) {
     console.error('Error in /session/abandon:', err);
+    return reply.code(500).send({ error: 'Database error' });
+  } finally {
+    db.close();
+  }
+});
+
+// Force end an existing session (with confirmation from frontend)
+// This allows a player to end their stuck session and start a new one
+fastify.post('/session/force-end', async (req, reply) => {
+  const me = await getCurrentUser(req);
+  if (!me) return reply.code(401).send({ error: 'Not authenticated' });
+
+  const db = openDb();
+  try {
+    // Find all active sessions for this user
+    const activeSessions = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT id, player1_id, player2_id FROM game_sessions 
+         WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
+        [me.id, me.id],
+        (err, rows) => (err ? reject(err) : resolve(rows || []))
+      );
+    });
+
+    if (activeSessions.length === 0) {
+      return reply.send({ ok: true, message: 'No active sessions to end' });
+    }
+
+    // End all active sessions
+    for (const session of activeSessions) {
+      await new Promise((resolve, reject) => {
+        db.run(
+          `UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 WHERE id = ?`,
+          [session.id],
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+
+      // Clean up AI session in game_service
+      try {
+        await fetch('https://game_service:3000/game/cleanup', {
+          method: 'POST',
+          dispatcher,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session.id }),
+        });
+      } catch (err) {
+        console.log('Failed to cleanup game_service session:', err.message);
+      }
+
+      console.log(`Session ${session.id} force-ended by user ${me.id}`);
+    }
+
+    return reply.send({ ok: true, endedSessions: activeSessions.length });
+  } catch (err) {
+    console.error('Error in /session/force-end:', err);
     return reply.code(500).send({ error: 'Database error' });
   } finally {
     db.close();

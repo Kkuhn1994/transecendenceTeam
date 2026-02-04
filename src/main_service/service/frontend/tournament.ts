@@ -15,6 +15,7 @@ declare global {
   interface Window {
     currentTournamentId?: number;
     currentSessionId?: number;
+    currentSessionIsAI?: boolean;
     tournamentPlayerMap?: Record<number, string>;
     currentMatchPlayer1Id?: number;
     currentMatchPlayer2Id?: number;
@@ -275,6 +276,8 @@ async function startMatchLoop(onAbandonReset: () => Promise<void>): Promise<void
     window.currentSessionId = pending.sessionId;
     window.currentMatchPlayer1Id = pending.player1Id;
     window.currentMatchPlayer2Id = pending.player2Id;
+    // Tournament matches are NEVER AI matches - reset this flag
+    window.currentSessionIsAI = false;
 
     setPendingMatch(null);
     saveTournamentUIState();
@@ -411,24 +414,58 @@ export async function initTournamentUI() {
       await resetTournamentVisualAndState(true);
     }
 
-    try {
-      const name = nameInput?.value.trim() || 'Tournament';
+    const name = nameInput?.value.trim() || 'Tournament';
+    const playerIds = tournamentPlayers.map(p => p.id);
+
+    // Helper to create tournament with retry on "already in active game" error
+    async function tryCreateTournament(retryCount = 0): Promise<{ success: boolean; data?: any }> {
+      // Prevent infinite retry loops
+      if (retryCount > 2) {
+        await uiAlert('Failed to create tournament after multiple attempts. Please try again later.', 'Error');
+        return { success: false };
+      }
 
       const res = await fetch('/tournament_service/tournament/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerIds: tournamentPlayers.map(p => p.id),
-          name,
-        }),
+        body: JSON.stringify({ playerIds, name }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        const errMsg = data.error || '';
+        // Check if it's an "already in active game" error
+        if (errMsg.includes('already in an active game')) {
+          const confirmed = await uiConfirm(
+            `${errMsg}\n\nThis may be from a previous game that didn't finish properly.\nDo you want to end those sessions and retry?`,
+            'Active Session Detected',
+            'End sessions and retry',
+            'Cancel'
+          );
+          if (confirmed) {
+            // Call force-end-sessions for all players
+            await fetch('/tournament_service/tournament/force-end-sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ playerIds }),
+            });
+            // Retry with incremented count
+            return tryCreateTournament(retryCount + 1);
+          }
+          return { success: false };
+        }
         await uiAlert(data.error || `Create tournament failed (${res.status})`, 'Error');
-        return;
+        return { success: false };
       }
+      return { success: true, data };
+    }
+
+    try {
+      const result = await tryCreateTournament();
+      if (!result.success || !result.data) return;
+
+      const data = result.data;
 
       window.currentTournamentId = data.tournamentId;
       await loadTournamentPlayerMap(data.tournamentId);
@@ -456,6 +493,8 @@ export async function initTournamentUI() {
           window.currentSessionId = pm.sessionId;
           window.currentMatchPlayer1Id = pm.player1Id;
           window.currentMatchPlayer2Id = pm.player2Id;
+          // Tournament matches are NEVER AI matches - reset this flag
+          window.currentSessionIsAI = false;
           setPendingMatch(null);
           saveTournamentUIState();
           location.hash = '#/game';
@@ -504,6 +543,8 @@ export async function initTournamentUI() {
       window.currentSessionId = pm.sessionId;
       window.currentMatchPlayer1Id = pm.player1Id;
       window.currentMatchPlayer2Id = pm.player2Id;
+      // Tournament matches are NEVER AI matches - reset this flag
+      window.currentSessionIsAI = false;
       setPendingMatch(null);
       saveTournamentUIState();
       location.hash = '#/game';

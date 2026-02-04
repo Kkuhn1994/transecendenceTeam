@@ -6,7 +6,8 @@ COPY . .
 RUN npm -y init
 RUN npm install sqlite3 fastify \
                         https \
-                        fs
+                        fs \
+                        undici
 
 RUN openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \

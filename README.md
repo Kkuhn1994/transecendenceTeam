@@ -142,5 +142,5 @@ TODO: documentation links, tutorials, references, AI usage disclosure
 - [ ] Privacy Policy + Terms of Service
 - [ ] Frontend responsiveness
 - [ ] Test multiple users → Data races etc
-
-
+- [ ] Buttons actions when creating a tournament
+- [ ]
