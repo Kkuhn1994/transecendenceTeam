@@ -347,6 +347,7 @@ fastify.post('/logout', (request, reply) => {
   if (!sessionCookie) {
     db.close();
     reply.clearCookie('session', { path: '/' });
+    reply.clearCookie('JWT', { path: '/' });
     return reply.send({ status: 'ok' });
   }
 
