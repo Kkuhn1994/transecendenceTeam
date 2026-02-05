@@ -1,7 +1,5 @@
 export {};
 
-import { uiConfirm } from './ui_modal';
-
 declare global {
   interface Window {
     currentSessionId?: number;
@@ -17,42 +15,6 @@ declare global {
     lastP2Otp?: string;
   }
 }
-
-// Helper to check if error is "already in active game" and offer to force-end
-async function handleActiveGameError(errorMessage: string, errorEl: HTMLParagraphElement | null): Promise<boolean> {
-  if (errorMessage.toLowerCase().includes('already in an active game') || 
-      errorMessage.toLowerCase().includes('already in a game')) {
-    const shouldForceEnd = await uiConfirm(
-      'You or the other player have an unfinished game session.\n\nDo you want to end all active sessions and start fresh?',
-      'Active Session Found',
-      'End Sessions & Continue',
-      'Cancel'
-    );
-    
-    if (shouldForceEnd) {
-      try {
-        const res = await fetch('/session/force-end', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        
-        if (res.ok) {
-          return true; // Signal to retry the operation
-        } else {
-          const data = await res.json().catch(() => ({}));
-          if (errorEl) errorEl.textContent = data.error || 'Failed to end sessions';
-        }
-      } catch (err) {
-        if (errorEl) errorEl.textContent = 'Network error while ending sessions';
-      }
-    }
-    return false;
-  }
-  
-  if (errorEl) errorEl.textContent = errorMessage;
-  return false;
-}
-
 
 export function init1v1Setup() {
   const form = document.getElementById('player2Form') as HTMLFormElement | null;
@@ -115,12 +77,7 @@ export function init1v1Setup() {
     const player2Password = passwordInput.value;
     const otp = otpInput.value.trim();
 
-    async function tryCreateSession(retryCount = 0): Promise<boolean> {
-      if (retryCount > 2) {
-        if (errorEl) errorEl.textContent = 'Failed after multiple attempts. Please try again later.';
-        return false;
-      }
-
+    async function tryCreateSession(): Promise<boolean> {
       const response = await fetch('/session/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,10 +87,7 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const shouldRetry = await handleActiveGameError(data.error || 'Could not create session', errorEl);
-        if (shouldRetry) {
-          return tryCreateSession(retryCount + 1); // Retry after force-ending sessions
-        }
+        if (errorEl) errorEl.textContent = data.error || 'Could not create session';
         return false;
       }
 
@@ -179,12 +133,7 @@ export function init1v1Setup() {
   startAiMatchBtn?.addEventListener('click', async () => {
     if (errorEl) errorEl.textContent = '';
     
-    async function tryCreateAISession(retryCount = 0): Promise<boolean> {
-      if (retryCount > 2) {
-        if (errorEl) errorEl.textContent = 'Failed after multiple attempts. Please try again later.';
-        return false;
-      }
-
+    async function tryCreateAISession(): Promise<boolean> {
       const response = await fetch('/session/create_ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,10 +143,7 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const shouldRetry = await handleActiveGameError(data.error || 'Could not create AI session', errorEl);
-        if (shouldRetry) {
-          return tryCreateAISession(retryCount + 1); // Retry after force-ending sessions
-        }
+        if (errorEl) errorEl.textContent = data.error || 'Could not create AI session';
         return false;
       }
 

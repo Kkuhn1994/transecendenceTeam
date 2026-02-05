@@ -99,7 +99,9 @@ function getJWTToken(refresh_token, db) {
     console.log('Looking up user with session cookie:', refresh_token ? `${refresh_token.substring(0, 20)}...` : 'null');
     
     db.get(
-      'SELECT * FROM users WHERE session_cookie = ?',
+      `SELECT u.* FROM sessions s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.session_cookie = ?`,
       [refresh_token],
       (err, row) => {
         if (err) {
@@ -112,7 +114,6 @@ function getJWTToken(refresh_token, db) {
         }
 
         console.log('Found user for JWT creation:', { id: row.id, email: row.email });
-        console.log('JWT_SECRET available:', !!process.env.JWT_SECRET);
 
         const token = jwt.sign(
           {
@@ -120,7 +121,6 @@ function getJWTToken(refresh_token, db) {
             email: row.email,
             nickname: row.nickname,
             avatar: row.avatar,
-            is_active: row.is_active,
           },
           process.env.JWT_SECRET,
           { expiresIn: '5m' }
@@ -261,65 +261,24 @@ fastify.post('/loginAccount', async (request, reply) => {
 
   console.log('update session');
 
-  // Check if user already has an active session
-  const existingUser = await getAsync(
-    db,
-    'SELECT session_cookie, is_active, last_login, datetime(last_login) as last_login_dt FROM users WHERE id = ?',
-    [id]
-  );
-  
-  if (existingUser && existingUser.session_cookie && existingUser.is_active) {
-    // Check if session is stale (inactive for more than 5 minutes)
-    // SQLite datetime is stored as UTC string, need to parse it
-    let lastLoginTime = 0;
-    if (existingUser.last_login) {
-      // Parse SQLite datetime (format: 'YYYY-MM-DD HH:MM:SS')
-      const lastLoginDate = new Date(existingUser.last_login.replace(' ', 'T') + 'Z');
-      lastLoginTime = lastLoginDate.getTime();
-    }
-    
-    const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-    const timeSinceLastLogin = now - lastLoginTime;
-    
-    console.log('Session check:', {
-      lastLogin: existingUser.last_login,
-      lastLoginTime,
-      now,
-      timeSinceLastLogin,
-      threshold: fiveMinutes,
-      isStale: timeSinceLastLogin >= fiveMinutes
-    });
-    
-    if (timeSinceLastLogin < fiveMinutes) {
-      // Active session exists, reject new login
-      console.log('User already has an active session - REJECTING LOGIN');
-      db.close();
-      return sendError(reply, 409, 'Account is already logged in elsewhere');
-    } else {
-      // Session is stale, allow login (old session abandoned)
-      console.log('Stale session detected, allowing new login');
-    }
-  }
-
   sessionCookie = crypto.randomBytes(32).toString('hex');
 
   try {
-    // Save session cookie to DB and verify persistence
+    // Insert a new session row (allows multiple concurrent logins)
     await runAsync(
       db,
-      'UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?',
-      [sessionCookie, id]
+      'INSERT INTO sessions (user_id, session_cookie) VALUES (?, ?)',
+      [id, sessionCookie]
     );
 
-    // Immediately read back to verify
-    const verifySession = await getAsync(db, 'SELECT session_cookie FROM users WHERE id = ?', [id]);
-    if (!verifySession || verifySession.session_cookie !== sessionCookie) {
-      console.error('Session cookie was not saved correctly to DB:', verifySession);
-      return sendError(reply, 500, 'Session cookie not persisted');
-    }
+    // Update last_login on the user row
+    await runAsync(
+      db,
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+      [id]
+    );
 
-    console.log('session updated and verified in DB');
+    console.log('session inserted into sessions table');
 
     const JWT = await getJWTToken(sessionCookie, db);
 
@@ -363,11 +322,11 @@ fastify.post('/logout', async (request, reply) => {
   try {
     await runAsync(
       db,
-      'UPDATE users SET session_cookie = NULL, is_active = 0 WHERE session_cookie = ?',
+      'DELETE FROM sessions WHERE session_cookie = ?',
       [sessionCookie]
     );
   } catch (err) {
-    console.error('Error clearing session cookie:', err);
+    console.error('Error clearing session:', err);
   } finally {
     db.close();
   }
@@ -401,7 +360,6 @@ fastify.post('/auth/me', async (request, reply) => {
         email: decoded.email,
         nickname: decoded.nickname,
         avatar: decoded.avatar,
-        is_active: decoded.is_active,
       });
     } catch (jwtErr) {
       console.log('JWT verification failed:', jwtErr.message);
@@ -447,7 +405,6 @@ fastify.post('/auth/me', async (request, reply) => {
         email: decoded.email,
         nickname: decoded.nickname,
         avatar: decoded.avatar,
-        is_active: decoded.is_active,
       });
   } catch (refreshErr) {
     console.error('Token refresh failed:', refreshErr.message);
@@ -477,7 +434,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
   console.log('DB call pre');
 
   db.get(
-    'SELECT id, email, secret, is_active FROM users WHERE email = ? AND password = ?',
+    'SELECT id, email, secret FROM users WHERE email = ? AND password = ?',
     [email, hashed],
     (err, row) => {
       db.close();
@@ -507,7 +464,6 @@ fastify.post('/verifyCredentials', (request, reply) => {
         status: 'ok',
         id: row.id,
         email: row.email,
-        is_active: row.is_active,
       });
     }
   );
@@ -530,7 +486,7 @@ fastify.post('/user/update', async (request, reply) => {
   const db = openDb();
 
   db.get(
-    'SELECT id FROM users WHERE session_cookie = ?',
+    'SELECT user_id AS id FROM sessions WHERE session_cookie = ?',
     [sessionCookie],
     (err, user) => {
       if (err || !user) {
@@ -585,7 +541,9 @@ fastify.get('/user/profile', async (request, reply) => {
   try {
     const row = await getAsync(
       db,
-      'SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?',
+      `SELECT u.id, u.email, u.nickname, u.avatar, u.last_login,
+              (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active
+       FROM users u WHERE u.id = ?`,
       [userId]
     );
 
@@ -613,17 +571,19 @@ fastify.get('/user/friends', async (request, reply) => {
 
   try {
     // 1) resolve current user id by session cookie
-    const user = await getAsync(db, `SELECT id FROM users WHERE session_cookie = ?`, [sessionCookie]);
+    const user = await getAsync(db, `SELECT user_id AS id FROM sessions WHERE session_cookie = ?`, [sessionCookie]);
     if (!user) return sendError(reply, 401, 'Invalid session');
 
-    // 2) get friends list
+    // 2) get friends list (is_active = has at least one active session)
     const rows = await allAsync(
       db,
-      `SELECT u.id, u.email, u.nickname, u.avatar, u.is_active, u.last_login, f.created_at as friendship_date
+      `SELECT u.id, u.email, u.nickname, u.avatar,
+              (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active,
+              u.last_login, f.created_at as friendship_date
        FROM friends f
        JOIN users u ON f.friend_id = u.id
        WHERE f.user_id = ?
-       ORDER BY u.is_active DESC, u.nickname ASC`,
+       ORDER BY is_active DESC, u.nickname ASC`,
       [user.id],
     );
 
@@ -652,7 +612,7 @@ fastify.post('/user/friends/add', async (request, reply) => {
   const db = openDb();
 
   try {
-    const user = await getAsync(db, 'SELECT id FROM users WHERE session_cookie = ?', [sessionCookie]);
+    const user = await getAsync(db, 'SELECT user_id AS id FROM sessions WHERE session_cookie = ?', [sessionCookie]);
     if (!user) return sendError(reply, 401, 'Invalid session');
 
     let target = null;
@@ -715,7 +675,7 @@ fastify.post('/user/friends/remove', async (request, reply) => {
   const db = openDb();
 
   try {
-    const user = await getAsync(db, 'SELECT id FROM users WHERE session_cookie = ?', [sessionCookie]);
+    const user = await getAsync(db, 'SELECT user_id AS id FROM sessions WHERE session_cookie = ?', [sessionCookie]);
     if (!user) return sendError(reply, 401, 'Invalid session');
 
     const result = await runAsync(

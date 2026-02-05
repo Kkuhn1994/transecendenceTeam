@@ -117,32 +117,6 @@ fastify.post('/session/create', async (req, reply) => {
       await cleanupStaleSessions(db, me.id);
       await cleanupStaleSessions(db, player2.id);
 
-      // Check if either player is already in an active human game (no winner yet)
-      // AI games (player2_id = 0) don't block creating a human match
-      const activeGame1 = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND player2_id != 0 AND winner_id IS NULL',
-          [me.id, me.id],
-          (err, row) => (err ? reject(err) : resolve(row))
-        );
-      });
-      
-      if (activeGame1) {
-        return reply.code(400).send({ error: 'You are already in an active game' });
-      }
-      
-      const activeGame2 = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND player2_id != 0 AND winner_id IS NULL',
-          [player2.id, player2.id],
-          (err, row) => (err ? reject(err) : resolve(row))
-        );
-      });
-      
-      if (activeGame2) {
-        return reply.code(400).send({ error: 'Player 2 is already in an active game' });
-      }
-
       const sessionId = await new Promise((resolve, reject) => {
         db.run(
           `INSERT INTO game_sessions (player1_id, player2_id)
@@ -190,20 +164,6 @@ fastify.post('/session/create_ai', async (req, reply) => {
     try {
       // Clean up stale sessions first (handles crashed browsers, etc.)
       await cleanupStaleSessions(db, me.id);
-
-      // For AI games, allow multiple concurrent sessions.
-      // Only block if the player is in an active 1v1 game.
-      const activeHumanGame = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND player2_id != 0 AND winner_id IS NULL',
-          [me.id, me.id],
-          (err, row) => (err ? reject(err) : resolve(row))
-        );
-      });
-      
-      if (activeHumanGame) {
-        return reply.code(400).send({ error: 'You are already in an active game. Finish or abandon it first.' });
-      }
 
       const sessionId = await new Promise((resolve, reject) => {
         // Use player2_id = 0 to indicate AI opponent
@@ -333,119 +293,27 @@ fastify.post('/session/abandon', async (req, reply) => {
   if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
   const { sessionId } = req.body || {};
-  
-  const db = openDb();
-  try {
-    // If sessionId is provided, abandon that specific session
-    if (sessionId) {
-      const session = await new Promise((resolve, reject) => {
-        db.get(
-          `SELECT id, player1_id, player2_id FROM game_sessions WHERE id = ? AND winner_id IS NULL`,
-          [sessionId],
-          (err, row) => (err ? reject(err) : resolve(row))
-        );
-      });
-
-      if (session && (session.player1_id === me.id || session.player2_id === me.id)) {
-        await new Promise((resolve, reject) => {
-          db.run(
-            `UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 WHERE id = ?`,
-            [sessionId],
-            (err) => (err ? reject(err) : resolve())
-          );
-        });
-        console.log(`Session ${sessionId} abandoned by user ${me.id}`);
-        
-        // Clean up AI session in game_service
-        try {
-          await fetch('https://game_service:3000/game/cleanup', {
-            method: 'POST',
-            dispatcher,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId }),
-          });
-        } catch (err) {
-          console.log('Failed to cleanup game_service session:', err.message);
-        }
-      }
-    } else {
-      // Abandon ALL active sessions for this user
-      // First get all active sessions
-      const activeSessions = await new Promise((resolve, reject) => {
-        db.all(
-          `SELECT id FROM game_sessions 
-           WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
-          [me.id, me.id],
-          (err, rows) => (err ? reject(err) : resolve(rows || []))
-        );
-      });
-      
-      await new Promise((resolve, reject) => {
-        db.run(
-          `UPDATE game_sessions 
-           SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
-           WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
-          [me.id, me.id],
-          (err) => (err ? reject(err) : resolve())
-        );
-      });
-      console.log(`All active sessions abandoned for user ${me.id}`);
-      
-      // Clean up all AI sessions in game_service
-      for (const session of activeSessions) {
-        try {
-          await fetch('https://game_service:3000/game/cleanup', {
-            method: 'POST',
-            dispatcher,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: session.id }),
-          });
-        } catch (err) {
-          console.log('Failed to cleanup game_service session:', err.message);
-        }
-      }
-    }
-
-    return reply.send({ ok: true });
-  } catch (err) {
-    console.error('Error in /session/abandon:', err);
-    return reply.code(500).send({ error: 'Database error' });
-  } finally {
-    db.close();
-  }
-});
-
-// Force end an existing session (with confirmation from frontend)
-// This allows a player to end their stuck session and start a new one
-fastify.post('/session/force-end', async (req, reply) => {
-  const me = await getCurrentUser(req, reply);
-  if (!me) return reply.code(401).send({ error: 'Not authenticated' });
+  if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });
 
   const db = openDb();
   try {
-    // Find all active sessions for this user
-    const activeSessions = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, player1_id, player2_id FROM game_sessions 
-         WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
-        [me.id, me.id],
-        (err, rows) => (err ? reject(err) : resolve(rows || []))
+    const session = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT id, player1_id, player2_id FROM game_sessions WHERE id = ? AND winner_id IS NULL`,
+        [sessionId],
+        (err, row) => (err ? reject(err) : resolve(row))
       );
     });
 
-    if (activeSessions.length === 0) {
-      return reply.send({ ok: true, message: 'No active sessions to end' });
-    }
-
-    // End all active sessions
-    for (const session of activeSessions) {
+    if (session && (session.player1_id === me.id || session.player2_id === me.id)) {
       await new Promise((resolve, reject) => {
         db.run(
           `UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 WHERE id = ?`,
-          [session.id],
+          [sessionId],
           (err) => (err ? reject(err) : resolve())
         );
       });
+      console.log(`Session ${sessionId} abandoned by user ${me.id}`);
 
       // Clean up AI session in game_service
       try {
@@ -453,18 +321,16 @@ fastify.post('/session/force-end', async (req, reply) => {
           method: 'POST',
           dispatcher,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: session.id }),
+          body: JSON.stringify({ sessionId }),
         });
       } catch (err) {
         console.log('Failed to cleanup game_service session:', err.message);
       }
-
-      console.log(`Session ${session.id} force-ended by user ${me.id}`);
     }
 
-    return reply.send({ ok: true, endedSessions: activeSessions.length });
+    return reply.send({ ok: true });
   } catch (err) {
-    console.error('Error in /session/force-end:', err);
+    console.error('Error in /session/abandon:', err);
     return reply.code(500).send({ error: 'Database error' });
   } finally {
     db.close();

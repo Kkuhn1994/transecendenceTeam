@@ -445,7 +445,7 @@ function hasPendingMatch(): boolean {
 }
 
 async function abandonProgressIfAny(): Promise<void> {
-  // Abandon any active game session on the backend
+  // Abandon the current game session on the backend
   const sessionId = window.currentSessionId;
   if (sessionId != null) {
     try {
@@ -457,9 +457,10 @@ async function abandonProgressIfAny(): Promise<void> {
     } catch {
       // ignore - best effort
     }
+    window.currentSessionId = undefined;
   }
 
-  // Tournament abandon = real abandon (delete DB + clear everything)
+  // Tournament abandon = delete tournament + clear everything
   if (window.currentTournamentId != null) {
     try {
       await fetch('/tournament_service/tournament/delete', {
@@ -472,7 +473,6 @@ async function abandonProgressIfAny(): Promise<void> {
     }
 
     window.currentTournamentId = undefined;
-    window.currentSessionId = undefined;
     (window as any).currentMatchPlayer1Id = undefined;
     (window as any).currentMatchPlayer2Id = undefined;
     (window as any).tournamentPlayerMap = undefined;
@@ -480,12 +480,6 @@ async function abandonProgressIfAny(): Promise<void> {
     window.currentMatchPlayer2Name = undefined;
 
     sessionStorage.removeItem(TOURNAMENT_UI_KEY);
-    return;
-  }
-
-  // 1v1 match abandon
-  if (window.currentSessionId != null) {
-    window.currentSessionId = undefined;
   }
 }
 

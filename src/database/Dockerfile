@@ -18,11 +18,9 @@ RUN sqlite3 /app/data/database.db " \
         id INTEGER PRIMARY KEY, \
         email TEXT UNIQUE, \
         password TEXT, \
-        session_cookie TEXT,\
         secret TEXT, \
         nickname TEXT, \
         avatar TEXT DEFAULT '/avatars/default.png', \
-        is_active BOOLEAN DEFAULT 0, \
         last_login DATETIME, \
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP \
     ); \
@@ -99,6 +97,13 @@ RUN sqlite3 /app/data/database.db " \
         expires_at DATETIME, \
         FOREIGN KEY (player1_id) REFERENCES users(id), \
         FOREIGN KEY (player2_id) REFERENCES users(id) \
+    ); \
+    CREATE TABLE IF NOT EXISTS sessions ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT, \
+        user_id INTEGER NOT NULL, \
+        session_cookie TEXT UNIQUE NOT NULL, \
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, \
+        FOREIGN KEY (user_id) REFERENCES users(id) \
     ); \
 "
 

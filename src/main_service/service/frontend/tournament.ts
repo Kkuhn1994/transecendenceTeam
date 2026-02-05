@@ -417,14 +417,7 @@ export async function initTournamentUI() {
     const name = nameInput?.value.trim() || 'Tournament';
     const playerIds = tournamentPlayers.map(p => p.id);
 
-    // Helper to create tournament with retry on "already in active game" error
-    async function tryCreateTournament(retryCount = 0): Promise<{ success: boolean; data?: any }> {
-      // Prevent infinite retry loops
-      if (retryCount > 2) {
-        await uiAlert('Failed to create tournament after multiple attempts. Please try again later.', 'Error');
-        return { success: false };
-      }
-
+    try {
       const res = await fetch('/tournament_service/tournament/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -434,38 +427,9 @@ export async function initTournamentUI() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        const errMsg = data.error || '';
-        // Check if it's an "already in active game" error
-        if (errMsg.includes('already in an active game')) {
-          const confirmed = await uiConfirm(
-            `${errMsg}\n\nThis may be from a previous game that didn't finish properly.\nDo you want to end those sessions and retry?`,
-            'Active Session Detected',
-            'End sessions and retry',
-            'Cancel'
-          );
-          if (confirmed) {
-            // Call force-end-sessions for all players
-            await fetch('/tournament_service/tournament/force-end-sessions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ playerIds }),
-            });
-            // Retry with incremented count
-            return tryCreateTournament(retryCount + 1);
-          }
-          return { success: false };
-        }
         await uiAlert(data.error || `Create tournament failed (${res.status})`, 'Error');
-        return { success: false };
+        return;
       }
-      return { success: true, data };
-    }
-
-    try {
-      const result = await tryCreateTournament();
-      if (!result.success || !result.data) return;
-
-      const data = result.data;
 
       window.currentTournamentId = data.tournamentId;
       await loadTournamentPlayerMap(data.tournamentId);
