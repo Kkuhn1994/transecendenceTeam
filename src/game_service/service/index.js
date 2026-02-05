@@ -70,7 +70,7 @@ const dispatcher = new Agent({
   },
 });
 
-async function getCurrentUser(req) {
+async function getCurrentUser(req, reply) {
   const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
     dispatcher,
@@ -82,6 +82,15 @@ async function getCurrentUser(req) {
   });
 
   if (!res.ok) return null;
+
+  // Forward Set-Cookie headers (refreshed JWT) back to the browser
+  if (reply) {
+    const setCookies = res.headers.getSetCookie?.() || [];
+    for (const cookie of setCookies) {
+      reply.raw.setHeader('Set-Cookie', cookie);
+    }
+  }
+
   return await res.json(); // { id, email }
 }
 
@@ -458,7 +467,7 @@ async function game_actions(sessionId, row, body, db) {
 fastify.post('/game', async function (request, reply) {
   console.log('game service');
 
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) {
     console.log('wrong session');
     return reply.code(401).send({ error: 'Not authenticated as Player 1' });
@@ -582,7 +591,7 @@ fastify.post('/game', async function (request, reply) {
 });
 
 fastify.post('/game/reset', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const db = openDb();

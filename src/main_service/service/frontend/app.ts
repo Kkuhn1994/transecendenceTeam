@@ -512,6 +512,17 @@ async function guardedNavigate(targetHash: string): Promise<void> {
   location.hash = targetHash;
 }
 
+// Register beforeunload cleanup once (not inside handleNavButtons to avoid duplicates)
+window.addEventListener('beforeunload', () => {
+  if (window.currentSessionId != null) {
+    const abandonData = new Blob(
+      [JSON.stringify({ sessionId: window.currentSessionId })],
+      { type: 'application/json' }
+    );
+    navigator.sendBeacon('/session/abandon', abandonData);
+  }
+});
+
 async function handleNavButtons() {
   const homeBtn = document.getElementById('navHome');
   const playBtn = document.getElementById('navPlay');
@@ -533,24 +544,6 @@ async function handleNavButtons() {
       window.currentTournamentId = undefined;
     });
   }
-
-  // Abandon game sessions and logout on window close/refresh
-  window.addEventListener('beforeunload', () => {
-    // Use sendBeacon for reliable cleanup on page unload
-    // Abandon any active game session first
-    if (window.currentSessionId != null) {
-      const abandonData = new Blob(
-        [JSON.stringify({ sessionId: window.currentSessionId })],
-        { type: 'application/json' }
-      );
-      navigator.sendBeacon('/session/abandon', abandonData);
-    } else {
-      // Abandon all sessions for this user (fallback)
-      const abandonAll = new Blob([JSON.stringify({})], { type: 'application/json' });
-      navigator.sendBeacon('/session/abandon', abandonAll);
-    }
-    navigator.sendBeacon('/login_service/logout');
-  });
 }
 
 async function router() {

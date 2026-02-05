@@ -44,7 +44,7 @@ function openDb() {
   return db;
 }
 
-async function getCurrentUser(req) {
+async function getCurrentUser(req, reply) {
   const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
     dispatcher,
@@ -56,12 +56,21 @@ async function getCurrentUser(req) {
   });
 
   if (!res.ok) return null;
+
+  // Forward Set-Cookie headers (refreshed JWT) back to the browser
+  if (reply) {
+    const setCookies = res.headers.getSetCookie?.() || [];
+    for (const cookie of setCookies) {
+      reply.raw.setHeader('Set-Cookie', cookie);
+    }
+  }
+
   return await res.json(); // { id, email }
 }
 
 fastify.post('/session/create', async (req, reply) => {
   try {
-    const me = await getCurrentUser(req);
+    const me = await getCurrentUser(req, reply);
     if (!me) {
       return reply.code(401).send({ error: 'Not authenticated as Player 1' });
     }
@@ -108,10 +117,11 @@ fastify.post('/session/create', async (req, reply) => {
       await cleanupStaleSessions(db, me.id);
       await cleanupStaleSessions(db, player2.id);
 
-      // Check if either player is already in an active game (no winner yet)
+      // Check if either player is already in an active human game (no winner yet)
+      // AI games (player2_id = 0) don't block creating a human match
       const activeGame1 = await new Promise((resolve, reject) => {
         db.get(
-          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND player2_id != 0 AND winner_id IS NULL',
           [me.id, me.id],
           (err, row) => (err ? reject(err) : resolve(row))
         );
@@ -123,7 +133,7 @@ fastify.post('/session/create', async (req, reply) => {
       
       const activeGame2 = await new Promise((resolve, reject) => {
         db.get(
-          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND player2_id != 0 AND winner_id IS NULL',
           [player2.id, player2.id],
           (err, row) => (err ? reject(err) : resolve(row))
         );
@@ -173,7 +183,7 @@ fastify.post('/session/create', async (req, reply) => {
 
 fastify.post('/session/create_ai', async (req, reply) => {
   try {
-    const me = await getCurrentUser(req);
+    const me = await getCurrentUser(req, reply);
     if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
     const db = openDb();
@@ -181,17 +191,18 @@ fastify.post('/session/create_ai', async (req, reply) => {
       // Clean up stale sessions first (handles crashed browsers, etc.)
       await cleanupStaleSessions(db, me.id);
 
-      // Check if player is already in an active game
-      const activeGame = await new Promise((resolve, reject) => {
+      // For AI games, allow multiple concurrent sessions.
+      // Only block if the player is in an active 1v1 game.
+      const activeHumanGame = await new Promise((resolve, reject) => {
         db.get(
-          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
+          'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND player2_id != 0 AND winner_id IS NULL',
           [me.id, me.id],
           (err, row) => (err ? reject(err) : resolve(row))
         );
       });
       
-      if (activeGame) {
-        return reply.code(400).send({ error: 'You are already in an active game' });
+      if (activeHumanGame) {
+        return reply.code(400).send({ error: 'You are already in an active game. Finish or abandon it first.' });
       }
 
       const sessionId = await new Promise((resolve, reject) => {
@@ -268,7 +279,7 @@ fastify.post('/session/finish', async (req, reply) => {
 });
 
 fastify.post('/session/rematch', async (req, reply) => {
-  const me = await getCurrentUser(req);
+  const me = await getCurrentUser(req, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
   const { pairingToken } = req.body || {};
@@ -318,7 +329,7 @@ fastify.post('/session/rematch', async (req, reply) => {
 // Abandon a game session (when player leaves early)
 // This marks the session as ended so players can start new games
 fastify.post('/session/abandon', async (req, reply) => {
-  const me = await getCurrentUser(req);
+  const me = await getCurrentUser(req, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
   const { sessionId } = req.body || {};
@@ -407,7 +418,7 @@ fastify.post('/session/abandon', async (req, reply) => {
 // Force end an existing session (with confirmation from frontend)
 // This allows a player to end their stuck session and start a new one
 fastify.post('/session/force-end', async (req, reply) => {
-  const me = await getCurrentUser(req);
+  const me = await getCurrentUser(req, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
   const db = openDb();
@@ -481,49 +492,52 @@ async function cleanupStaleSessions(db, userId) {
 
 fastify.get('/profile/me', async (req, reply) => {
   try {
-    const me = await getCurrentUser(req);
+    const me = await getCurrentUser(req, reply);
     if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
     const db = openDb();
+    try {
+      const stats = await new Promise((resolve, reject) => {
+        db.get(
+          `
+          SELECT
+            COUNT(*) AS games_played,
+            SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) AS wins
+          FROM game_sessions
+          WHERE (player1_id = ? OR player2_id = ?)
+            AND player2_id != 0
+          `,
+          [me.id, me.id, me.id],
+          (err, row) => (err ? reject(err) : resolve(row || {})),
+        );
+      });
 
-    const stats = await new Promise((resolve, reject) => {
-      db.get(
-        `
-        SELECT
-          COUNT(*) AS games_played,
-          SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) AS wins
-        FROM game_sessions
-        WHERE (player1_id = ? OR player2_id = ?)
-          AND player2_id != 0
-        `,
-        [me.id, me.id, me.id],
-        (err, row) => (err ? reject(err) : resolve(row || {})),
-      );
-    });
+      const tour = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT COUNT(*) AS tournaments_won
+           FROM tournaments
+           WHERE winner_id = ?`,
+          [me.id],
+          (err, row) => (err ? reject(err) : resolve(row || {})),
+        );
+      });
 
-    const tour = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT COUNT(*) AS tournaments_won
-         FROM tournaments
-         WHERE winner_id = ?`,
-        [me.id],
-        (err, row) => (err ? reject(err) : resolve(row || {})),
-      );
-    }).finally(() => db.close());
+      const gamesPlayed = stats.games_played || 0;
+      const wins = stats.wins || 0;
+      const winrate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
+      const tournamentsWon = tour.tournaments_won || 0;
 
-    const gamesPlayed = stats.games_played || 0;
-    const wins = stats.wins || 0;
-    const winrate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
-    const tournamentsWon = tour.tournaments_won || 0;
-
-    return reply.send({
-      id: me.id,
-      email: me.email,
-      gamesPlayed,
-      wins,
-      winrate,
-      tournamentsWon,
-    });
+      return reply.send({
+        id: me.id,
+        email: me.email,
+        gamesPlayed,
+        wins,
+        winrate,
+        tournamentsWon,
+      });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('Error in /profile/me:', err);
     return reply.code(500).send({ error: 'Internal server error' });
@@ -532,41 +546,45 @@ fastify.get('/profile/me', async (req, reply) => {
 
 fastify.get('/profile/history', async (req, reply) => {
   try {
-    const me = await getCurrentUser(req);
+    const me = await getCurrentUser(req, reply);
     if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
     const db = openDb();
-    const rows = await new Promise((resolve, reject) => {
-      db.all(
-        `
-        SELECT 
-          gs.id,
-          gs.player1_id,
-          gs.player2_id,
-          u1.email AS player1_email,
-          u2.email AS player2_email,
-          gs.score1,
-          gs.score2,
-          gs.winner_id,
-          gs.started_at,
-          gs.ended_at,
-          gs.tournament_id,
-          t.name AS tournament_name
-        FROM game_sessions gs
-        JOIN users u1 ON gs.player1_id = u1.id
-        LEFT JOIN users u2 ON gs.player2_id = u2.id
-        LEFT JOIN tournaments t ON gs.tournament_id = t.id
-        WHERE (gs.player1_id = ? OR gs.player2_id = ?)
-          AND gs.player2_id != 0
-        ORDER BY gs.started_at DESC
-        LIMIT 50
-        `,
-        [me.id, me.id],
-        (err, rows2) => (err ? reject(err) : resolve(rows2 || [])),
-      );
-    }).finally(() => db.close());
+    try {
+      const rows = await new Promise((resolve, reject) => {
+        db.all(
+          `
+          SELECT 
+            gs.id,
+            gs.player1_id,
+            gs.player2_id,
+            u1.email AS player1_email,
+            u2.email AS player2_email,
+            gs.score1,
+            gs.score2,
+            gs.winner_id,
+            gs.started_at,
+            gs.ended_at,
+            gs.tournament_id,
+            t.name AS tournament_name
+          FROM game_sessions gs
+          JOIN users u1 ON gs.player1_id = u1.id
+          LEFT JOIN users u2 ON gs.player2_id = u2.id
+          LEFT JOIN tournaments t ON gs.tournament_id = t.id
+          WHERE (gs.player1_id = ? OR gs.player2_id = ?)
+            AND gs.player2_id != 0
+          ORDER BY gs.started_at DESC
+          LIMIT 50
+          `,
+          [me.id, me.id],
+          (err, rows2) => (err ? reject(err) : resolve(rows2 || [])),
+        );
+      });
 
-    return reply.send({ matches: rows });
+      return reply.send({ matches: rows });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('Error in /profile/history:', err);
     return reply.code(500).send({ error: 'Internal server error' });

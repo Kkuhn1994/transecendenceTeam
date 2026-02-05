@@ -45,7 +45,7 @@ class PongAI {
       this.isTracking = false;
       this.cachedPrediction = null;
       // Return to center when ball goes away
-      this.targetY = (canvasHeight / 2) - (paddleHeight / 2);
+      // this.targetY = (canvasHeight / 2) - (paddleHeight / 2);
     }
 
     return this.targetY;

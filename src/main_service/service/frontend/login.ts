@@ -56,7 +56,6 @@ export async function loginUser(
       body: JSON.stringify(body),
       credentials: 'include',
     });
-    alert(response.type);
     const data = await response.json();
     if (response.status == 200) {
       return { status: 'ok', error: 'no error' };
@@ -64,7 +63,7 @@ export async function loginUser(
       return { status: 'login fail', error: data.error };
     }
   } catch (err) {
-    alert(err);
+    console.error('Login error:', err);
     return { status: 'error', error: (err as Error).message };
   }
 }

@@ -31,7 +31,7 @@ const dispatcher = new Agent({
   connect: { rejectUnauthorized: false },
 });
 
-async function getCurrentUser(req) {
+async function getCurrentUser(req, reply) {
   const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
     dispatcher,
@@ -43,6 +43,15 @@ async function getCurrentUser(req) {
   });
 
   if (!res.ok) return null;
+
+  // Forward Set-Cookie headers (refreshed JWT) back to the browser
+  if (reply) {
+    const setCookies = res.headers.getSetCookie?.() || [];
+    for (const cookie of setCookies) {
+      reply.raw.setHeader('Set-Cookie', cookie);
+    }
+  }
+
   return await res.json(); // { id, email }
 }
 
@@ -87,12 +96,23 @@ function allAsync(db, sql, params = []) {
 
 function getJWTToken(refresh_token, db) {
   return new Promise((resolve, reject) => {
+    console.log('Looking up user with session cookie:', refresh_token ? `${refresh_token.substring(0, 20)}...` : 'null');
+    
     db.get(
       'SELECT * FROM users WHERE session_cookie = ?',
       [refresh_token],
       (err, row) => {
-        if (err) return reject(err);
-        if (!row) return reject(new Error('Wrong Refresh Token'));
+        if (err) {
+          console.error('Database error in getJWTToken:', err);
+          return reject(err);
+        }
+        if (!row) {
+          console.log('No user found with session cookie');
+          return reject(new Error('Wrong Refresh Token'));
+        }
+
+        console.log('Found user for JWT creation:', { id: row.id, email: row.email });
+        console.log('JWT_SECRET available:', !!process.env.JWT_SECRET);
 
         const token = jwt.sign(
           {
@@ -106,6 +126,7 @@ function getJWTToken(refresh_token, db) {
           { expiresIn: '5m' }
         );
 
+        console.log('JWT token created successfully');
         resolve(token);
       }
     );
@@ -284,13 +305,21 @@ fastify.post('/loginAccount', async (request, reply) => {
   sessionCookie = crypto.randomBytes(32).toString('hex');
 
   try {
+    // Save session cookie to DB and verify persistence
     await runAsync(
       db,
       'UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?',
       [sessionCookie, id]
     );
 
-    console.log('session updated');
+    // Immediately read back to verify
+    const verifySession = await getAsync(db, 'SELECT session_cookie FROM users WHERE id = ?', [id]);
+    if (!verifySession || verifySession.session_cookie !== sessionCookie) {
+      console.error('Session cookie was not saved correctly to DB:', verifySession);
+      return sendError(reply, 500, 'Session cookie not persisted');
+    }
+
+    console.log('session updated and verified in DB');
 
     const JWT = await getJWTToken(sessionCookie, db);
 
@@ -300,7 +329,7 @@ fastify.post('/loginAccount', async (request, reply) => {
         secure: false, // set true if https
         sameSite: 'strict',
         path: '/',
-        maxAge: 60 * 60 * 24,
+        maxAge: 60 * 60 * 24, // 24 hours in seconds
       })
       .setCookie('JWT', JWT, {
         httpOnly: true,
@@ -311,7 +340,7 @@ fastify.post('/loginAccount', async (request, reply) => {
       })
       .send({ status: 'ok', email: data.email, userId: id });
   } catch (err) {
-    console.error('Error updating session cookie:', err);
+    console.error('Error updating or verifying session cookie:', err);
     return sendError(reply, 500, 'Failed to update session');
   } finally {
     db.close();
@@ -321,27 +350,31 @@ fastify.post('/loginAccount', async (request, reply) => {
 /**
  * Logout: invalidate session
  */
-fastify.post('/logout', (request, reply) => {
+fastify.post('/logout', async (request, reply) => {
   const sessionCookie = request.cookies.session;
-  const db = openDb();
 
   if (!sessionCookie) {
-    db.close();
     reply.clearCookie('session', { path: '/' });
+    reply.clearCookie('JWT', { path: '/' });
     return reply.send({ status: 'ok' });
   }
 
-  db.run(
-    'UPDATE users SET session_cookie = NULL, is_active = 0 WHERE session_cookie = ?',
-    [sessionCookie],
-    (err) => {
-      db.close();
-      if (err) console.error('Error clearing session cookie:', err);
+  const db = openDb();
+  try {
+    await runAsync(
+      db,
+      'UPDATE users SET session_cookie = NULL, is_active = 0 WHERE session_cookie = ?',
+      [sessionCookie]
+    );
+  } catch (err) {
+    console.error('Error clearing session cookie:', err);
+  } finally {
+    db.close();
+  }
 
-      reply.clearCookie('session', { path: '/' });
-      return reply.send({ status: 'ok' });
-    }
-  );
+  reply.clearCookie('session', { path: '/' });
+  reply.clearCookie('JWT', { path: '/' });
+  return reply.send({ status: 'ok' });
 });
 
 /**
@@ -352,55 +385,75 @@ fastify.post('/auth/me', async (request, reply) => {
 
   try {
     token = request.cookies.JWT;
+    console.log('JWT token from cookies:', token ? `${token.substring(0, 20)}...` : 'null');
   } catch (err) {
-    console.log(err);
+    console.log('Error reading JWT cookie:', err);
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    return reply.send({
-      id: decoded.id,
-      email: decoded.email,
-      nickname: decoded.nickname,
-      avatar: decoded.avatar,
-      is_active: decoded.is_active,
-    });
-  } catch (err) {
+  // First try to verify the existing JWT
+  if (token) {
     try {
-      const db = openDb();
-      token = await getJWTToken(request.cookies.session, db);
-      console.log('token refresh');
-
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Update last_login to track activity
-      await runAsync(
-        db,
-        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
-        [decoded.id]
-      ).catch(err => console.error('Failed to update last_login:', err));
-      
-      db.close();
+      console.log('JWT verification successful for user:', decoded.id);
 
-      return reply
-        .setCookie('JWT', token, {
-          httpOnly: true,
-          secure: false,
-          sameSite: 'strict',
-          path: '/',
-          maxAge: 60 * 60 * 24,
-        })
-        .send({
-          id: decoded.id,
-          email: decoded.email,
-          nickname: decoded.nickname,
-          avatar: decoded.avatar,
-          is_active: decoded.is_active,
-        });
-    } catch (e2) {
-      return sendError(reply, 401, 'corrupted jwt');
+      return reply.send({
+        id: decoded.id,
+        email: decoded.email,
+        nickname: decoded.nickname,
+        avatar: decoded.avatar,
+        is_active: decoded.is_active,
+      });
+    } catch (jwtErr) {
+      console.log('JWT verification failed:', jwtErr.message);
+      // Continue to token refresh logic below
     }
+  } else {
+    console.log('No JWT token found in cookies');
+  }
+
+  // Try to refresh the token using session cookie
+  const sessionCookie = request.cookies.session;
+  console.log('Session cookie for refresh:', sessionCookie ? `${sessionCookie.substring(0, 20)}...` : 'null');
+  
+  if (!sessionCookie) {
+    console.log('No session cookie found - cannot refresh');
+    return sendError(reply, 401, 'No valid session');
+  }
+
+  const db = openDb();
+  try {
+    const newToken = await getJWTToken(sessionCookie, db);
+    console.log('Token refresh successful, new token created');
+
+    const decoded = jwt.verify(newToken, process.env.JWT_SECRET);
+    
+    // Update last_login to track activity
+    await runAsync(
+      db,
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+      [decoded.id]
+    ).catch(err => console.error('Failed to update last_login:', err));
+
+    return reply
+      .setCookie('JWT', newToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 60 * 60 * 24,
+      })
+      .send({
+        id: decoded.id,
+        email: decoded.email,
+        nickname: decoded.nickname,
+        avatar: decoded.avatar,
+        is_active: decoded.is_active,
+      });
+  } catch (refreshErr) {
+    console.error('Token refresh failed:', refreshErr.message);
+    return sendError(reply, 401, 'Session expired or invalid');
+  } finally {
+    db.close();
   }
 });
 
@@ -465,7 +518,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
  * Body: { nickname?, avatar? }
  */
 fastify.post('/user/update', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
@@ -522,7 +575,7 @@ fastify.post('/user/update', async (request, reply) => {
  * Query: ?userId=123
  */
 fastify.get('/user/profile', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ status: 'error', error: 'Not authenticated as Player 1' });
 
   const userId = Number(request.query.userId);
@@ -550,7 +603,7 @@ fastify.get('/user/profile', async (request, reply) => {
  * Get friends list for current user
  */
 fastify.get('/user/friends', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
@@ -587,7 +640,7 @@ fastify.get('/user/friends', async (request, reply) => {
  * Body: { friendId } or { friendEmail }
  */
 fastify.post('/user/friends/add', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
@@ -650,7 +703,7 @@ fastify.post('/user/friends/add', async (request, reply) => {
  * Body: { friendId }
  */
 fastify.post('/user/friends/remove', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
@@ -685,7 +738,7 @@ fastify.post('/user/friends/remove', async (request, reply) => {
  * Query: ?userId=123
  */
 fastify.get('/user/stats', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ status: 'error', error: 'Not authenticated as Player 1' });
 
   const userId = Number(request.query.userId);
@@ -716,7 +769,7 @@ fastify.get('/user/stats', async (request, reply) => {
 });
 
 fastify.get('/user/matches', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ status: 'error', error: 'Not authenticated as Player 1' });
 
   const userId = Number(request.query.userId);
@@ -753,7 +806,7 @@ fastify.get('/user/matches', async (request, reply) => {
 });
 
 fastify.get('/user/summary', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const userId = request.query.userId;
