@@ -96,7 +96,7 @@ async function canAccessUser(db, viewerId, targetId) {
   const row = await getAsync(
     db,
     'SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? LIMIT 1',
-    [viewerId, targetId]
+    [viewerId, targetId],
   );
 
   return !!row;
@@ -120,11 +120,11 @@ function getJWTToken(refresh_token, db) {
             is_active: row.is_active,
           },
           process.env.JWT_SECRET,
-          { expiresIn: '5m' }
+          { expiresIn: '5m' },
         );
 
         resolve(token);
-      }
+      },
     );
   });
 }
@@ -191,7 +191,7 @@ fastify.post('/createAccount', async (request, reply) => {
     const result = await runAsync(
       db,
       'INSERT INTO users (email, password, secret) VALUES (?, ?, ?)',
-      [email, hashed, secret.base32]
+      [email, hashed, secret.base32],
     );
 
     const otpAuthUrl = secret.otpauth_url;
@@ -261,41 +261,43 @@ fastify.post('/loginAccount', async (request, reply) => {
   const existingUser = await getAsync(
     db,
     'SELECT session_cookie, is_active, last_login, datetime(last_login) as last_login_dt FROM users WHERE id = ?',
-    [id]
+    [id],
   );
-  
+
   if (existingUser && existingUser.session_cookie && existingUser.is_active) {
     // Check if session is stale (inactive for more than 5 minutes)
     // SQLite datetime is stored as UTC string, need to parse it
     let lastLoginTime = 0;
     if (existingUser.last_login) {
       // Parse SQLite datetime (format: 'YYYY-MM-DD HH:MM:SS')
-      const lastLoginDate = new Date(existingUser.last_login.replace(' ', 'T') + 'Z');
+      const lastLoginDate = new Date(
+        existingUser.last_login.replace(' ', 'T') + 'Z',
+      );
       lastLoginTime = lastLoginDate.getTime();
     }
-    
+
     const now = Date.now();
     const fiveMinutes = 5 * 60 * 1000;
     const timeSinceLastLogin = now - lastLoginTime;
-    
-    console.log('Session check:', {
-      lastLogin: existingUser.last_login,
-      lastLoginTime,
-      now,
-      timeSinceLastLogin,
-      threshold: fiveMinutes,
-      isStale: timeSinceLastLogin >= fiveMinutes
-    });
-    
-    if (timeSinceLastLogin < fiveMinutes) {
-      // Active session exists, reject new login
-      console.log('User already has an active session - REJECTING LOGIN');
-      db.close();
-      return sendError(reply, 409, 'Account is already logged in elsewhere');
-    } else {
-      // Session is stale, allow login (old session abandoned)
-      console.log('Stale session detected, allowing new login');
-    }
+
+    // console.log('Session check:', {
+    //   lastLogin: existingUser.last_login,
+    //   lastLoginTime,
+    //   now,
+    //   timeSinceLastLogin,
+    //   threshold: fiveMinutes,
+    //   isStale: timeSinceLastLogin >= fiveMinutes
+    // });
+
+    // if (timeSinceLastLogin < fiveMinutes) {
+    //   // Active session exists, reject new login
+    //   console.log('User already has an active session - REJECTING LOGIN');
+    //   db.close();
+    //   return sendError(reply, 409, 'Account is already logged in elsewhere');
+    // } else {
+    //   // Session is stale, allow login (old session abandoned)
+    //   console.log('Stale session detected, allowing new login');
+    // }
   }
 
   sessionCookie = crypto.randomBytes(32).toString('hex');
@@ -304,7 +306,7 @@ fastify.post('/loginAccount', async (request, reply) => {
     await runAsync(
       db,
       'UPDATE users SET session_cookie = ?, is_active = 1, last_login = CURRENT_TIMESTAMP WHERE id = ?',
-      [sessionCookie, id]
+      [sessionCookie, id],
     );
 
     console.log('session updated');
@@ -357,7 +359,7 @@ fastify.post('/logout', (request, reply) => {
 
       reply.clearCookie('session', { path: '/' });
       return reply.send({ status: 'ok' });
-    }
+    },
   );
 });
 
@@ -390,14 +392,14 @@ fastify.post('/auth/me', async (request, reply) => {
       console.log('token refresh');
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Update last_login to track activity
       await runAsync(
         db,
         'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
-        [decoded.id]
-      ).catch(err => console.error('Failed to update last_login:', err));
-      
+        [decoded.id],
+      ).catch((err) => console.error('Failed to update last_login:', err));
+
       db.close();
 
       return reply
@@ -473,7 +475,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
         email: row.email,
         is_active: row.is_active,
       });
-    }
+    },
   );
 });
 
@@ -483,13 +485,15 @@ fastify.post('/verifyCredentials', (request, reply) => {
  */
 fastify.post('/user/update', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
   if (!sessionCookie) return sendError(reply, 401, 'Authentication required');
 
   const { nickname, avatar } = request.body || {};
-  if (!nickname && !avatar) return sendError(reply, 400, 'Nickname or avatar required');
+  if (!nickname && !avatar)
+    return sendError(reply, 400, 'Nickname or avatar required');
 
   const db = openDb();
 
@@ -528,9 +532,9 @@ fastify.post('/user/update', async (request, reply) => {
           }
 
           return reply.send({ status: 'ok', updated: this.changes });
-        }
+        },
       );
-    }
+    },
   );
 });
 
@@ -540,10 +544,14 @@ fastify.post('/user/update', async (request, reply) => {
  */
 fastify.get('/user/profile', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ status: 'error', error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply
+      .code(401)
+      .send({ status: 'error', error: 'Not authenticated as Player 1' });
 
   const userId = Number(request.query.userId);
-  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
+  if (!Number.isFinite(userId) || userId <= 0)
+    return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -553,7 +561,7 @@ fastify.get('/user/profile', async (request, reply) => {
     const row = await getAsync(
       db,
       'SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?',
-      [userId]
+      [userId],
     );
 
     if (!row) return sendError(reply, 404, 'User not found');
@@ -571,7 +579,8 @@ fastify.get('/user/profile', async (request, reply) => {
  */
 fastify.get('/user/friends', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
   if (!sessionCookie) return sendError(reply, 401, 'Authentication required');
@@ -580,7 +589,11 @@ fastify.get('/user/friends', async (request, reply) => {
 
   try {
     // 1) resolve current user id by session cookie
-    const user = await getAsync(db, `SELECT id FROM users WHERE session_cookie = ?`, [sessionCookie]);
+    const user = await getAsync(
+      db,
+      `SELECT id FROM users WHERE session_cookie = ?`,
+      [sessionCookie],
+    );
     if (!user) return sendError(reply, 401, 'Invalid session');
 
     // 2) get friends list
@@ -608,27 +621,37 @@ fastify.get('/user/friends', async (request, reply) => {
  */
 fastify.post('/user/friends/add', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
   const { friendId, friendEmail } = request.body || {};
 
   if (!sessionCookie) return sendError(reply, 401, 'Authentication required');
-  if (!friendId && !friendEmail) return sendError(reply, 400, 'friendId or friendEmail required');
+  if (!friendId && !friendEmail)
+    return sendError(reply, 400, 'friendId or friendEmail required');
 
   const db = openDb();
 
   try {
-    const user = await getAsync(db, 'SELECT id FROM users WHERE session_cookie = ?', [sessionCookie]);
+    const user = await getAsync(
+      db,
+      'SELECT id FROM users WHERE session_cookie = ?',
+      [sessionCookie],
+    );
     if (!user) return sendError(reply, 401, 'Invalid session');
 
     let target = null;
 
     if (friendEmail) {
-      target = await getAsync(db, 'SELECT id FROM users WHERE email = ?', [friendEmail]);
+      target = await getAsync(db, 'SELECT id FROM users WHERE email = ?', [
+        friendEmail,
+      ]);
       if (!target) return sendError(reply, 404, 'User not found');
     } else {
-      target = await getAsync(db, 'SELECT id FROM users WHERE id = ?', [friendId]);
+      target = await getAsync(db, 'SELECT id FROM users WHERE id = ?', [
+        friendId,
+      ]);
       if (!target) return sendError(reply, 404, 'User not found');
     }
 
@@ -646,7 +669,7 @@ fastify.post('/user/friends/add', async (request, reply) => {
       const result = await runAsync(
         db,
         'INSERT INTO friends (user_id, friend_id) VALUES (?, ?)',
-        [user.id, targetFriendId]
+        [user.id, targetFriendId],
       );
 
       return reply.send({ status: 'ok', friendshipId: result.lastID });
@@ -671,7 +694,8 @@ fastify.post('/user/friends/add', async (request, reply) => {
  */
 fastify.post('/user/friends/remove', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
   const { friendId } = request.body || {};
@@ -682,13 +706,17 @@ fastify.post('/user/friends/remove', async (request, reply) => {
   const db = openDb();
 
   try {
-    const user = await getAsync(db, 'SELECT id FROM users WHERE session_cookie = ?', [sessionCookie]);
+    const user = await getAsync(
+      db,
+      'SELECT id FROM users WHERE session_cookie = ?',
+      [sessionCookie],
+    );
     if (!user) return sendError(reply, 401, 'Invalid session');
 
     const result = await runAsync(
       db,
       'DELETE FROM friends WHERE user_id = ? AND friend_id = ?',
-      [user.id, friendId]
+      [user.id, friendId],
     );
 
     return reply.send({ status: 'ok', removed: result.changes || 0 });
@@ -706,10 +734,14 @@ fastify.post('/user/friends/remove', async (request, reply) => {
  */
 fastify.get('/user/stats', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ status: 'error', error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply
+      .code(401)
+      .send({ status: 'error', error: 'Not authenticated as Player 1' });
 
   const userId = Number(request.query.userId);
-  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
+  if (!Number.isFinite(userId) || userId <= 0)
+    return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -726,7 +758,7 @@ fastify.get('/user/stats', async (request, reply) => {
       FROM game_sessions
       WHERE player1_id = ? OR player2_id = ?
       `,
-      [userId, userId, userId, userId]
+      [userId, userId, userId, userId],
     );
 
     return reply.send(row || { total_games: 0, wins: 0, losses: 0 });
@@ -740,11 +772,15 @@ fastify.get('/user/stats', async (request, reply) => {
 
 fastify.get('/user/matches', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ status: 'error', error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply
+      .code(401)
+      .send({ status: 'error', error: 'Not authenticated as Player 1' });
 
   const userId = Number(request.query.userId);
   const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 10));
-  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
+  if (!Number.isFinite(userId) || userId <= 0)
+    return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -768,7 +804,7 @@ fastify.get('/user/matches', async (request, reply) => {
       ORDER BY gs.started_at DESC
       LIMIT ?
       `,
-      [userId, userId, limit]
+      [userId, userId, limit],
     );
 
     return reply.send({ matches: rows || [] });
@@ -782,13 +818,15 @@ fastify.get('/user/matches', async (request, reply) => {
 
 fastify.get('/user/summary', async (request, reply) => {
   const me = await getCurrentUser(request);
-  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  if (!me)
+    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const userId = request.query.userId;
   if (!userId) return sendError(reply, 400, 'userId required');
 
   const uid = Number(userId);
-  if (!Number.isFinite(uid) || uid <= 0) return sendError(reply, 400, 'Invalid userId');
+  if (!Number.isFinite(uid) || uid <= 0)
+    return sendError(reply, 400, 'Invalid userId');
 
   const db = openDb();
 
@@ -806,7 +844,7 @@ fastify.get('/user/summary', async (request, reply) => {
       FROM game_sessions
       WHERE (player1_id = ? OR player2_id = ?)
        AND player2_id != 0`,
-      [uid, uid, uid, uid]
+      [uid, uid, uid, uid],
     );
 
     const tour = await getAsync(
@@ -816,7 +854,7 @@ fastify.get('/user/summary', async (request, reply) => {
       FROM tournaments
       WHERE winner_id = ?
       `,
-      [uid]
+      [uid],
     );
 
     const gamesPlayed = Number(stats?.games_played || 0);

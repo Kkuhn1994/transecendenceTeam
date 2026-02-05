@@ -84,7 +84,7 @@ fastify.post('/session/create', async (req, reply) => {
           password: player2Password,
           otp,
         }),
-      }
+      },
     );
 
     if (!verifyRes.ok) {
@@ -113,24 +113,28 @@ fastify.post('/session/create', async (req, reply) => {
         db.get(
           'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
           [me.id, me.id],
-          (err, row) => (err ? reject(err) : resolve(row))
+          (err, row) => (err ? reject(err) : resolve(row)),
         );
       });
-      
+
       if (activeGame1) {
-        return reply.code(400).send({ error: 'You are already in an active game' });
+        return reply
+          .code(400)
+          .send({ error: 'You are already in an active game' });
       }
-      
+
       const activeGame2 = await new Promise((resolve, reject) => {
         db.get(
           'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
           [player2.id, player2.id],
-          (err, row) => (err ? reject(err) : resolve(row))
+          (err, row) => (err ? reject(err) : resolve(row)),
         );
       });
-      
+
       if (activeGame2) {
-        return reply.code(400).send({ error: 'Player 2 is already in an active game' });
+        return reply
+          .code(400)
+          .send({ error: 'Player 2 is already in an active game' });
       }
 
       const sessionId = await new Promise((resolve, reject) => {
@@ -141,7 +145,7 @@ fastify.post('/session/create', async (req, reply) => {
           function (err) {
             if (err) return reject(err);
             resolve(this.lastID);
-          }
+          },
         );
       });
 
@@ -152,7 +156,7 @@ fastify.post('/session/create', async (req, reply) => {
           `INSERT INTO session_pairings (player1_id, player2_id, token)
            VALUES (?, ?, ?)`,
           [me.id, player2.id, pairingToken],
-          (err) => (err ? reject(err) : resolve(null))
+          (err) => (err ? reject(err) : resolve(null)),
         );
       });
 
@@ -174,7 +178,8 @@ fastify.post('/session/create', async (req, reply) => {
 fastify.post('/session/create_ai', async (req, reply) => {
   try {
     const me = await getCurrentUser(req);
-    if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+    if (!me)
+      return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
     const db = openDb();
     try {
@@ -186,13 +191,13 @@ fastify.post('/session/create_ai', async (req, reply) => {
         db.get(
           'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
           [me.id, me.id],
-          (err, row) => (err ? reject(err) : resolve(row))
+          (err, row) => (err ? reject(err) : resolve(row)),
         );
       });
-      
-      if (activeGame) {
-        return reply.code(400).send({ error: 'You are already in an active game' });
-      }
+
+      // if (activeGame) {
+      //   return reply.code(400).send({ error: 'You are already in an active game' });
+      // }
 
       const sessionId = await new Promise((resolve, reject) => {
         // Use player2_id = 0 to indicate AI opponent
@@ -203,7 +208,7 @@ fastify.post('/session/create_ai', async (req, reply) => {
           function (err) {
             if (err) return reject(err);
             resolve(this.lastID);
-          }
+          },
         );
       });
 
@@ -211,7 +216,7 @@ fastify.post('/session/create_ai', async (req, reply) => {
         sessionId,
         player1: { id: me.id, email: me.email },
         ai: { type: 'basic' },
-        isAI: true
+        isAI: true,
       });
     } finally {
       db.close();
@@ -221,7 +226,6 @@ fastify.post('/session/create_ai', async (req, reply) => {
     return reply.code(500).send({ error: 'Internal server error' });
   }
 });
-
 
 fastify.post('/session/finish', async (req, reply) => {
   console.log('/session/finish');
@@ -282,7 +286,7 @@ fastify.post('/session/rematch', async (req, reply) => {
       db.get(
         `SELECT player1_id, player2_id FROM session_pairings WHERE token = ?`,
         [pairingToken],
-        (err, row) => (err ? reject(err) : resolve(row))
+        (err, row) => (err ? reject(err) : resolve(row)),
       );
     });
 
@@ -302,7 +306,7 @@ fastify.post('/session/rematch', async (req, reply) => {
         function (err) {
           if (err) return reject(err);
           resolve(this.lastID);
-        }
+        },
       );
     });
 
@@ -322,7 +326,7 @@ fastify.post('/session/abandon', async (req, reply) => {
   if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
   const { sessionId } = req.body || {};
-  
+
   const db = openDb();
   try {
     // If sessionId is provided, abandon that specific session
@@ -331,20 +335,23 @@ fastify.post('/session/abandon', async (req, reply) => {
         db.get(
           `SELECT id, player1_id, player2_id FROM game_sessions WHERE id = ? AND winner_id IS NULL`,
           [sessionId],
-          (err, row) => (err ? reject(err) : resolve(row))
+          (err, row) => (err ? reject(err) : resolve(row)),
         );
       });
 
-      if (session && (session.player1_id === me.id || session.player2_id === me.id)) {
+      if (
+        session &&
+        (session.player1_id === me.id || session.player2_id === me.id)
+      ) {
         await new Promise((resolve, reject) => {
           db.run(
             `UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 WHERE id = ?`,
             [sessionId],
-            (err) => (err ? reject(err) : resolve())
+            (err) => (err ? reject(err) : resolve()),
           );
         });
         console.log(`Session ${sessionId} abandoned by user ${me.id}`);
-        
+
         // Clean up AI session in game_service
         try {
           await fetch('https://game_service:3000/game/cleanup', {
@@ -365,21 +372,21 @@ fastify.post('/session/abandon', async (req, reply) => {
           `SELECT id FROM game_sessions 
            WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
           [me.id, me.id],
-          (err, rows) => (err ? reject(err) : resolve(rows || []))
+          (err, rows) => (err ? reject(err) : resolve(rows || [])),
         );
       });
-      
+
       await new Promise((resolve, reject) => {
         db.run(
           `UPDATE game_sessions 
            SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
            WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
           [me.id, me.id],
-          (err) => (err ? reject(err) : resolve())
+          (err) => (err ? reject(err) : resolve()),
         );
       });
       console.log(`All active sessions abandoned for user ${me.id}`);
-      
+
       // Clean up all AI sessions in game_service
       for (const session of activeSessions) {
         try {
@@ -418,7 +425,7 @@ fastify.post('/session/force-end', async (req, reply) => {
         `SELECT id, player1_id, player2_id FROM game_sessions 
          WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
         [me.id, me.id],
-        (err, rows) => (err ? reject(err) : resolve(rows || []))
+        (err, rows) => (err ? reject(err) : resolve(rows || [])),
       );
     });
 
@@ -432,7 +439,7 @@ fastify.post('/session/force-end', async (req, reply) => {
         db.run(
           `UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 WHERE id = ?`,
           [session.id],
-          (err) => (err ? reject(err) : resolve())
+          (err) => (err ? reject(err) : resolve()),
         );
       });
 
@@ -473,11 +480,10 @@ async function cleanupStaleSessions(db, userId) {
          AND winner_id IS NULL 
          AND started_at < datetime('now', '-10 minutes')`,
       [userId, userId],
-      (err) => (err ? reject(err) : resolve())
+      (err) => (err ? reject(err) : resolve()),
     );
   });
 }
-
 
 fastify.get('/profile/me', async (req, reply) => {
   try {

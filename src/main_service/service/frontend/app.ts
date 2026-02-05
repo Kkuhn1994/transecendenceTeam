@@ -502,7 +502,7 @@ async function guardedNavigate(targetHash: string): Promise<void> {
       'A match/tournament is in progress.\nIf you leave now, progress will be lost.',
       'Leave game?',
       'Leave',
-      'Stay'
+      'Stay',
     );
 
     if (!ok) return;
@@ -519,8 +519,10 @@ async function handleNavButtons() {
   const logoutBtn = document.getElementById('navLogout');
   const friendsBtn = document.getElementById('navFriends');
 
-  if (homeBtn) homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
-  if (playBtn) playBtn.addEventListener('click', () => guardedNavigate('#/play'));
+  if (homeBtn)
+    homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
+  if (playBtn)
+    playBtn.addEventListener('click', () => guardedNavigate('#/play'));
   if (profileBtn)
     profileBtn.addEventListener('click', () => guardedNavigate('#/profile'));
   if (friendsBtn)
@@ -541,15 +543,17 @@ async function handleNavButtons() {
     if (window.currentSessionId != null) {
       const abandonData = new Blob(
         [JSON.stringify({ sessionId: window.currentSessionId })],
-        { type: 'application/json' }
+        { type: 'application/json' },
       );
       navigator.sendBeacon('/session/abandon', abandonData);
     } else {
       // Abandon all sessions for this user (fallback)
-      const abandonAll = new Blob([JSON.stringify({})], { type: 'application/json' });
+      const abandonAll = new Blob([JSON.stringify({})], {
+        type: 'application/json',
+      });
       navigator.sendBeacon('/session/abandon', abandonAll);
     }
-    navigator.sendBeacon('/login_service/logout');
+    // navigator.sendBeacon('/login_service/logout');
   });
 }
 
