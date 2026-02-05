@@ -480,7 +480,7 @@ fastify.post('/game', async function (request, reply) {
       // Verify user is player1 in this game session
       const gameSessionRecord = await new Promise((resolve, reject) => {
         db.get(
-          'SELECT player1_id, player2_id FROM game_sessions WHERE id = ?',
+          'SELECT player1_id, player2_id, tournament_id FROM game_sessions WHERE id = ?',
           [sessionId],
           (err, row) => (err ? reject(err) : resolve(row))
         );
@@ -491,9 +491,31 @@ fastify.post('/game', async function (request, reply) {
         return reply.code(404).send({ error: 'Game session not found' });
       }
 
-      // Allow either player1 OR player2 to control the game
-      // This is needed for tournament matches where logged-in user might be player2
-      if (gameSessionRecord.player1_id !== me.id && gameSessionRecord.player2_id !== me.id) {
+      // Check if user has permission to control this game
+      let hasPermission = false;
+      
+      // Allow if user is player1 or player2
+      if (gameSessionRecord.player1_id === me.id || gameSessionRecord.player2_id === me.id) {
+        hasPermission = true;
+      }
+      
+      // For tournament games, allow any participant in the tournament to control the game
+      if (!hasPermission && gameSessionRecord.tournament_id) {
+        const tournamentParticipant = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT 1 FROM tournament_matches 
+             WHERE tournament_id = ? AND (player1_id = ? OR player2_id = ?)
+             LIMIT 1`,
+            [gameSessionRecord.tournament_id, me.id, me.id],
+            (err, row) => (err ? reject(err) : resolve(row))
+          );
+        });
+        if (tournamentParticipant) {
+          hasPermission = true;
+        }
+      }
+      
+      if (!hasPermission) {
         console.log('User', me.id, 'is not a player in session', sessionId);
         return reply.code(403).send({ error: 'You are not a player in this game' });
       }
