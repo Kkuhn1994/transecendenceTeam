@@ -85,6 +85,23 @@ function allAsync(db, sql, params = []) {
   });
 }
 
+async function canAccessUser(db, viewerId, targetId) {
+  if (!Number.isFinite(viewerId) || viewerId <= 0) return false;
+  if (!Number.isFinite(targetId) || targetId <= 0) return false;
+
+  // Always allow self
+  if (viewerId === targetId) return true;
+
+  // Allow if target is in viewer's friends list (one-direction)
+  const row = await getAsync(
+    db,
+    'SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? LIMIT 1',
+    [viewerId, targetId]
+  );
+
+  return !!row;
+}
+
 function getJWTToken(refresh_token, db) {
   return new Promise((resolve, reject) => {
     db.get(
@@ -530,6 +547,9 @@ fastify.get('/user/profile', async (request, reply) => {
 
   const db = openDb();
   try {
+    const allowed = await canAccessUser(db, Number(me.id), userId);
+    if (!allowed) return sendError(reply, 403, 'Forbidden');
+
     const row = await getAsync(
       db,
       'SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?',
@@ -693,6 +713,9 @@ fastify.get('/user/stats', async (request, reply) => {
 
   const db = openDb();
   try {
+    const allowed = await canAccessUser(db, Number(me.id), userId);
+    if (!allowed) return sendError(reply, 403, 'Forbidden');
+
     const row = await getAsync(
       db,
       `
@@ -725,16 +748,21 @@ fastify.get('/user/matches', async (request, reply) => {
 
   const db = openDb();
   try {
+    const allowed = await canAccessUser(db, Number(me.id), userId);
+    if (!allowed) return sendError(reply, 403, 'Forbidden');
+
     const rows = await allAsync(
       db,
       `
       SELECT
         gs.*,
+        t.name AS tournament_name,
         u1.nickname as player1_nickname, u1.avatar as player1_avatar, u1.email as player1_email,
         u2.nickname as player2_nickname, u2.avatar as player2_avatar, u2.email as player2_email
       FROM game_sessions gs
       JOIN users u1 ON gs.player1_id = u1.id
       LEFT JOIN users u2 ON gs.player2_id = u2.id
+      LEFT JOIN tournaments t ON gs.tournament_id = t.id
       WHERE (gs.player1_id = ? OR gs.player2_id = ?)
       AND gs.player2_id != 0
       ORDER BY gs.started_at DESC
@@ -765,6 +793,9 @@ fastify.get('/user/summary', async (request, reply) => {
   const db = openDb();
 
   try {
+    const allowed = await canAccessUser(db, Number(me.id), uid);
+    if (!allowed) return sendError(reply, 403, 'Forbidden');
+
     const stats = await getAsync(
       db,
       `
