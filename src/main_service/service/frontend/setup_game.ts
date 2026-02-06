@@ -30,11 +30,21 @@ export function init1v1Setup() {
   ) as HTMLParagraphElement | null;
 
   // AI Match Elements
-  const humanMatchRadio = document.getElementById('humanMatch') as HTMLInputElement | null;
-  const aiMatchRadio = document.getElementById('aiMatch') as HTMLInputElement | null;
-  const humanMatchSection = document.getElementById('humanMatchSection') as HTMLDivElement | null;
-  const aiMatchSection = document.getElementById('aiMatchSection') as HTMLDivElement | null;
-  const startAiMatchBtn = document.getElementById('startAiMatch') as HTMLButtonElement | null;
+  const humanMatchRadio = document.getElementById(
+    'humanMatch',
+  ) as HTMLInputElement | null;
+  const aiMatchRadio = document.getElementById(
+    'aiMatch',
+  ) as HTMLInputElement | null;
+  const humanMatchSection = document.getElementById(
+    'humanMatchSection',
+  ) as HTMLDivElement | null;
+  const aiMatchSection = document.getElementById(
+    'aiMatchSection',
+  ) as HTMLDivElement | null;
+  const startAiMatchBtn = document.getElementById(
+    'startAiMatch',
+  ) as HTMLButtonElement | null;
 
   // Toggle between human and AI match sections
   function toggleMatchType() {
@@ -64,7 +74,6 @@ export function init1v1Setup() {
       const me = await res.json().catch(() => ({}));
       return typeof me?.email === 'string' ? me.email : null;
     } catch {
-      console.log('auth me fail');
       return null;
     }
   }
@@ -87,7 +96,8 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (errorEl) errorEl.textContent = data.error || 'Could not create session';
+        if (errorEl)
+          errorEl.textContent = data.error || 'Could not create session';
         return false;
       }
 
@@ -124,7 +134,6 @@ export function init1v1Setup() {
         location.hash = '#/game';
       }
     } catch (err) {
-      console.error('Error creating session:', err);
       if (errorEl) errorEl.textContent = 'Network error while creating session';
     }
   });
@@ -132,7 +141,7 @@ export function init1v1Setup() {
   // AI Match Handler
   startAiMatchBtn?.addEventListener('click', async () => {
     if (errorEl) errorEl.textContent = '';
-    
+
     async function tryCreateAISession(): Promise<boolean> {
       const response = await fetch('/session/create_ai', {
         method: 'POST',
@@ -143,7 +152,8 @@ export function init1v1Setup() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (errorEl) errorEl.textContent = data.error || 'Could not create AI session';
+        if (errorEl)
+          errorEl.textContent = data.error || 'Could not create AI session';
         return false;
       }
 
@@ -162,15 +172,15 @@ export function init1v1Setup() {
       const meEmail = await getMeEmail();
       window.currentMatchPlayer1Name = meEmail || 'Player 1';
       window.currentMatchPlayer2Name = 'AI Bot';
-      
+
       const success = await tryCreateAISession();
       if (success) {
         // Go to game
         location.hash = '#/game';
       }
     } catch (err) {
-      console.error('Error creating AI session:', err);
-      if (errorEl) errorEl.textContent = 'Network error while creating AI session';
+      if (errorEl)
+        errorEl.textContent = 'Network error while creating AI session';
     }
   });
 }

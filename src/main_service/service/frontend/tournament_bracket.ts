@@ -16,7 +16,12 @@ type BracketMatch = {
 };
 
 type BracketPayload = {
-  tournament: { id: number; name: string; created_at: string; winner_id: number | null };
+  tournament: {
+    id: number;
+    name: string;
+    created_at: string;
+    winner_id: number | null;
+  };
   matches: BracketMatch[];
 };
 
@@ -49,10 +54,13 @@ export async function initTournamentBracket() {
 
   try {
     const res = await fetch(`/tournament_service/tournament/${id}/bracket`);
-    const data: BracketPayload = await res.json().catch(() => ({} as any));
+    const data: BracketPayload = await res.json().catch(() => ({}) as any);
 
     if (!res.ok) {
-      await uiAlert((data as any)?.error || `Failed to load bracket (${res.status})`, 'Error');
+      await uiAlert(
+        (data as any)?.error || `Failed to load bracket (${res.status})`,
+        'Error',
+      );
       root.textContent = 'Could not load bracket.';
       return;
     }
@@ -71,7 +79,9 @@ export async function initTournamentBracket() {
 
     let winnerName: string | null = null;
     if (data.tournament.winner_id != null) {
-      const w = (data.matches || []).find(m => m.winner_id === data.tournament.winner_id);
+      const w = (data.matches || []).find(
+        (m) => m.winner_id === data.tournament.winner_id,
+      );
       winnerName = w?.winner_email || `Player ${data.tournament.winner_id}`;
     }
 
@@ -95,8 +105,12 @@ export async function initTournamentBracket() {
 
       for (const m of matches) {
         const p1 = m.player1_email || `Player ${m.player1_id}`;
-        const p2 = m.player2_id ? (m.player2_email || `Player ${m.player2_id}`) : 'BYE';
-        const w = m.winner_id ? (m.winner_email || `Player ${m.winner_id}`) : null;
+        const p2 = m.player2_id
+          ? m.player2_email || `Player ${m.player2_id}`
+          : 'BYE';
+        const w = m.winner_id
+          ? m.winner_email || `Player ${m.winner_id}`
+          : null;
 
         html += `
           <div style="
@@ -122,7 +136,6 @@ export async function initTournamentBracket() {
     html += `</div>`;
     root.innerHTML = html;
   } catch (e) {
-    console.error(e);
     await uiAlert('Bracket request crashed', 'Network error');
     root.textContent = 'Network error.';
   }

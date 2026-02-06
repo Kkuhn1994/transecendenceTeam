@@ -50,8 +50,10 @@ function getPendingMatch(): PendingMatch | null {
   const player1Id = Number(pm.player1Id);
   const player2Id = Number(pm.player2Id);
 
-  if (![tournamentId, sessionId, player1Id, player2Id].every(Number.isFinite)) return null;
-  if (tournamentId <= 0 || sessionId <= 0 || player1Id <= 0 || player2Id <= 0) return null;
+  if (![tournamentId, sessionId, player1Id, player2Id].every(Number.isFinite))
+    return null;
+  if (tournamentId <= 0 || sessionId <= 0 || player1Id <= 0 || player2Id <= 0)
+    return null;
 
   return { tournamentId, sessionId, player1Id, player2Id };
 }
@@ -63,7 +65,10 @@ function setPendingMatch(pending: PendingMatch | null) {
 }
 
 function saveTournamentUIState() {
-  const name = (document.getElementById('tournamentName') as HTMLInputElement | null)?.value.trim() || 'Tournament';
+  const name =
+    (
+      document.getElementById('tournamentName') as HTMLInputElement | null
+    )?.value.trim() || 'Tournament';
 
   // preserve pendingMatch if any
   const raw = readRawUIState() || {};
@@ -76,7 +81,7 @@ function saveTournamentUIState() {
       players: tournamentPlayers,
       currentTournamentId: window.currentTournamentId ?? null,
       pendingMatch,
-    })
+    }),
   );
 }
 
@@ -99,15 +104,30 @@ function loadTournamentUIState(): {
       const sessionId = Number(pm.sessionId);
       const player1Id = Number(pm.player1Id);
       const player2Id = Number(pm.player2Id);
-      if (![tournamentId, sessionId, player1Id, player2Id].every(Number.isFinite)) return null;
-      if (tournamentId <= 0 || sessionId <= 0 || player1Id <= 0 || player2Id <= 0) return null;
+      if (
+        ![tournamentId, sessionId, player1Id, player2Id].every(Number.isFinite)
+      )
+        return null;
+      if (
+        tournamentId <= 0 ||
+        sessionId <= 0 ||
+        player1Id <= 0 ||
+        player2Id <= 0
+      )
+        return null;
       return { tournamentId, sessionId, player1Id, player2Id } as PendingMatch;
     })();
 
     return {
       name: String(parsed.name || 'Tournament'),
-      players: parsed.players.map((p: any) => ({ id: Number(p.id), email: String(p.email) })),
-      currentTournamentId: parsed.currentTournamentId != null ? Number(parsed.currentTournamentId) : null,
+      players: parsed.players.map((p: any) => ({
+        id: Number(p.id),
+        email: String(p.email),
+      })),
+      currentTournamentId:
+        parsed.currentTournamentId != null
+          ? Number(parsed.currentTournamentId)
+          : null,
       pendingMatch,
     };
   } catch {
@@ -129,12 +149,15 @@ async function getMe(): Promise<TournamentPlayer | null> {
     if (!me?.id || !me?.email) return null;
     return { id: me.id, email: me.email };
   } catch (e) {
-    console.error('getMe failed:', e);
     return null;
   }
 }
 
-async function verifyPlayer(email: string, password: string, otp: string): Promise<TournamentPlayer | null> {
+async function verifyPlayer(
+  email: string,
+  password: string,
+  otp: string,
+): Promise<TournamentPlayer | null> {
   try {
     const res = await fetch('/login_service/verifyCredentials', {
       method: 'POST',
@@ -150,20 +173,25 @@ async function verifyPlayer(email: string, password: string, otp: string): Promi
     }
 
     if (!data?.id || !data?.email) {
-      await uiAlert('verifyCredentials returned invalid payload', 'Server error');
+      await uiAlert(
+        'verifyCredentials returned invalid payload',
+        'Server error',
+      );
       return null;
     }
 
     return { id: data.id, email: data.email };
   } catch (e) {
-    console.error('verifyPlayer failed:', e);
-    await uiAlert('verifyCredentials crashed (network/server)', 'Network error');
+    await uiAlert(
+      'verifyCredentials crashed (network/server)',
+      'Network error',
+    );
     return null;
   }
 }
 
 function hasPlayer(id: number): boolean {
-  return tournamentPlayers.some(p => p.id === id);
+  return tournamentPlayers.some((p) => p.id === id);
 }
 
 function nameOf(id: number | null | undefined): string {
@@ -173,13 +201,16 @@ function nameOf(id: number | null | undefined): string {
 
 async function loadTournamentPlayerMap(tournamentId: number) {
   try {
-    const res = await fetch(`/tournament_service/tournament/${tournamentId}/players`);
+    const res = await fetch(
+      `/tournament_service/tournament/${tournamentId}/players`,
+    );
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !Array.isArray(data.players)) return;
 
     window.tournamentPlayerMap = {};
     for (const p of data.players) {
-      if (p?.id && p?.email) window.tournamentPlayerMap[Number(p.id)] = String(p.email);
+      if (p?.id && p?.email)
+        window.tournamentPlayerMap[Number(p.id)] = String(p.email);
     }
   } catch {
     // ignore
@@ -206,7 +237,9 @@ function clearRuntimeState() {
   window.tournamentPlayerMap = undefined;
 }
 
-async function startMatchLoop(onAbandonReset: () => Promise<void>): Promise<void> {
+async function startMatchLoop(
+  onAbandonReset: () => Promise<void>,
+): Promise<void> {
   for (let guard = 0; guard < 50; guard++) {
     const res = await fetch('/tournament_service/tournament/start-match', {
       method: 'POST',
@@ -217,19 +250,28 @@ async function startMatchLoop(onAbandonReset: () => Promise<void>): Promise<void
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      await uiAlert(data.error || `Start match failed (${res.status})`, 'Error');
+      await uiAlert(
+        data.error || `Start match failed (${res.status})`,
+        'Error',
+      );
       return;
     }
 
     if (Array.isArray(data.byes) && data.byes.length > 0) {
       for (const pid of data.byes) {
-        await uiAlert(`Bye round:\n${nameOf(Number(pid))} advances automatically.`, 'Bye round');
+        await uiAlert(
+          `Bye round:\n${nameOf(Number(pid))} advances automatically.`,
+          'Bye round',
+        );
       }
       if (!data.sessionId) continue;
     }
 
     if (data.tournamentFinished) {
-      await uiAlert(`🏆 Tournament finished!\nWinner: ${data.winnerId ? nameOf(data.winnerId) : 'Unknown'}`, 'Tournament complete');
+      await uiAlert(
+        `🏆 Tournament finished!\nWinner: ${data.winnerId ? nameOf(data.winnerId) : 'Unknown'}`,
+        'Tournament complete',
+      );
 
       clearRuntimeState();
       sessionStorage.removeItem(TOURNAMENT_UI_KEY);
@@ -237,7 +279,10 @@ async function startMatchLoop(onAbandonReset: () => Promise<void>): Promise<void
     }
 
     if (!data.sessionId || !data.player1Id || !data.player2Id) {
-      await uiAlert('No match available (server returned incomplete data).', 'Error');
+      await uiAlert(
+        'No match available (server returned incomplete data).',
+        'Error',
+      );
       return;
     }
 
@@ -267,7 +312,10 @@ async function startMatchLoop(onAbandonReset: () => Promise<void>): Promise<void
     }
 
     if (choice === 'back') {
-      await uiAlert('Tournament paused. You can resume by clicking "Start Match".', 'Paused');
+      await uiAlert(
+        'Tournament paused. You can resume by clicking "Start Match".',
+        'Paused',
+      );
       // keep pendingMatch in storage
       return;
     }
@@ -285,33 +333,54 @@ async function startMatchLoop(onAbandonReset: () => Promise<void>): Promise<void
     return;
   }
 
-  await uiAlert('Start match guard hit (unexpected tournament state).', 'Error');
+  await uiAlert(
+    'Start match guard hit (unexpected tournament state).',
+    'Error',
+  );
 }
 
 export async function initTournamentUI() {
   const saved = loadTournamentUIState();
   tournamentPlayers = [];
 
-  const form = document.getElementById('addPlayerForm') as HTMLFormElement | null;
+  const form = document.getElementById(
+    'addPlayerForm',
+  ) as HTMLFormElement | null;
   const list = document.getElementById('playerList') as HTMLUListElement | null;
-  const info = document.getElementById('tournamentInfo') as HTMLDivElement | null;
-  const startTournamentBtn = document.getElementById('startTournamentBtn') as HTMLButtonElement | null;
-  const startMatchBtn = document.getElementById('startMatchBtn') as HTMLButtonElement | null;
-  const resetBtn = document.getElementById('resetTournamentBtn') as HTMLButtonElement | null;
+  const info = document.getElementById(
+    'tournamentInfo',
+  ) as HTMLDivElement | null;
+  const startTournamentBtn = document.getElementById(
+    'startTournamentBtn',
+  ) as HTMLButtonElement | null;
+  const startMatchBtn = document.getElementById(
+    'startMatchBtn',
+  ) as HTMLButtonElement | null;
+  const resetBtn = document.getElementById(
+    'resetTournamentBtn',
+  ) as HTMLButtonElement | null;
 
-  if (!form || !list || !info || !startTournamentBtn || !startMatchBtn || !resetBtn) {
-    console.error('Tournament UI missing elements');
+  if (
+    !form ||
+    !list ||
+    !info ||
+    !startTournamentBtn ||
+    !startMatchBtn ||
+    !resetBtn
+  ) {
     return;
   }
 
   startTournamentBtn.disabled = true;
   startMatchBtn.disabled = true;
 
-  const nameInput = document.getElementById('tournamentName') as HTMLInputElement | null;
+  const nameInput = document.getElementById(
+    'tournamentName',
+  ) as HTMLInputElement | null;
 
   function renderPlayers() {
     list!.innerHTML = '';
-    tournamentPlayers.forEach(p => {
+    tournamentPlayers.forEach((p) => {
       const li = document.createElement('li');
       li.textContent = `${p.email} (id=${p.id})`;
       list!.appendChild(li);
@@ -349,7 +418,7 @@ export async function initTournamentUI() {
     if (nameInput) nameInput.value = saved.name;
 
     tournamentPlayers = saved.players;
-    if (!tournamentPlayers.some(p => p.id === mePlayer.id)) {
+    if (!tournamentPlayers.some((p) => p.id === mePlayer.id)) {
       tournamentPlayers.unshift(mePlayer);
     }
 
@@ -360,7 +429,10 @@ export async function initTournamentUI() {
     // if a pending match exists, show that you can resume without skipping.
     if (window.currentTournamentId) {
       startMatchBtn.disabled = false;
-      if (saved.pendingMatch && saved.pendingMatch.tournamentId === window.currentTournamentId) {
+      if (
+        saved.pendingMatch &&
+        saved.pendingMatch.tournamentId === window.currentTournamentId
+      ) {
         info.innerText = `Tournament paused (id=${window.currentTournamentId}). Pending match ready: ${nameOf(saved.pendingMatch.player1Id)} vs ${nameOf(saved.pendingMatch.player2Id)}.`;
       } else {
         info.innerText = `Tournament already created (id=${window.currentTournamentId}).`;
@@ -379,9 +451,17 @@ export async function initTournamentUI() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = (document.getElementById('playerEmail') as HTMLInputElement | null)?.value.trim() || '';
-    const password = (document.getElementById('playerPassword') as HTMLInputElement | null)?.value || '';
-    const otp = (document.getElementById('playerOtp') as HTMLInputElement | null)?.value.trim() || '';
+    const email =
+      (
+        document.getElementById('playerEmail') as HTMLInputElement | null
+      )?.value.trim() || '';
+    const password =
+      (document.getElementById('playerPassword') as HTMLInputElement | null)
+        ?.value || '';
+    const otp =
+      (
+        document.getElementById('playerOtp') as HTMLInputElement | null
+      )?.value.trim() || '';
 
     if (!email || !password || !otp) {
       await uiAlert('Please fill username / password / OTP.', 'Missing info');
@@ -392,7 +472,10 @@ export async function initTournamentUI() {
     if (!player) return;
 
     if (hasPlayer(player.id)) {
-      await uiAlert('That account is already added to the tournament.', 'Duplicate player');
+      await uiAlert(
+        'That account is already added to the tournament.',
+        'Duplicate player',
+      );
       return;
     }
 
@@ -407,7 +490,7 @@ export async function initTournamentUI() {
         'A tournament is already created. Creating a new one will abandon it.\nContinue?',
         'Overwrite tournament?',
         'Yes, create new',
-        'Cancel'
+        'Cancel',
       );
       if (!ok) return;
 
@@ -415,7 +498,7 @@ export async function initTournamentUI() {
     }
 
     const name = nameInput?.value.trim() || 'Tournament';
-    const playerIds = tournamentPlayers.map(p => p.id);
+    const playerIds = tournamentPlayers.map((p) => p.id);
 
     try {
       const res = await fetch('/tournament_service/tournament/create', {
@@ -427,7 +510,10 @@ export async function initTournamentUI() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        await uiAlert(data.error || `Create tournament failed (${res.status})`, 'Error');
+        await uiAlert(
+          data.error || `Create tournament failed (${res.status})`,
+          'Error',
+        );
         return;
       }
 
@@ -467,18 +553,20 @@ export async function initTournamentUI() {
 
         await startMatchLoop(async () => resetTournamentVisualAndState(true));
       } else if (choice === 'bracket') {
-          sessionStorage.setItem('bracketBackTo', '#/tournament');
-          location.hash = `#/tournament_bracket?tournamentId=${data.tournamentId}`;
+        sessionStorage.setItem('bracketBackTo', '#/tournament');
+        location.hash = `#/tournament_bracket?tournamentId=${data.tournamentId}`;
       }
     } catch (e) {
-      console.error(e);
       await uiAlert('Create tournament request crashed', 'Network error');
     }
   });
 
   startMatchBtn.addEventListener('click', async () => {
     if (!window.currentTournamentId) {
-      await uiAlert('No active tournament id. Create a tournament first.', 'No tournament');
+      await uiAlert(
+        'No active tournament id. Create a tournament first.',
+        'No tournament',
+      );
       return;
     }
 
@@ -521,7 +609,10 @@ export async function initTournamentUI() {
   resetBtn.addEventListener('click', async () => {
     if (!window.currentTournamentId) {
       await resetTournamentVisualAndState(false);
-      await uiAlert('Nothing to delete — no active tournament.\nPlayers list was reset.', 'Reset');
+      await uiAlert(
+        'Nothing to delete — no active tournament.\nPlayers list was reset.',
+        'Reset',
+      );
       return;
     }
 
@@ -529,7 +620,7 @@ export async function initTournamentUI() {
       'This will delete the active tournament and reset the setup.',
       'Reset tournament?',
       'Reset',
-      'Cancel'
+      'Cancel',
     );
     if (!ok) return;
 

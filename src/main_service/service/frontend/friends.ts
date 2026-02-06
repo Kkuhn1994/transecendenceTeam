@@ -15,10 +15,13 @@ interface Friend {
 
 async function getFriends(): Promise<Friend[]> {
   try {
-    const response = await fetch(`/login_service/user/friends?t=${Date.now()}`, {
-      credentials: 'include',
-      cache: 'no-store',
-    });
+    const response = await fetch(
+      `/login_service/user/friends?t=${Date.now()}`,
+      {
+        credentials: 'include',
+        cache: 'no-store',
+      },
+    );
 
     const raw = await response.text();
     let data: any = null;
@@ -29,25 +32,20 @@ async function getFriends(): Promise<Friend[]> {
       // ignore
     }
 
-    console.log('GET FRIENDS', {
-      status: response.status,
-      rawPreview: raw.slice(0, 200),
-      data,
-    });
-
     if (!response.ok) {
       throw new Error(data?.error || `HTTP ${response.status}`);
     }
 
     return data?.friends || [];
   } catch (err: any) {
-    console.error('Failed to get friends:', err);
     await uiAlert(`Failed to load friends: ${err.message || err}`, 'Error');
     return [];
   }
 }
 
-async function addFriendByEmail(friendEmail: string): Promise<{ ok: boolean; error?: string }> {
+async function addFriendByEmail(
+  friendEmail: string,
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch('/login_service/user/friends/add', {
       method: 'POST',
@@ -59,13 +57,6 @@ async function addFriendByEmail(friendEmail: string): Promise<{ ok: boolean; err
 
     const contentType = response.headers.get('content-type') || '';
     const raw = await response.text();
-
-    console.log('ADD FRIEND RESPONSE', {
-      status: response.status,
-      ok: response.ok,
-      contentType,
-      rawPreview: raw.slice(0, 300),
-    });
 
     let data: any = null;
     if (contentType.includes('application/json')) {
@@ -83,7 +74,6 @@ async function addFriendByEmail(friendEmail: string): Promise<{ ok: boolean; err
 
     return { ok: false, error: `Non-JSON response (HTTP ${response.status})` };
   } catch (err) {
-    console.error('Failed to add friend:', err);
     return { ok: false, error: 'Network error' };
   }
 }
@@ -99,7 +89,6 @@ async function removeFriend(friendId: number): Promise<boolean> {
 
     return response.ok;
   } catch (err) {
-    console.error('Failed to remove friend:', err);
     return false;
   }
 }
@@ -129,7 +118,9 @@ export async function initFriends(): Promise<void> {
             const statusLine = f.is_active
               ? '🟢 Online'
               : `⚫ Last seen ${
-                  f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'
+                  f.last_login
+                    ? new Date(f.last_login).toLocaleDateString()
+                    : 'Never'
                 }`;
 
             const friendPayload = encodeURIComponent(
@@ -138,7 +129,7 @@ export async function initFriends(): Promise<void> {
                 email: f.email,
                 nickname: f.nickname,
                 avatar: f.avatar,
-              })
+              }),
             );
 
             return `
@@ -197,7 +188,9 @@ export async function initFriends(): Promise<void> {
   });
 
   const addBtn = document.getElementById('addFriendBtn');
-  const friendEmailInput = document.getElementById('friendEmailInput') as HTMLInputElement | null;
+  const friendEmailInput = document.getElementById(
+    'friendEmailInput',
+  ) as HTMLInputElement | null;
 
   addBtn?.addEventListener('click', async () => {
     const friendEmail = (friendEmailInput?.value || '').trim();
@@ -234,7 +227,6 @@ export async function initFriends(): Promise<void> {
 
         location.hash = `#/profile?userId=${friendId}`;
       } catch (err) {
-        console.error('Bad friend payload:', err);
         location.hash = '#/profile';
       }
     });
@@ -251,7 +243,12 @@ export async function initFriends(): Promise<void> {
         return;
       }
 
-      const ok = await uiConfirm('Remove this friend?', 'Confirm', 'Remove', 'Cancel');
+      const ok = await uiConfirm(
+        'Remove this friend?',
+        'Confirm',
+        'Remove',
+        'Cancel',
+      );
       if (!ok) return;
 
       const success = await removeFriend(friendId);

@@ -115,17 +115,13 @@ async function abandonTournamentAndResetUI() {
 }
 
 export function startGame() {
-  console.log('game_start');
-
   const canvasEl = document.getElementById('pongCanvas');
   if (!(canvasEl instanceof HTMLCanvasElement)) {
-    console.error('pongCanvas not found');
     return;
   }
 
   const ctx0 = canvasEl.getContext('2d');
   if (!ctx0) {
-    console.error('2D context not available');
     return;
   }
 
@@ -162,7 +158,7 @@ export function startGame() {
 
     const rectW = stage.getBoundingClientRect().width;
     const availableW = Math.min(900, window.innerWidth - 40); // 20px padding each side
-    const baseW = rectW > 200 ? rectW : availableW;           // fallback if layout is tiny
+    const baseW = rectW > 200 ? rectW : availableW; // fallback if layout is tiny
     const cssW = Math.max(320, Math.min(900, baseW));
     const cssH = Math.round(cssW / 2);
 
@@ -178,7 +174,7 @@ export function startGame() {
     const scaleY = cssH / LOGICAL_H;
 
     ctx.setTransform(scaleX * dpr, 0, 0, scaleY * dpr, 0, 0);
-  } 
+  }
 
   fitCanvasToStage();
   window.addEventListener('resize', fitCanvasToStage);
@@ -188,18 +184,19 @@ export function startGame() {
   const rightNameEl = document.getElementById('playerRightName');
 
   if (leftNameEl && rightNameEl) {
-    if (window.currentTournamentId != null &&
-        window.currentMatchPlayer1Id != null &&
-        window.currentMatchPlayer2Id != null) {
+    if (
+      window.currentTournamentId != null &&
+      window.currentMatchPlayer1Id != null &&
+      window.currentMatchPlayer2Id != null
+    ) {
       leftNameEl.textContent = nameOf(window.currentMatchPlayer1Id);
       rightNameEl.textContent = nameOf(window.currentMatchPlayer2Id);
     } else {
       // 1v1 fallback (until we store actual usernames for both)
-        leftNameEl.textContent = window.currentMatchPlayer1Name || 'Player 1';
-        rightNameEl.textContent = window.currentMatchPlayer2Name || 'Player 2';
+      leftNameEl.textContent = window.currentMatchPlayer1Name || 'Player 1';
+      rightNameEl.textContent = window.currentMatchPlayer2Name || 'Player 2';
     }
   }
-
 
   // prevent multiple loops
   if (window.pongInterval) {
@@ -245,7 +242,6 @@ export function startGame() {
   let running = true;
 
   function cleanup() {
-    console.log('cleanup');
     running = false;
     if (rafId != null) cancelAnimationFrame(rafId);
     rafId = null;
@@ -332,7 +328,14 @@ export function startGame() {
 
     // ball
     ctx.save();
-    const ballGrad = ctx.createRadialGradient(ballX, ballY, 0, ballX, ballY, ballSize / 2);
+    const ballGrad = ctx.createRadialGradient(
+      ballX,
+      ballY,
+      0,
+      ballX,
+      ballY,
+      ballSize / 2,
+    );
     ballGrad.addColorStop(0, '#ffffff');
     ballGrad.addColorStop(1, '#e0e0e0');
 
@@ -412,9 +415,6 @@ export function startGame() {
   }
 
   async function handle1v1End(winnerIndex: number) {
-    // console.log('1vs1 ' + winnerIndex);
-    // console.log('1vs1 ' + scoreLeft);
-    // console.log('1vs1 ' + scoreRight);
     const p1 = window.currentMatchPlayer1Name || 'Player 1';
     const p2 = window.currentMatchPlayer2Name || 'Player 2';
     const winner = winnerIndex === 1 ? p1 : p2;
@@ -435,7 +435,7 @@ export function startGame() {
       if (!pairingToken) {
         await uiAlert(
           'Can’t start a rematch because the pairing token is missing.\nGo back to lobby and start a new 1v1.',
-          'Rematch unavailable'
+          'Rematch unavailable',
         );
         return;
       }
@@ -448,17 +448,19 @@ export function startGame() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.sessionId) {
-        await uiAlert(data.error || 'Failed to create rematch session', 'Error');
+        await uiAlert(
+          data.error || 'Failed to create rematch session',
+          'Error',
+        );
         return;
       }
 
-    window.currentSessionId = Number(data.sessionId);
+      window.currentSessionId = Number(data.sessionId);
 
-    resetLocalStateForNewMatch();
-    window.pongInterval = setInterval(getGameState, 20);
-    return;
-  }
-
+      resetLocalStateForNewMatch();
+      window.pongInterval = setInterval(getGameState, 20);
+      return;
+    }
 
     window.currentSessionId = undefined;
     window.currentSessionIsAI = undefined; // Reset AI flag on game end
@@ -469,7 +471,9 @@ export function startGame() {
   }
 
   //  this is the tournament popup after a match: Start / Back / Abandon
-  async function askStartNextMatch(pending: PendingMatch): Promise<'start' | 'back' | 'abandon'> {
+  async function askStartNextMatch(
+    pending: PendingMatch,
+  ): Promise<'start' | 'back' | 'abandon'> {
     const p1 = nameOf(pending.player1Id);
     const p2 = nameOf(pending.player2Id);
 
@@ -514,7 +518,7 @@ export function startGame() {
       ballX,
       ballY,
       sessionId,
-      isAI: window.currentSessionIsAI || false
+      isAI: window.currentSessionIsAI || false,
     };
 
     try {
@@ -526,20 +530,20 @@ export function startGame() {
 
       const response = await res.json().catch(() => ({}));
       if (!res.ok) {
-        console.error('game_service/game error:', response);
         // Show error to user and stop the game loop
         if (window.pongInterval) {
           clearInterval(window.pongInterval);
           window.pongInterval = null;
         }
         matchEnding = true;
-        await uiAlert(response.error || `Game error (${res.status})`, 'Game Error');
+        await uiAlert(
+          response.error || `Game error (${res.status})`,
+          'Game Error',
+        );
         cleanup();
         location.hash = '#/play';
         return;
       }
-      // console.log(JSON.stringify(response, null, 2));
-      // console.log(response.scoreLeft);
 
       leftPaddleY = response.leftPaddleY;
       rightPaddleY = response.rightPaddleY;
@@ -548,10 +552,6 @@ export function startGame() {
 
       scoreLeft = response.scoreLeft;
       scoreRight = response.scoreRight;
-      // console.log('Response ' + response.scoreLeft);
-      // console.log('Response ' + response.scoreRight);
-      // console.log('Response ' + scoreLeft);
-      // console.log('Response ' + scoreRight);
 
       const winnerIndex = response.winnerIndex;
 
@@ -725,7 +725,6 @@ export function startGame() {
         await handle1v1End(Number(winnerIndex));
       }
     } catch (err) {
-      console.error('Error in game fetch:', err);
     } finally {
       inFlight = false;
     }
