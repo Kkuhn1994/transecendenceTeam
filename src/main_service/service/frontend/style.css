@@ -566,3 +566,26 @@ h1 {
   margin: 10px;
   background-color: white;
 } */
+
+@media (min-width: 768px) {
+  .login-container,
+  .page-container,
+  .profile-container,
+  .card {
+    margin: 40px;
+    padding: 24px;
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .login-container,
+  .page-container,
+  .profile-container,
+  .card {
+    margin: 64px;
+    padding: 32px;
+    gap: 2rem;
+    max-width: 70vw; /* optional, wirkt oft cleaner */
+  }
+}
