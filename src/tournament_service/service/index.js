@@ -91,7 +91,7 @@ async function buildPairsFromPlayers(players) {
   return pairs;
 }
 
-async function maybeAdvanceRound(tournamentId) {
+async function advanceRoundIfComplete(tournamentId) {
   const t = activeTournaments.get(tournamentId);
   if (!t) return null;
 
@@ -141,7 +141,7 @@ async function getNextPlayableMatch(tournamentId) {
 
     // end of round? advance
     if (t.currentMatchIndex >= t.matchQueue.length) {
-      const adv = await maybeAdvanceRound(tournamentId);
+      const adv = await advanceRoundIfComplete(tournamentId);
       if (adv && adv.tournamentFinished) {
         return { tournamentFinished: true, winnerId: adv.winnerId, byes };
       }
@@ -338,7 +338,7 @@ fastify.post('/tournament/match-finished', async (request, reply) => {
       [winnerId, tid, sessionId],
     );
 
-    const adv = await maybeAdvanceRound(tid);
+    const adv = await advanceRoundIfComplete(tid);
     if (adv && adv.tournamentFinished) {
       return reply.send({ tournamentFinished: true, winnerId: adv.winnerId });
     }
