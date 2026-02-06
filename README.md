@@ -2,6 +2,12 @@
 
 # ft_transcendence
 
+## TODO
+
+- [ ] Privacy Policy + Terms of Service
+- [ ] Better UI -> remove all emojis, maybe use other buttons than standard
+- [ ] Better tournament messages (match vs "BYE" insead of a real message)
+
 ## Description
 
 A secure, multiplayer web-based Pong game featuring JWT authentication, 2FA, HTTPS encryption, user management, tournaments, and AI opponents.
@@ -136,11 +142,3 @@ TODO: documentation links, tutorials, references, AI usage disclosure
 
 ---
 
-## TODO
-
-- [ ] Check no logs in frontend ("no errors should show in the console")
-- [ ] Privacy Policy + Terms of Service
-- [ ] Frontend responsiveness
-- [ ] Test multiple users → Data races etc
-- [ ] Buttons actions when creating a tournament
-- [ ]
