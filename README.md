@@ -112,7 +112,7 @@ tournament_players: tournament_id, user_id
 //subject wants a lot more here  
 **kkuhn:**  
 **temil-da:**  
-**rwegat:** User profiles, friends system, match history, AI opponent module, UI
+**rwegat:**
 
 ---
 
@@ -137,7 +137,8 @@ Open `https://localhost:1080` in your browser.
 
 ## Resources
 
-TODO: documentation links, tutorials, references, AI usage disclosure
+AI disclosure: We have used AI to help with design, tracking down bugs, creating temporary content as proof of concepts
+and assisting by providing pseudo code to help with getting familiar in new topics and areas.
 
 ---
 
