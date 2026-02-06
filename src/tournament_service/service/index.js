@@ -4,7 +4,8 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('/app/data/database.db');
 db.run('PRAGMA journal_mode = WAL');
 
-let activeTournament = null;
+// Map of active tournaments keyed by tournament ID
+const activeTournaments = new Map();
 
 const https = require('https');
 const fs = require('fs');
@@ -62,39 +63,6 @@ async function cleanupStaleSessions(playerId) {
   );
 }
 
-// Force-end all active sessions for a player (regardless of age)
-async function forceEndPlayerSessions(playerId) {
-  // Get session IDs first for game_service cleanup
-  const sessions = await dbAll(
-    `SELECT id FROM game_sessions 
-     WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
-    [playerId, playerId]
-  );
-
-  // Mark all as abandoned
-  await dbRun(
-    `UPDATE game_sessions 
-     SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
-     WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL`,
-    [playerId, playerId]
-  );
-
-  // Cleanup AI sessions in game_service
-  for (const session of sessions) {
-    try {
-      await fetch('https://game_service:3000/game/cleanup', {
-        method: 'POST',
-        dispatcher,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id }),
-      });
-    } catch (err) {
-      console.log('Failed to cleanup game_service session:', err.message);
-    }
-  }
-
-  return sessions.length;
-}
 
 async function insertRoundMatches(tournamentId, round, pairs) {
   // pairs: Array<[p1, p2|null]>
@@ -123,67 +91,66 @@ async function buildPairsFromPlayers(players) {
   return pairs;
 }
 
-async function maybeAdvanceRound() {
-  if (!activeTournament) return null;
+async function maybeAdvanceRound(tournamentId) {
+  const t = activeTournaments.get(tournamentId);
+  if (!t) return null;
 
   // if matches remain in current round, do nothing
-  if (activeTournament.currentMatchIndex < activeTournament.matchQueue.length) {
+  if (t.currentMatchIndex < t.matchQueue.length) {
     return null;
   }
 
   // round finished: if one winner remains, tournament done
-  if (activeTournament.winners.length === 1) {
-    const winnerId = activeTournament.winners[0];
+  if (t.winners.length === 1) {
+    const winnerId = t.winners[0];
     await dbRun('UPDATE tournaments SET winner_id = ? WHERE id = ?', [
       winnerId,
-      activeTournament.id,
+      t.id,
     ]);
-    activeTournament = null;
+    activeTournaments.delete(tournamentId);
     return { tournamentFinished: true, winnerId };
   }
 
   // prepare next round from winners
-  const players = [...activeTournament.winners];
-  activeTournament.winners = [];
-  activeTournament.currentMatchIndex = 0;
-  activeTournament.matchQueue = [];
+  const players = [...t.winners];
+  t.winners = [];
+  t.currentMatchIndex = 0;
+  t.matchQueue = [];
 
   const nextPairs = await buildPairsFromPlayers(players);
 
-  activeTournament.round += 1;
-  activeTournament.matchQueue = nextPairs;
+  t.round += 1;
+  t.matchQueue = nextPairs;
 
   // persist round matches
   await insertRoundMatches(
-    activeTournament.id,
-    activeTournament.round,
+    t.id,
+    t.round,
     nextPairs,
   );
 
   return { nextRoundReady: true, remaining: players.length };
 }
 
-async function getNextPlayableMatch() {
+async function getNextPlayableMatch(tournamentId) {
   const byes = [];
 
   for (let guard = 0; guard < 200; guard++) {
-    if (!activeTournament) return { tournamentFinished: true, byes };
+    const t = activeTournaments.get(tournamentId);
+    if (!t) return { tournamentFinished: true, byes };
 
     // end of round? advance
-    if (
-      activeTournament.currentMatchIndex >= activeTournament.matchQueue.length
-    ) {
-      const adv = await maybeAdvanceRound();
+    if (t.currentMatchIndex >= t.matchQueue.length) {
+      const adv = await maybeAdvanceRound(tournamentId);
       if (adv && adv.tournamentFinished) {
         return { tournamentFinished: true, winnerId: adv.winnerId, byes };
       }
       continue;
     }
 
-    const match =
-      activeTournament.matchQueue[activeTournament.currentMatchIndex];
+    const match = t.matchQueue[t.currentMatchIndex];
     if (!match) {
-      activeTournament.currentMatchIndex = activeTournament.matchQueue.length;
+      t.currentMatchIndex = t.matchQueue.length;
       continue;
     }
 
@@ -192,7 +159,7 @@ async function getNextPlayableMatch() {
     // bye => winner directly advances, and write winner_id into tournament_matches row
     if (!player2) {
       byes.push(player1);
-      activeTournament.winners.push(player1);
+      t.winners.push(player1);
 
       await dbRun(
         `UPDATE tournament_matches
@@ -200,13 +167,13 @@ async function getNextPlayableMatch() {
          WHERE tournament_id = ? AND round = ? AND match_index = ?`,
         [
           player1,
-          activeTournament.id,
-          activeTournament.round,
-          activeTournament.currentMatchIndex,
+          t.id,
+          t.round,
+          t.currentMatchIndex,
         ],
       );
 
-      activeTournament.currentMatchIndex++;
+      t.currentMatchIndex++;
       continue;
     }
 
@@ -214,7 +181,7 @@ async function getNextPlayableMatch() {
     const result = await dbRun(
       `INSERT INTO game_sessions (player1_id, player2_id, tournament_id)
        VALUES (?, ?, ?)`,
-      [player1, player2, activeTournament.id],
+      [player1, player2, t.id],
     );
 
     // link session_id into tournament_matches row
@@ -224,13 +191,13 @@ async function getNextPlayableMatch() {
        WHERE tournament_id = ? AND round = ? AND match_index = ?`,
       [
         result.lastID,
-        activeTournament.id,
-        activeTournament.round,
-        activeTournament.currentMatchIndex,
+        t.id,
+        t.round,
+        t.currentMatchIndex,
       ],
     );
 
-    activeTournament.currentMatchIndex++;
+    t.currentMatchIndex++;
 
     return {
       byes,
@@ -274,16 +241,6 @@ fastify.post('/tournament/create', async (request, reply) => {
       await cleanupStaleSessions(playerId);
     }
 
-    // Check if any player is already in an active game
-    for (const playerId of playerIds) {
-      const activeGame = await dbGet(
-        'SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL',
-        [playerId, playerId]
-      );
-      if (activeGame) {
-        return reply.code(400).send({ error: `Player ${playerId} is already in an active game` });
-      }
-    }
 
     const result = await dbRun('INSERT INTO tournaments (name) VALUES (?)', [
       cleanName,
@@ -296,14 +253,14 @@ fastify.post('/tournament/create', async (request, reply) => {
     // persist round 1 matches
     await insertRoundMatches(tournamentId, 1, pairs);
 
-    activeTournament = {
+    activeTournaments.set(tournamentId, {
       id: tournamentId,
       name: cleanName,
       round: 1,
       matchQueue: pairs,
       currentMatchIndex: 0,
       winners: [],
-    };
+    });
 
     return reply.send({ tournamentId, name: cleanName });
   } catch (err) {
@@ -314,16 +271,17 @@ fastify.post('/tournament/create', async (request, reply) => {
 
 fastify.post('/tournament/start-match', async (request, reply) => {
   try {
-    if (!activeTournament) {
-      return reply.code(400).send({ error: 'No active tournament!' });
-    }
-
     const { tournamentId } = request.body || {};
-    if (tournamentId && Number(tournamentId) !== Number(activeTournament.id)) {
-      return reply.code(400).send({ error: 'Tournament ID mismatch' });
+    if (!tournamentId) {
+      return reply.code(400).send({ error: 'tournamentId is required' });
     }
 
-    const out = await getNextPlayableMatch();
+    const tid = Number(tournamentId);
+    if (!activeTournaments.has(tid)) {
+      return reply.code(400).send({ error: 'No active tournament with that ID!' });
+    }
+
+    const out = await getNextPlayableMatch(tid);
 
     if (out.error) return reply.code(500).send({ error: out.error });
 
@@ -351,10 +309,6 @@ fastify.post('/tournament/match-finished', async (request, reply) => {
   try {
     const { sessionId, winnerIndex } = request.body || {};
 
-    if (!activeTournament) {
-      return reply.code(400).send({ error: 'No active tournament!' });
-    }
-
     if (!sessionId || (winnerIndex !== 1 && winnerIndex !== 2)) {
       return reply
         .code(400)
@@ -367,18 +321,24 @@ fastify.post('/tournament/match-finished', async (request, reply) => {
     );
     if (!session) return reply.code(400).send({ error: 'Invalid sessionId' });
 
+    const tid = Number(session.tournament_id);
+    const t = activeTournaments.get(tid);
+    if (!t) {
+      return reply.code(400).send({ error: 'No active tournament for this session!' });
+    }
+
     const winnerId =
       winnerIndex === 1 ? session.player1_id : session.player2_id;
-    activeTournament.winners.push(winnerId);
+    t.winners.push(winnerId);
 
     // persist winner into tournament_matches by session_id
     await dbRun(
       `UPDATE tournament_matches SET winner_id = ?
        WHERE tournament_id = ? AND session_id = ?`,
-      [winnerId, activeTournament.id, sessionId],
+      [winnerId, tid, sessionId],
     );
 
-    const adv = await maybeAdvanceRound();
+    const adv = await maybeAdvanceRound(tid);
     if (adv && adv.tournamentFinished) {
       return reply.send({ tournamentFinished: true, winnerId: adv.winnerId });
     }
@@ -515,41 +475,13 @@ fastify.post('/tournament/delete', async (request, reply) => {
       [id],
     );
 
-    // If you deleted the currently active tournament, also clear in-memory state
-    if (activeTournament && Number(activeTournament.id) === id) {
-      activeTournament = null;
-    }
+    // Remove from active tournaments map
+    activeTournaments.delete(id);
 
     console.log(`Tournament ${id} deleted, ended ${unfinishedSessions.length} unfinished sessions`);
     return reply.send({ ok: true, endedSessions: unfinishedSessions.length });
   } catch (err) {
     console.error('Tournament delete failed', err);
-    return reply.code(500).send({ error: 'Internal server error' });
-  }
-});
-
-// Force-end all active sessions for specified players (used before creating tournament)
-fastify.post('/tournament/force-end-sessions', async (request, reply) => {
-  try {
-    const { playerIds } = request.body || {};
-
-    if (!Array.isArray(playerIds)) {
-      return reply.code(400).send({ error: 'playerIds must be an array' });
-    }
-
-    const validIds = playerIds
-      .map(Number)
-      .filter((n) => Number.isFinite(n) && n > 0);
-
-    let totalEnded = 0;
-    for (const playerId of validIds) {
-      const ended = await forceEndPlayerSessions(playerId);
-      totalEnded += ended;
-    }
-
-    return reply.send({ ok: true, endedSessions: totalEnded });
-  } catch (err) {
-    console.error('Force-end sessions failed', err);
     return reply.code(500).send({ error: 'Internal server error' });
   }
 });
