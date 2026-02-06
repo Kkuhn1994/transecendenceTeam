@@ -1,11 +1,15 @@
 export {};
 
+
 import { initTournamentUI } from './tournament';
 import { uiConfirm } from './ui_modal';
+import { privacyPage } from './privacy';
+
 
 const app = document.getElementById('app') as HTMLDivElement | null;
 
 type ViewMap = Record<string, string>;
+
 
 const views: ViewMap = {
   '/': `
@@ -54,12 +58,17 @@ const views: ViewMap = {
       <p class="text-center mt-3">
         Not registered? <a href="#/register">Sign up</a>
       </p>
+      <div style="position: fixed; bottom: 10px; right: 20px; z-index: 1000;">
+        <a href="#/privacy" style="font-size: 0.95em; color: #888; cursor: pointer;">
+        Privacy Policy & Terms of Service
+        </a>
+      </div>
     </div>
   `,
 
   '/register': `
     <div class="login-container">
-      <h1>🎆 Create Account</h1>
+      <h1>Create Account</h1>
 
       <form id="registerForm" novalidate>
         <div class="mb-3">
@@ -112,16 +121,22 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>🏠 Home</h1>
+      <h1>Home</h1>
       <p>Choose what you want to do:</p>
 
       <div class="d-flex gap-3 justify-content-center mt-4">
-        <button id="goPlay" class="btn btn-primary">🎮 Play Game</button>
-        <button id="goProfile" class="btn btn-primary">👤 Profile</button>
-        <button id="goFriends" class="btn btn-primary">👥 Friends</button>
+        <button id="goPlay" class="btn btn-primary">Play Game</button>
+        <button id="goProfile" class="btn btn-primary">Profile</button>
+        <button id="goFriends" class="btn btn-primary">Friends</button>
+      </div>
+
+      <div style="position: fixed; bottom: 10px; right: 20px; z-index: 1000;">
+        <a href="#/privacy" style="font-size: 0.95em; color: #888; cursor: pointer;">Privacy Policy & Terms of Service</a>
       </div>
     </div>
   `,
+
+  '/privacy': privacyPage,
 
   '/play': `
     <div class="page-container">
@@ -133,12 +148,12 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>🎮 Play Game</h1>
+      <h1>Play Game</h1>
 
       <div class="d-flex gap-3 justify-content-center mt-4">
-        <button id="go1v1" class="btn btn-primary">⚔️ 1v1 Match</button>
+        <button id="go1v1" class="btn btn-primary">1v1 Match</button>
         <button id="goTournament" class="btn btn-primary">
-          🏆 Create Tournament
+          Create Tournament
         </button>
       </div>
     </div>
@@ -154,7 +169,7 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>⚔️ 1v1 Match Setup</h1>
+      <h1>1v1 Match Setup</h1>
       <p>Player 1 is the currently logged in user.</p>
 
       <!-- Match Type Selection -->
@@ -171,7 +186,7 @@ const views: ViewMap = {
             checked
           />
           <label class="form-check-label" for="humanMatch">
-            👥 Play against another player
+            Play against another player
           </label>
         </div>
 
@@ -184,7 +199,7 @@ const views: ViewMap = {
             value="ai"
           />
           <label class="form-check-label" for="aiMatch">
-            🤖 Play against AI opponent
+            Play against AI opponent
           </label>
         </div>
       </div>
@@ -226,7 +241,7 @@ const views: ViewMap = {
           </div>
 
           <button type="submit" class="btn btn-primary">
-            🚀 Start Match vs Player
+            Start Match vs Player
           </button>
         </form>
       </div>
@@ -235,7 +250,7 @@ const views: ViewMap = {
       <div id="aiMatchSection" style="display: none;">
         <p>Ready to challenge our AI opponent?</p>
         <button id="startAiMatch" class="btn btn-primary">
-          🤖 Start Match vs AI
+          Start Match vs AI
         </button>
       </div>
 
@@ -281,11 +296,11 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>👤 Profile</h1>
+      <h1>Profile</h1>
       <div id="profileInfo" class="mb-4">Loading...</div>
 
       <div class="text-center" id="profileActions">
-        <button id="viewHistory" class="btn btn-primary">📊 Match History</button>
+        <button id="viewHistory" class="btn btn-primary">Match History</button>
       </div>
     </div>
   `,
@@ -300,7 +315,7 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>📊 Match History</h1>
+      <h1>Match History</h1>
       <div id="historyContainer" class="mt-4">Loading...</div>
     </div>
   `,
@@ -315,7 +330,7 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>🏆 Tournament</h1>
+      <h1>Tournament</h1>
       <p class="text-muted mb-2">Minimum 3 players required.</p>
 
       <div class="mb-3">
@@ -350,7 +365,7 @@ const views: ViewMap = {
           placeholder="OTP"
           required
         />
-        <button class="btn btn-primary" type="submit">➕ Add Player</button>
+        <button class="btn btn-primary" type="submit">Add Player</button>
       </form>
 
       <h3>Players</h3>
@@ -384,7 +399,7 @@ const views: ViewMap = {
         <button id="navLogout">Logout</button>
       </div>
 
-      <h1>🏆 Tournament Bracket</h1>
+      <h1>Tournament Bracket</h1>
       <div id="bracketRoot" class="mb-3">Loading...</div>
       <button id="backToTournament" class="btn btn-primary">Back</button>
     </div>
@@ -549,6 +564,26 @@ async function router() {
   if (route === '/' || route === '/register') {
     app.innerHTML = views[route] || '<h1>404 Not Found</h1>';
     await loadLoginModule();
+    return;
+  }
+
+  if (route === '/privacy') {
+    app.innerHTML = views['/privacy'] || '<h1>404 Not Found</h1>';
+    const backBtn = document.getElementById('privacyBack');
+    if (backBtn) {
+      backBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/login_service/auth/me', {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          location.hash = res.ok ? '#/home' : '#/';
+        } catch {
+          location.hash = '#/';
+        }
+      });
+    }
     return;
   }
   const res = await fetch('/login_service/auth/me', {

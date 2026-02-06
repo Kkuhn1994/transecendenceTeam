@@ -89,7 +89,7 @@ export async function initTournamentBracket() {
       <div class="mb-3">
         <div style="font-size:18px;font-weight:700;">${data.tournament.name}</div>
         <div style="opacity:0.8;font-size:12px;">Tournament id=${data.tournament.id}</div>
-        ${winnerName ? `<div style="margin-top:8px;">🏆 Winner: <b>${winnerName}</b></div>` : ''}
+        ${winnerName ? `<div style="margin-top:8px;">Winner: <b>${winnerName}</b></div>` : ''}
       </div>
 
       <div style="display:flex; gap:16px; overflow:auto; padding-bottom:10px;">

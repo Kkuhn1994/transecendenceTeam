@@ -269,7 +269,7 @@ async function startMatchLoop(
 
     if (data.tournamentFinished) {
       await uiAlert(
-        `🏆 Tournament finished!\nWinner: ${data.winnerId ? nameOf(data.winnerId) : 'Unknown'}`,
+        `Tournament finished!\nWinner: ${data.winnerId ? nameOf(data.winnerId) : 'Unknown'}`,
         'Tournament complete',
       );
 

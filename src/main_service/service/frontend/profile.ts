@@ -113,7 +113,7 @@ export async function initProfile() {
   `;
 
   if (historyBtn) {
-    historyBtn.textContent = '📊 Match History';
+    historyBtn.textContent = 'Match History';
     historyBtn.onclick = () => {
       // always pass userId so history loads the right person (self or friend)
       location.hash = `#/history?userId=${effectiveUserId}`;

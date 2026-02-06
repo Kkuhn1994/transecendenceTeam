@@ -4,8 +4,7 @@
 
 ## TODO
 
-- [ ] Privacy Policy + Terms of Service
-- [ ] Better UI -> remove all emojis, maybe use other buttons than standard
+- [ ] Better UI ->maybe use other buttons than standard
 - [ ] Better tournament messages (match vs "BYE" insead of a real message)
 
 ## Description

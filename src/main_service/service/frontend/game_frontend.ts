@@ -603,7 +603,7 @@ export function startGame() {
             const winName = winId != null ? nameOf(winId) : winnerName;
 
             await uiAlert(
-              `🏆 Tournament finished!\nWinner: ${winName}`,
+              `Tournament finished!\nWinner: ${winName}`,
               'Tournament finished',
             );
 
@@ -641,7 +641,7 @@ export function startGame() {
             const winName = winId != null ? nameOf(winId) : winnerName;
 
             await uiAlert(
-              `🏆 Tournament finished!\nWinner: ${winName}`,
+              `Tournament finished!\nWinner: ${winName}`,
               'Tournament finished',
             );
 
