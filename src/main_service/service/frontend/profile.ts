@@ -99,7 +99,6 @@ export async function initProfile() {
       }
       <div>
         <div style="font-size:18px;font-weight:bold;">${displayName}</div>
-        <div style="opacity:0.85;">${profile.email}</div>
         <div style="opacity:0.75; margin-top:4px;">${lastSeen}</div>
       </div>
     </div>

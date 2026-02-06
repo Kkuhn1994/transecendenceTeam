@@ -353,7 +353,7 @@ fastify.post('/tournament/match-finished', async (request, reply) => {
   }
 });
 
-// ✅ Bracket endpoint WITH emails
+// Bracket endpoint WITH usernames
 fastify.get('/tournament/:id/bracket', async (request, reply) => {
   try {
     const id = Number(request.params.id);
