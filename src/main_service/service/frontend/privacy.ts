@@ -54,8 +54,6 @@ Personal data is not shared with third parties.
 
 <h3>6. Storage Duration</h3>
 <p>
-<h3>6. Storage Duration</h3>
-<p>
 Authentication and session data is stored only for the duration
 of the session or until the user logs out. User-generated data,
 such as match histories, is stored indefinitely unless the user
