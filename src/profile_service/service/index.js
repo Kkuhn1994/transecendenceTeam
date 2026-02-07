@@ -24,7 +24,7 @@ const dispatcher = new Agent({
   connect: { rejectUnauthorized: false },
 });
 
-async function getCurrentUser(req) {
+async function getCurrentUser(req, reply) {
   const res = await fetch('https://login_service:3000/auth/me', {
     method: 'POST',
     dispatcher,
@@ -36,8 +36,22 @@ async function getCurrentUser(req) {
   });
 
   if (!res.ok) return null;
-  return await res.json(); // { id, email, nickname, avatar, is_active }
+
+  // Forward refreshed cookies (e.g., JWT refresh) back to the browser
+  if (reply) {
+    const setCookies = res.headers.getSetCookie?.() || [];
+    for (const c of setCookies) {
+      // IMPORTANT: don't overwrite previous cookies
+      reply.raw.setHeader('Set-Cookie', [
+        ...(reply.raw.getHeader('Set-Cookie') || []),
+        c,
+      ]);
+    }
+  }
+
+  return await res.json();
 }
+
 
 function openDb() {
   const db = new sqlite3.Database(DB_PATH);
@@ -92,7 +106,7 @@ async function canAccessUser(db, viewerId, targetId) {
 }
 // Not used for now
 // fastify.post('/user/update', async (request, reply) => {
-//   const me = await getCurrentUser(request);
+//   const me = await getCurrentUser(request, reply);
 //   if (!me) return sendError(reply, 401, 'Not authenticated');
 
 //   const sessionCookie = request.cookies.session;
@@ -132,7 +146,7 @@ async function canAccessUser(db, viewerId, targetId) {
 // });
 
 fastify.get('/user/profile', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const userId = Number(request.query.userId);
@@ -146,7 +160,14 @@ fastify.get('/user/profile', async (request, reply) => {
 
     const row = await getAsync(
       db,
-      'SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?',
+      `
+      SELECT
+        u.id, u.email, u.nickname, u.avatar,
+        (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active,
+        u.last_login
+      FROM users u
+      WHERE u.id = ?
+      `,
       [userId],
     );
 
@@ -161,7 +182,7 @@ fastify.get('/user/profile', async (request, reply) => {
 });
 
 fastify.get('/user/matches', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const userId = Number(request.query.userId);
@@ -204,7 +225,7 @@ fastify.get('/user/matches', async (request, reply) => {
 });
 
 fastify.get('/user/summary', async (request, reply) => {
-  const me = await getCurrentUser(request);
+  const me = await getCurrentUser(request, reply);
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const uid = Number(request.query.userId);

@@ -20,6 +20,8 @@ services:
       - game_service
       - tournament_service
       - database
+      - friends_service
+      - profile_service
   main_service:
     build: src/main_service/service/.
     container_name: main_service
@@ -60,7 +62,29 @@ services:
       - sqlite-data:/app/data
     depends_on:
       - database
-
+  friends_service:
+    build: src/friends_service/service/.
+    container_name: friends_service
+    expose:
+      - "3000"
+    networks:
+      - webnet
+    volumes:
+      - sqlite-data:/app/data
+    depends_on:
+      - login_service
+      - database
+  profile_service:
+    build: src/profile_service/service/.
+    container_name: profile_service
+    expose:
+      - "3000"
+    networks:
+      - webnet
+    volumes:
+      - sqlite-data:/app/data
+    environment:
+      - JWT_SECRET=super_geheim
 
 volumes:
   sqlite-data:

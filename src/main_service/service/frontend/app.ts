@@ -459,6 +459,23 @@ const views: ViewMap = {
       </button>
     </div>
   `,
+    '/friends': `
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome"><i class="fas fa-home"></i> Home</button>
+        <button id="navPlay"><i class="fas fa-gamepad"></i> Play</button>
+        <button id="navProfile"><i class="fas fa-user"></i> Profile</button>
+        <button id="navFriends"><i class="fas fa-users"></i> Friends</button>
+        <button id="navLogout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+
+      <h1><i class="fas fa-users"></i> Friends</h1>
+
+      <div id="friendsRoot" class="card" style="padding:12px;">
+        Loading...
+      </div>
+    </div>
+  `,
 };
 
 declare global {

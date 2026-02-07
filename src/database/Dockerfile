@@ -105,11 +105,18 @@ RUN sqlite3 /app/data/database.db " \
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP, \
         FOREIGN KEY (user_id) REFERENCES users(id) \
     ); \
+    CREATE TABLE IF NOT EXISTS friend_requests ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT, \
+        requester_id INTEGER NOT NULL, \
+        addressee_id INTEGER NOT NULL, \
+        status TEXT NOT NULL DEFAULT 'pending', \
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, \
+        responded_at DATETIME, \
+        FOREIGN KEY (requester_id) REFERENCES users(id), \
+        FOREIGN KEY (addressee_id) REFERENCES users(id), \
+        UNIQUE(requester_id, addressee_id) \
+    ); \
 "
-
-
-
-
 
 # Ändere die Berechtigungen für das Verzeichnis und die Datenbankdatei
 RUN chown -R www-data:www-data /app/data && chmod -R 775 /app/data
