@@ -743,5 +743,5 @@ export function startGame() {
 
   startCountdown();
   rafId = requestAnimationFrame(draw);
-  window.pongInterval = setInterval(getGameState, 50);
+  window.pongInterval = setInterval(getGameState, 20);
 }
