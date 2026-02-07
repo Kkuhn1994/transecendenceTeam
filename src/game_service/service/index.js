@@ -1,34 +1,104 @@
+'use strict';
+
 const Fastify = require('fastify');
-const DB_PATH = '/app/data/database.db';
+const fs = require('fs');
 const sqlite3 = require('sqlite3');
+const jwt = require('jsonwebtoken');
+const fastifyCookie = require('@fastify/cookie');
+const { Agent } = require('undici');
+
 const { PongAI } = require('./opponent_ai.js');
 
+const DB_PATH = '/app/data/database.db';
+
+const fastify = Fastify({
+  logger: true,
+  https: {
+    key: fs.readFileSync('/service/service.key'),
+    cert: fs.readFileSync('/service/service.crt'),
+  },
+});
+
+fastify.register(fastifyCookie, {
+  secret: 'super_secret_key_32_chars',
+});
+
+const dispatcher = new Agent({
+  connect: { rejectUnauthorized: false },
+});
 // Game session storage for AI opponents
 const gameSessions = new Map();
 
 // Per-session locks to prevent overlapping requests for the same session
 const sessionLocks = new Map();
 
+// JWT verify cache: token -> { user, untilMs }
+const authCache = new Map();
+
+const liveState = new Map();
+
+const permissionCache = new Map();
+
+const PERM_TTL_MS = 30_000;
+
+function openDb() {
+  const db = new sqlite3.Database(DB_PATH);
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
+}
+
+function getAsync(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+/**
+ * JWT auth (LOCAL) with 2s cache
+ */
+function getCurrentUserLocal(req) {
+  const token = req.cookies?.JWT;
+  if (!token) return null;
+
+  const now = Date.now();
+  const hit = authCache.get(token);
+  if (hit && hit.untilMs > now) return hit.user;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = {
+      id: decoded.id,
+      email: decoded.email,
+      nickname: decoded.nickname,
+      avatar: decoded.avatar,
+    };
+    authCache.set(token, { user, untilMs: now + 2000 });
+    return user;
+  } catch {
+    return null;
+  }
+}
 /**
  * Acquire a lock for a specific session to prevent race conditions.
  * Requests for the same sessionId will queue up and execute sequentially.
  */
 async function withSessionLock(sessionId, fn) {
-  // Wait for any existing operation on this session to complete
   while (sessionLocks.has(sessionId)) {
     try {
       await sessionLocks.get(sessionId);
-    } catch (e) {
-      // Previous operation failed, that's okay, we can proceed
+    } catch {
+      // previous op failed; proceed
     }
   }
 
-  // Create our lock promise
   let resolveLock, rejectLock;
   const lockPromise = new Promise((resolve, reject) => {
     resolveLock = resolve;
     rejectLock = reject;
   });
+
   sessionLocks.set(sessionId, lockPromise);
 
   try {
@@ -43,89 +113,11 @@ async function withSessionLock(sessionId, fn) {
   }
 }
 
-const https = require('https');
-const fs = require('fs');
-
-const fastify = Fastify({
-  logger: false,
-  https: {
-    key: fs.readFileSync('/service/service.key'),
-    cert: fs.readFileSync('/service/service.crt'),
-  },
-});
-
-function openDb() {
-  const db = new sqlite3.Database(DB_PATH);
-  db.run('PRAGMA journal_mode = WAL');
-  return db;
-}
-
-// const https = require('https');
-
-const { Agent } = require('undici');
-
-const dispatcher = new Agent({
-  connect: {
-    rejectUnauthorized: false,
-  },
-});
-
-async function getCurrentUser(req, reply) {
-  const res = await fetch('https://login_service:3000/auth/me', {
-    method: 'POST',
-    dispatcher,
-    headers: {
-      'Content-Type': 'application/json',
-      Cookie: req.headers.cookie || '',
-    },
-    body: JSON.stringify({}),
-  });
-
-  if (!res.ok) return null;
-
-  // Forward Set-Cookie headers (refreshed JWT) back to the browser
-  if (reply) {
-    const setCookies = res.headers.getSetCookie?.() || [];
-    for (const cookie of setCookies) {
-      reply.raw.setHeader('Set-Cookie', cookie);
-    }
-  }
-
-  return await res.json(); // { id, email }
-}
-
 // -------------------- GAME LOOP --------------------
 
-async function setup_newgame(sessionId, body, db) {
-  const canvasheight = Number(body.canvasheight);
-  const canvaswidth = Number(body.canvaswidth);
-  const isAI = body.isAI || false;
-
-  // Always clean up any existing AI session for this sessionId first
-  if (gameSessions.has(sessionId)) {
-    gameSessions.delete(sessionId);
-    console.log('Cleaned up existing AI session for sessionId:', sessionId);
-  }
-
-  // For AI games, create a fresh AI session
-  if (isAI) {
-    const gameSession = {
-      currentSessionId: sessionId,
-      ballSpeedX: 4,
-      ballSpeedY: 4,
-      scoreLeft: 0,
-      scoreRight: 0,
-      ballX: canvaswidth / 2,
-      ballY: canvasheight / 2,
-      leftPaddleY: (canvasheight - 100) / 2,
-      rightPaddleY: (canvasheight - 100) / 2,
-      isAI: true,
-      ai: new PongAI(),
-      aiUpdateCounter: 0,
-    };
-    gameSessions.set(sessionId, gameSession);
-    console.log('Created new AI session for sessionId:', sessionId);
-  }
+function setup_newgame(sessionId, body) {
+  const canvasheight = Number(body.canvasheight) || 400;
+  const canvaswidth = Number(body.canvaswidth) || 800;
 
   const paddleHeight = 100;
 
@@ -135,44 +127,25 @@ async function setup_newgame(sessionId, body, db) {
   const leftPaddleY = (canvasheight - paddleHeight) / 2;
   const rightPaddleY = (canvasheight - paddleHeight) / 2;
 
-  // IMPORTANT: DB schema uses ballSpeedX / ballSpeedY (capital X/Y)
-  const ballSpeedX = 4;
-  const ballSpeedY = 4;
-
-  await new Promise((resolve, reject) => {
-    db.run(
-      `INSERT INTO game_data
-        (sessionId, scoreLeft, scoreRight, ballSpeedX, ballSpeedY,
-         canvaswidth, canvasheight, leftPaddleY, rightPaddleY, ballX, ballY)
-       VALUES (?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        sessionId,
-        ballSpeedX,
-        ballSpeedY,
-        canvaswidth,
-        canvasheight,
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-      ],
-      (err) => (err ? reject(err) : resolve(null)),
-    );
-  });
-
-  // Return the created row so game_actions gets real numbers
-  return await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
+  return {
     sessionId,
-  ]);
-}
+    scoreLeft: 0,
+    scoreRight: 0,
+    ballSpeedX: 4,
+    ballSpeedY: 4,
+    canvaswidth,
+    canvasheight,
+    leftPaddleY,
+    rightPaddleY,
+    ballX,
+    ballY,
 
-function getAsync(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+    // optional fields from your schema if you want them in RAM too
+    serveUntilMs: 0,
+    serveVX: 0,
+    serveVY: 0,
+    rallyCount: 0,
+  };
 }
 
 function clamp(v, min, max) {
@@ -183,7 +156,7 @@ function speedOf(vx, vy) {
   return Math.sqrt(vx * vx + vy * vy);
 }
 
-async function game_actions(sessionId, row, body, db) {
+async function game_actions(sessionId, row, body) {
   let {
     canvasheight,
     canvaswidth,
@@ -198,12 +171,12 @@ async function game_actions(sessionId, row, body, db) {
   } = row;
   let { upPressed, downPressed, wPressed, sPressed } = body;
   const isAI = body.isAI || false;
-
+  
   // AI opponent logic
   if (isAI && gameSessions.has(sessionId)) {
     const gameSession = gameSessions.get(sessionId);
     gameSession.aiUpdateCounter++;
-
+    
     // Update AI every 5 frames for performance
     if (gameSession.aiUpdateCounter % 5 === 0) {
       const aiGameState = {
@@ -215,31 +188,30 @@ async function game_actions(sessionId, row, body, db) {
         canvasWidth: canvaswidth,
         canvasHeight: canvasheight,
         paddleHeight: 100,
-        paddleWidth: 10,
+        paddleWidth: 10
       };
-
+      
       gameSession.ai.update(aiGameState);
     }
-
+    
     // Override AI player input (right paddle)
     upPressed = gameSession.ai.shouldMoveUp(rightPaddleY, 100);
     downPressed = gameSession.ai.shouldMoveDown(rightPaddleY, 100);
   }
-
+  
   const paddleWidth = 10,
     paddleHeight = 100,
     paddleSpeed = 4,
     ballSize = 10;
   const BASE_SPEED = 4;
   const MAX_SPEED = 10;
-  const SPEEDUP_PER_HIT = 1.06; // 6% faster each paddle contact
+  const SPEEDUP_PER_HIT = 1.06;     // 6% faster each paddle contact
   const MAX_BOUNCE_ANGLE = Math.PI / 3; // 60 degrees
   const SPIN = 1.2; // how much paddle movement affects Y on impact
 
   // paddleDY is -paddleSpeed, 0, or +paddleSpeed depending on keys
   const leftDY = (sPressed ? paddleSpeed : 0) + (wPressed ? -paddleSpeed : 0);
-  const rightDY =
-    (downPressed ? paddleSpeed : 0) + (upPressed ? -paddleSpeed : 0);
+  const rightDY = (downPressed ? paddleSpeed : 0) + (upPressed ? -paddleSpeed : 0);
 
   if (wPressed) leftPaddleY -= paddleSpeed;
   if (sPressed) leftPaddleY += paddleSpeed;
@@ -290,8 +262,8 @@ async function game_actions(sessionId, row, body, db) {
     // Apply spin from paddle movement
     const spinY = (leftDY / paddleSpeed) * SPIN; // -SPIN..+SPIN
 
-    ballSpeedX = Math.cos(angle) * s; // to the right
-    ballSpeedY = Math.sin(angle) * s + spinY; // angle + spin
+    ballSpeedX = Math.cos(angle) * s;          // to the right
+    ballSpeedY = Math.sin(angle) * s + spinY;  // angle + spin
 
     // push ball outside paddle to prevent sticking
     ballX = paddleWidth;
@@ -314,7 +286,7 @@ async function game_actions(sessionId, row, body, db) {
 
     const spinY = (rightDY / paddleSpeed) * SPIN;
 
-    ballSpeedX = -Math.cos(angle) * s; // to the left
+    ballSpeedX = -Math.cos(angle) * s;         // to the left
     ballSpeedY = Math.sin(angle) * s + spinY;
 
     ballX = canvaswidth - paddleWidth - ballSize;
@@ -345,13 +317,13 @@ async function game_actions(sessionId, row, body, db) {
   if (winnerIndex) {
     console.log(winnerIndex);
     console.log('winnerIndex');
-
+    
     // Clean up AI session if it exists
     if (gameSessions.has(sessionId)) {
       gameSessions.delete(sessionId);
       console.log('AI session cleaned up for sessionId:', sessionId);
     }
-
+    
     try {
       await fetch('https://main_service:3000/session/finish', {
         method: 'POST',
@@ -373,39 +345,6 @@ async function game_actions(sessionId, row, body, db) {
     ballSpeedY = 4;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
-    await new Promise((resolve, reject) => {
-      db.run(
-        `
-      UPDATE game_data
-      SET
-        scoreLeft = ?,
-        scoreRight = ?,
-        ballSpeedX = ?,
-        ballSpeedY = ?,
-        canvaswidth = ?,
-        canvasheight = ?,
-        leftPaddleY = ?,
-        rightPaddleY = ?,
-        ballX = ?,
-        ballY = ?
-      WHERE sessionId = ?
-      `,
-        [
-          0,
-          0,
-          ballSpeedX,
-          ballSpeedY,
-          canvaswidth,
-          canvasheight,
-          leftPaddleY,
-          rightPaddleY,
-          ballX,
-          ballY,
-          sessionId,
-        ],
-        (err) => (err ? reject(err) : resolve()),
-      );
-    });
     return {
       ballX,
       ballY,
@@ -418,39 +357,6 @@ async function game_actions(sessionId, row, body, db) {
       winnerIndex,
     };
   }
-  await new Promise((resolve, reject) => {
-    db.run(
-      `
-      UPDATE game_data
-      SET
-        scoreLeft = ?,
-        scoreRight = ?,
-        ballSpeedX = ?,
-        ballSpeedY = ?,
-        canvaswidth = ?,
-        canvasheight = ?,
-        leftPaddleY = ?,
-        rightPaddleY = ?,
-        ballX = ?,
-        ballY = ?
-      WHERE sessionId = ?
-      `,
-      [
-        scoreLeft,
-        scoreRight,
-        ballSpeedX,
-        ballSpeedY,
-        canvaswidth,
-        canvasheight,
-        leftPaddleY,
-        rightPaddleY,
-        ballX,
-        ballY,
-        sessionId,
-      ],
-      (err) => (err ? reject(err) : resolve()),
-    );
-  });
   return {
     ballX,
     ballY,
@@ -464,219 +370,155 @@ async function game_actions(sessionId, row, body, db) {
   };
 }
 
-fastify.post('/game', async function (request, reply) {
-  console.log('game service');
+async function getAllowedIdsForSession(db, sessionId) {
+  const row = await new Promise((resolve, reject) => {
+    db.get(
+      'SELECT player1_id, player2_id, tournament_id FROM game_sessions WHERE id = ?',
+      [sessionId],
+      (err, r) => (err ? reject(err) : resolve(r))
+    );
+  });
 
-  const me = await getCurrentUser(request, reply);
-  if (!me) {
-    console.log('wrong session');
-    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  if (!row) return null;
+
+  const allowed = new Set([row.player1_id, row.player2_id]);
+
+  // If it’s a tournament session, allow any participant (cache the whole set once)
+  if (row.tournament_id) {
+    const players = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT player1_id, player2_id
+           FROM tournament_matches
+          WHERE tournament_id = ?`,
+        [row.tournament_id],
+        (err, rows) => (err ? reject(err) : resolve(rows || []))
+      );
+    });
+
+    for (const m of players) {
+      if (m.player1_id) allowed.add(m.player1_id);
+      if (m.player2_id) allowed.add(m.player2_id);
+    }
   }
+
+  return allowed;
+}
+
+fastify.post('/game', async function (request, reply) {
+  const me = getCurrentUserLocal(request);
+  if (!me) return reply.code(401).send({ error: 'Not authenticated' });
 
   const body = request.body || {};
   const sessionId = body.sessionId;
+  if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });
 
-  if (!sessionId) {
-    console.log('no session ID');
-    return reply.code(400).send({ error: 'sessionId is required' });
-  }
-
-  // Use session lock to prevent overlapping requests for the same session
-  // This prevents the read-compute-write race condition that causes rubberbanding
   return withSessionLock(sessionId, async () => {
-    const db = openDb();
-    try {
-      // Verify user is player1 in this game session
-      const gameSessionRecord = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT player1_id, player2_id, tournament_id FROM game_sessions WHERE id = ?',
-          [sessionId],
-          (err, row) => (err ? reject(err) : resolve(row)),
-        );
-      });
+    // ---- permission check (cached) ----
+    const now = Date.now();
+    const cached = permissionCache.get(sessionId);
 
-      if (!gameSessionRecord) {
-        console.log('Game session not found:', sessionId);
-        return reply.code(404).send({ error: 'Game session not found' });
+    let allowedIds = cached?.allowedIds;
+    if (!allowedIds || cached.untilMs <= now) {
+      const db = openDb();
+      try {
+        allowedIds = await getAllowedIdsForSession(db, sessionId);
+        if (!allowedIds) return reply.code(404).send({ error: 'Game session not found' });
+
+        permissionCache.set(sessionId, { allowedIds, untilMs: now + PERM_TTL_MS });
+      } finally {
+        db.close();
       }
-
-      // Check if user has permission to control this game
-      let hasPermission = false;
-
-      // Allow if user is player1 or player2
-      if (
-        gameSessionRecord.player1_id === me.id ||
-        gameSessionRecord.player2_id === me.id
-      ) {
-        hasPermission = true;
-      }
-
-      // For tournament games, allow any participant in the tournament to control the game
-      if (!hasPermission && gameSessionRecord.tournament_id) {
-        const tournamentParticipant = await new Promise((resolve, reject) => {
-          db.get(
-            `SELECT 1 FROM tournament_matches 
-             WHERE tournament_id = ? AND (player1_id = ? OR player2_id = ?)
-             LIMIT 1`,
-            [gameSessionRecord.tournament_id, me.id, me.id],
-            (err, row) => (err ? reject(err) : resolve(row)),
-          );
-        });
-        if (tournamentParticipant) {
-          hasPermission = true;
-        }
-      }
-
-      if (!hasPermission) {
-        console.log('User', me.id, 'is not a player in session', sessionId);
-        return reply
-          .code(403)
-          .send({ error: 'You are not a player in this game' });
-      }
-
-      // 1) get row
-      let row = await getAsync(
-        db,
-        `SELECT * FROM game_data WHERE sessionId = ?`,
-        [sessionId],
-      );
-
-      // 2) if missing, create & fetch row
-      if (!row) {
-        console.log('new game');
-        row = await setup_newgame(sessionId, body, db);
-      } else {
-        console.log('old game');
-        const isAI = body.isAI || false;
-
-        // Handle AI session mismatch for existing games
-        if (isAI && !gameSessions.has(sessionId)) {
-          // AI game but no AI session - create one
-          const aiSession = {
-            currentSessionId: sessionId,
-            ballSpeedX: 4,
-            ballSpeedY: 4,
-            scoreLeft: 0,
-            scoreRight: 0,
-            ballX: row.canvaswidth / 2,
-            ballY: row.canvasheight / 2,
-            leftPaddleY: row.leftPaddleY,
-            rightPaddleY: row.rightPaddleY,
-            isAI: true,
-            ai: new PongAI(),
-            aiUpdateCounter: 0,
-          };
-          gameSessions.set(sessionId, aiSession);
-          console.log(
-            'Recreated AI session for existing game, sessionId:',
-            sessionId,
-          );
-        } else if (!isAI && gameSessions.has(sessionId)) {
-          // Non-AI game but has AI session - clean it up
-          gameSessions.delete(sessionId);
-          console.log(
-            'Removed AI session from non-AI game, sessionId:',
-            sessionId,
-          );
-        }
-      }
-
-      // 3) step simulation
-      const out = await game_actions(sessionId, row, body, db);
-
-      return reply.send({
-        leftPaddleY: out.leftPaddleY,
-        rightPaddleY: out.rightPaddleY,
-        ballX: out.ballX,
-        ballY: out.ballY,
-        scoreLeft: out.scoreLeft,
-        scoreRight: out.scoreRight,
-        winnerIndex: out.winnerIndex,
-      });
-    } catch (err) {
-      console.log('error in game route');
-      fastify.log.error('Error in /game route:', err);
-      return reply.code(500).send({ error: 'Game service error' });
-    } finally {
-      db.close();
     }
+
+    if (!allowedIds.has(me.id)) {
+      return reply.code(403).send({ error: 'You are not a player in this game' });
+    }
+
+    // ---- RAM state ----
+    let row = liveState.get(sessionId);
+
+    if (!row) {
+      row = setup_newgame(sessionId, body);
+      liveState.set(sessionId, row);
+    }
+
+    // ---- AI brain consistency ----
+    const isAI = !!body.isAI;
+    if (isAI && !gameSessions.has(sessionId)) {
+      gameSessions.set(sessionId, {
+        currentSessionId: sessionId,
+        isAI: true,
+        ai: new PongAI(),
+        aiUpdateCounter: 0,
+      });
+    } else if (!isAI && gameSessions.has(sessionId)) {
+      gameSessions.delete(sessionId);
+    }
+
+    const out = await game_actions(sessionId, row, body);
+
+    if (!out.winnerIndex) {
+      liveState.set(sessionId, { ...row, ...out });
+    } else {
+      liveState.delete(sessionId);
+      gameSessions.delete(sessionId);
+      permissionCache.delete(sessionId);
+    }
+
+    return reply.send({
+      leftPaddleY: out.leftPaddleY,
+      rightPaddleY: out.rightPaddleY,
+      ballX: out.ballX,
+      ballY: out.ballY,
+      scoreLeft: out.scoreLeft,
+      scoreRight: out.scoreRight,
+      winnerIndex: out.winnerIndex,
+    });
   });
 });
 
 fastify.post('/game/reset', async (request, reply) => {
-  const me = await getCurrentUser(request, reply);
-  if (!me)
-    return reply.code(401).send({ error: 'Not authenticated as Player 1' });
+  const me = getCurrentUserLocal(request);
+  if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
-  const db = openDb();
-  try {
-    const body = request.body || {};
-    const sessionId = body.sessionId;
-    if (!sessionId)
-      return reply.code(400).send({ error: 'sessionId is required' });
+  const body = request.body || {};
+  const sessionId = body.sessionId;
+  if (!sessionId) return reply.code(400).send({ error: 'sessionId is required' });
 
-    const canvaswidth = Number(body.canvaswidth) || 800;
-    const canvasheight = Number(body.canvasheight) || 400;
+  const canvaswidth = Number(body.canvaswidth) || 800;
+  const canvasheight = Number(body.canvasheight) || 400;
 
-    const paddleHeight = 100;
+  const fresh = setup_newgame(sessionId, { canvaswidth, canvasheight });
+  liveState.set(sessionId, fresh);
 
-    const leftPaddleY = (canvasheight - paddleHeight) / 2;
-    const rightPaddleY = (canvasheight - paddleHeight) / 2;
-
-    const ballX = canvaswidth / 2;
-    const ballY = canvasheight / 2;
-
-    await new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE game_data
-         SET scoreLeft = 0,
-             scoreRight = 0,
-             ballSpeedX = 4,
-             ballSpeedY = 4,
-             canvaswidth = ?,
-             canvasheight = ?,
-             leftPaddleY = ?,
-             rightPaddleY = ?,
-             ballX = ?,
-             ballY = ?
-         WHERE sessionId = ?`,
-        [
-          canvaswidth,
-          canvasheight,
-          leftPaddleY,
-          rightPaddleY,
-          ballX,
-          ballY,
-          sessionId,
-        ],
-        (err) => (err ? reject(err) : resolve(null)),
-      );
-    });
-
-    return reply.send({ status: 'ok' });
-  } catch (err) {
-    fastify.log.error(err);
-    return reply.code(500).send({ error: 'reset failed' });
-  } finally {
-    db.close();
+  // also reset AI brain if it exists
+  if (gameSessions.has(sessionId)) {
+    const s = gameSessions.get(sessionId);
+    s.ai = new PongAI();
+    s.aiUpdateCounter = 0;
   }
-});
 
+  return reply.send({ status: 'ok' });
+});
 // Cleanup AI session from memory (called when a game is abandoned)
 fastify.post('/game/cleanup', async (request, reply) => {
   const body = request.body || {};
   const sessionId = body.sessionId;
-
+  
   if (sessionId && gameSessions.has(sessionId)) {
     gameSessions.delete(sessionId);
     console.log(`AI session cleaned up for sessionId: ${sessionId}`);
   }
-
+  if (sessionId) {
+    liveState.delete(sessionId);
+  }
+  permissionCache.delete(sessionId);
+  
   // Also clean up session lock if it exists
   if (sessionId && sessionLocks.has(sessionId)) {
     sessionLocks.delete(sessionId);
   }
-
+  
   return reply.send({ ok: true });
 });
 
@@ -684,11 +526,11 @@ fastify.post('/game/cleanup', async (request, reply) => {
 fastify.post('/game/cleanup-user', async (request, reply) => {
   const body = request.body || {};
   const userId = body.userId;
-
+  
   if (!userId) {
     return reply.code(400).send({ error: 'userId required' });
   }
-
+  
   const db = openDb();
   try {
     // Get all sessions for this user
@@ -696,10 +538,10 @@ fastify.post('/game/cleanup-user', async (request, reply) => {
       db.all(
         `SELECT id FROM game_sessions WHERE (player1_id = ? OR player2_id = ?)`,
         [userId, userId],
-        (err, rows) => (err ? reject(err) : resolve(rows || [])),
+        (err, rows) => (err ? reject(err) : resolve(rows || []))
       );
     });
-
+    
     // Clean up AI sessions for all of them
     for (const session of sessions) {
       if (gameSessions.has(session.id)) {
@@ -709,8 +551,10 @@ fastify.post('/game/cleanup-user', async (request, reply) => {
       if (sessionLocks.has(session.id)) {
         sessionLocks.delete(session.id);
       }
+      liveState.delete(session.id);
     }
-
+    permissionCache.delete(session.id);
+    
     return reply.send({ ok: true, cleanedSessions: sessions.length });
   } catch (err) {
     console.error('Error in /game/cleanup-user:', err);
@@ -725,5 +569,5 @@ fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
     fastify.log.error(err);
     process.exit(1);
   }
-  console.log(`✅ Game Service running`);
+  fastify.log.info(`Server running at ${address}`);
 });

@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y sqlite3
 
 RUN npm -y init
 
-RUN npm install sqlite3 fastify @fastify/cookie undici https fs
+RUN npm install sqlite3 fastify @fastify/cookie undici https fs jsonwebtoken
 
 RUN openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \

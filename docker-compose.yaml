@@ -51,6 +51,8 @@ services:
       - webnet
     volumes:
       - sqlite-data:/app/data
+    environment:
+      - JWT_SECRET=super_geheim
   tournament_service:
     build: src/tournament_service/service/.
     container_name: tournament_service

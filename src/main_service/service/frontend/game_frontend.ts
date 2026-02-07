@@ -96,7 +96,7 @@ async function abandonCurrentSession() {
 function clearTournamentGlobals() {
   window.currentTournamentId = undefined;
   window.currentSessionId = undefined;
-  window.currentSessionIsAI = undefined; // Reset AI flag to prevent AI persisting to next game
+  window.currentSessionIsAI = undefined;
   window.currentMatchPlayer1Id = undefined;
   window.currentMatchPlayer2Id = undefined;
   window.tournamentPlayerMap = undefined;
@@ -246,6 +246,29 @@ export function startGame() {
   let rafId: number | null = null;
   let running = true;
 
+    // ---- JWT keep-alive ----
+  let jwtKeepAlive: number | null = null;
+
+  function startJwtKeepAlive() {
+    if (jwtKeepAlive != null) return;
+
+    const ping = async () => {
+      try {
+        await fetch('/login_service/auth/me', {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+      } catch {}
+    };
+
+    ping();
+    jwtKeepAlive = window.setInterval(ping, 2 * 60 * 1000);
+  }
+
+
   function cleanup() {
     running = false;
     if (rafId != null) cancelAnimationFrame(rafId);
@@ -254,12 +277,16 @@ export function startGame() {
     document.removeEventListener('keydown', keydownHandler);
     document.removeEventListener('keyup', keyupHandler);
     window.removeEventListener('resize', fitCanvasToStage);
-
+    if (jwtKeepAlive != null) {
+      clearInterval(jwtKeepAlive);
+      jwtKeepAlive = null;
+    }
     if (window.pongInterval) {
       clearInterval(window.pongInterval);
       window.pongInterval = null;
     }
   }
+
 
   function resetLocalStateForNewMatch() {
     leftPaddleY = (LOGICAL_H - PADDLE_H) / 2;
@@ -424,23 +451,37 @@ export function startGame() {
     const p2 = window.currentMatchPlayer2Name || 'Player 2';
     const winner = winnerIndex === 1 ? p1 : p2;
 
-    type UIButtonVariant = 'primary' | 'ghost' | 'secondary' | 'danger' | undefined;
-    const buttons: { id: 'again' | 'lobby'; text: string; variant: UIButtonVariant }[] = [];
-    if(!window.currentSessionIsAI)
-    {
-      buttons.push({id:'again', text: 'Play again', variant: 'primary'});
-    }
-    buttons.push({id:'lobby', text: 'Lobby', variant: 'ghost'});
-    
-    
     const choice = await uiDialog<'again' | 'lobby'>({
       title: ' Game finished!',
       message: `Final score: ${scoreLeft} - ${scoreRight}\nWinner: ${winner}`,
-      buttons,
+      buttons: [
+        { id: 'again', text: 'Play again', variant: 'primary' },
+        { id: 'lobby', text: 'Lobby', variant: 'ghost' },
+      ],
       dismissible: true,
     });
 
     if (choice === 'again') {
+      if (window.currentSessionIsAI) {
+        const res = await fetch('/session/create_ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        const data: any = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.sessionId) {
+          await uiAlert(data.error || 'Could not create AI rematch session', 'Error');
+          return;
+        }
+
+        window.currentSessionId = Number(data.sessionId);
+
+        resetLocalStateForNewMatch();
+        window.pongInterval = setInterval(getGameState, 20);
+        return;
+      }
       const pairingToken = window.lastPairingToken;
 
       if (!pairingToken) {
@@ -535,6 +576,7 @@ export function startGame() {
     try {
       const res = await fetch('/game_service/game', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
@@ -744,4 +786,5 @@ export function startGame() {
   startCountdown();
   rafId = requestAnimationFrame(draw);
   window.pongInterval = setInterval(getGameState, 20);
+  startJwtKeepAlive();
 }
