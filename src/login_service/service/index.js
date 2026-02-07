@@ -496,6 +496,13 @@ fastify.post('/user/update', async (request, reply) => {
   if (!nickname && !avatar)
     return sendError(reply, 400, 'Nickname or avatar required');
 
+  if (avatar) {
+    if (!avatar.startsWith('data:image/png;base64,'))
+      return sendError(reply, 400, 'Avatar must be a PNG image');
+    if (avatar.length > 500_000)
+      return sendError(reply, 400, 'Avatar too large (max ~375KB)');
+  }
+
   const db = openDb();
 
   db.get(

@@ -31,7 +31,10 @@
         <span class="close" id="closeModalBtn">&times;</span>
         <h2>Gib etwas ein:</h2>
         <input type="text" id="nameInputField" placeholder="change name" />
-        <input type="text" id="avatarField" placeholder="change avatar (URL)" />
+        <label for="avatarField" style="display:block;margin-top:8px;cursor:pointer;">
+          Upload avatar (.png)
+          <input type="file" id="avatarField" accept="image/png" style="margin-top:4px;" />
+        </label>
         <br /><br />
         <button id="updateBtn">Update</button>
       </div>

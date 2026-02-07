@@ -151,16 +151,38 @@ export async function initProfile() {
       myModal!.style.display = 'flex';
     };
   }
+  //avatar upload
   if (doUpdateBtn) {
     const myModal = document.getElementById('myModal');
-    doUpdateBtn.onclick = () => {
+    doUpdateBtn.onclick = async () => {
       const nameValue = nameInput?.value;
-      const avatar = avatarInput?.value;
-      const body = {
-        nickname: nameValue,
-        avatar: avatar,
-      };
-      fetch('/login_service/user/update', {
+
+      // Read PNG file as base64 data URL
+      let avatarDataUrl: string | undefined;
+      const fileInput = avatarInput as HTMLInputElement | null;
+      const file = fileInput?.files?.[0];
+      if (file) {
+        if (file.type !== 'image/png') {
+          alert('Only PNG files are allowed.');
+          return;
+        }
+        avatarDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const body: Record<string, string> = {};
+      if (nameValue) body.nickname = nameValue;
+      if (avatarDataUrl) body.avatar = avatarDataUrl;
+
+      if (Object.keys(body).length === 0) {
+        myModal!.style.display = 'none';
+        return;
+      }
+
+      await fetch('/login_service/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
