@@ -9,7 +9,7 @@ const { Agent } = require('undici');
 const DB_PATH = '/app/data/database.db';
 
 const fastify = Fastify({
-  logger: true,
+  logger: false,
   https: {
     key: fs.readFileSync('/service/service.key'),
     cert: fs.readFileSync('/service/service.crt'),
@@ -86,7 +86,7 @@ async function canAccessUser(db, viewerId, targetId) {
   const row = await getAsync(
     db,
     'SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? LIMIT 1',
-    [viewerId, targetId]
+    [viewerId, targetId],
   );
   return !!row;
 }
@@ -136,7 +136,8 @@ fastify.get('/user/profile', async (request, reply) => {
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const userId = Number(request.query.userId);
-  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
+  if (!Number.isFinite(userId) || userId <= 0)
+    return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -146,7 +147,7 @@ fastify.get('/user/profile', async (request, reply) => {
     const row = await getAsync(
       db,
       'SELECT id, email, nickname, avatar, is_active, last_login FROM users WHERE id = ?',
-      [userId]
+      [userId],
     );
 
     if (!row) return sendError(reply, 404, 'User not found');
@@ -165,7 +166,8 @@ fastify.get('/user/matches', async (request, reply) => {
 
   const userId = Number(request.query.userId);
   const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 10));
-  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
+  if (!Number.isFinite(userId) || userId <= 0)
+    return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -189,7 +191,7 @@ fastify.get('/user/matches', async (request, reply) => {
       ORDER BY gs.started_at DESC
       LIMIT ?
       `,
-      [userId, userId, limit]
+      [userId, userId, limit],
     );
 
     return reply.send({ matches: rows || [] });
@@ -206,7 +208,8 @@ fastify.get('/user/summary', async (request, reply) => {
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const uid = Number(request.query.userId);
-  if (!Number.isFinite(uid) || uid <= 0) return sendError(reply, 400, 'Invalid userId');
+  if (!Number.isFinite(uid) || uid <= 0)
+    return sendError(reply, 400, 'Invalid userId');
 
   const db = openDb();
 
@@ -224,13 +227,13 @@ fastify.get('/user/summary', async (request, reply) => {
       FROM game_sessions
       WHERE (player1_id = ? OR player2_id = ?)
        AND player2_id != 0`,
-      [uid, uid, uid, uid]
+      [uid, uid, uid, uid],
     );
 
     const tour = await getAsync(
       db,
       `SELECT COUNT(*) AS tournaments_won FROM tournaments WHERE winner_id = ?`,
-      [uid]
+      [uid],
     );
 
     const gamesPlayed = Number(stats?.games_played || 0);
