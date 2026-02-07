@@ -54,10 +54,38 @@ const fastify = Fastify({
   },
 });
 
-function openDb() {
-  const db = new sqlite3.Database(DB_PATH);
-  db.run('PRAGMA journal_mode = WAL');
+function openDb2() {
+  // RAM-Datenbank
+  const db = new sqlite3.Database(':memory:');
+
+  // Performance-PRAGMAs
+  db.run('PRAGMA journal_mode = WAL'); // optional in RAM
+  db.run('PRAGMA synchronous = NORMAL');
+  db.run('PRAGMA cache_size = 10000');
+  db.run('PRAGMA temp_store = MEMORY');
+
+  // sessions-Tabelle erstellen
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      session_cookie TEXT UNIQUE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `, (err) => {
+    if (err) console.error('Fehler beim Erstellen der sessions-Tabelle:', err);
+    else console.log('sessions-Tabelle bereit in RAM-Datenbank');
+  });
+
   return db;
+}
+
+function openDb() 
+{ 
+  const db = new sqlite3.Database(DB_PATH); 
+  db.run('PRAGMA journal_mode = WAL'); 
+  return db; 
 }
 
 // const https = require('https');
@@ -373,6 +401,7 @@ async function game_actions(sessionId, row, body, db) {
     ballSpeedY = 4;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
+    console.log('update data');
     await new Promise((resolve, reject) => {
       db.run(
         `
@@ -406,6 +435,7 @@ async function game_actions(sessionId, row, body, db) {
         (err) => (err ? reject(err) : resolve()),
       );
     });
+     console.log('updated data');
     return {
       ballX,
       ballY,
@@ -485,8 +515,10 @@ fastify.post('/game', async function (request, reply) {
   // This prevents the read-compute-write race condition that causes rubberbanding
   return withSessionLock(sessionId, async () => {
     const db = openDb();
+    const db2 = openDb2();
     try {
       // Verify user is player1 in this game session
+        console.log('update data');
       const gameSessionRecord = await new Promise((resolve, reject) => {
         db.get(
           'SELECT player1_id, player2_id, tournament_id FROM game_sessions WHERE id = ?',
@@ -494,7 +526,7 @@ fastify.post('/game', async function (request, reply) {
           (err, row) => (err ? reject(err) : resolve(row)),
         );
       });
-
+  console.log('update data');
       if (!gameSessionRecord) {
         console.log('Game session not found:', sessionId);
         return reply.code(404).send({ error: 'Game session not found' });
@@ -582,7 +614,7 @@ fastify.post('/game', async function (request, reply) {
       }
 
       // 3) step simulation
-      const out = await game_actions(sessionId, row, body, db);
+      const out = await game_actions(sessionId, row, body, db2);
 
       return reply.send({
         leftPaddleY: out.leftPaddleY,
@@ -599,6 +631,7 @@ fastify.post('/game', async function (request, reply) {
       return reply.code(500).send({ error: 'Game service error' });
     } finally {
       db.close();
+      db2.close();
     }
   });
 });
