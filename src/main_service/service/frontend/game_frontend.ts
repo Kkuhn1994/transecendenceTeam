@@ -424,13 +424,19 @@ export function startGame() {
     const p2 = window.currentMatchPlayer2Name || 'Player 2';
     const winner = winnerIndex === 1 ? p1 : p2;
 
+    type UIButtonVariant = 'primary' | 'ghost' | 'secondary' | 'danger' | undefined;
+    const buttons: { id: 'again' | 'lobby'; text: string; variant: UIButtonVariant }[] = [];
+    if(!window.currentSessionIsAI)
+    {
+      buttons.push({id:'again', text: 'Play again', variant: 'primary'});
+    }
+    buttons.push({id:'lobby', text: 'Lobby', variant: 'ghost'});
+    
+    
     const choice = await uiDialog<'again' | 'lobby'>({
       title: ' Game finished!',
       message: `Final score: ${scoreLeft} - ${scoreRight}\nWinner: ${winner}`,
-      buttons: [
-        { id: 'again', text: 'Play again', variant: 'primary' },
-        { id: 'lobby', text: 'Lobby', variant: 'ghost' },
-      ],
+      buttons,
       dismissible: true,
     });
 

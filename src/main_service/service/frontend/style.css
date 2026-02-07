@@ -590,3 +590,60 @@ label {
 .close:hover {
   color: #000;
 }
+
+/* Friend request badges */
+.badge-warn,
+.badge-muted{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 2px solid var(--line);
+  background: #fff;
+  box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #808080;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+.badge-warn{
+  border-color: var(--line);
+}
+
+.badge-muted{
+  opacity: 0.85;
+}
+
+/* Friend row layout */
+.friend-row{
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.friend-main{
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.friend-title{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.friend-meta{
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.friend-actions{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+}

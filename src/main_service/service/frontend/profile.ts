@@ -84,9 +84,7 @@ export async function initProfile() {
   }
 
   // Profile
-  const p = await fetchJson(
-    `/login_service/user/profile?userId=${effectiveUserId}`,
-  );
+  const p = await fetchJson(`/profile_service/user/profile?userId=${effectiveUserId}`);
   if (!p.ok || !p.data) {
     infoDiv.innerHTML = `
       <p>Could not load profile (HTTP ${p.status}).</p>
@@ -100,13 +98,10 @@ export async function initProfile() {
 
   const profile = p.data; // { id, email, nickname, avatar, is_active, last_login }
 
-  const s = await fetchJson(
-    `/login_service/user/summary?userId=${effectiveUserId}`,
-  );
-  const stats =
-    s.ok && s.data
-      ? s.data
-      : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
+  const s = await fetchJson(`/profile_service/user/summary?userId=${effectiveUserId}`);
+  const stats = s.ok && s.data
+    ? s.data
+    : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
 
   const displayName = profile.nickname || profile.email;
   const lastSeen = profile.is_active
@@ -214,9 +209,7 @@ export async function initHistory() {
     return;
   }
 
-  const r = await fetchJson(
-    `/login_service/user/matches?userId=${effectiveUserId}&limit=25`,
-  );
+  const r = await fetchJson(`/profile_service/user/matches?userId=${effectiveUserId}&limit=25`);
   if (!r.ok || !r.data) {
     container.textContent = `Could not load history (HTTP ${r.status}).`;
     return;
