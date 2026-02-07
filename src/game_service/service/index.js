@@ -54,6 +54,32 @@ const fastify = Fastify({
   },
 });
 
+var db2;
+
+function initDb2() {
+  db2 = new sqlite3.Database(':memory:');
+
+  db2.serialize(() => {
+    db2.run(`
+      CREATE TABLE game_data (
+        sessionId INTEGER PRIMARY KEY,
+        scoreLeft INTEGER,
+        scoreRight INTEGER,
+        ballSpeedX REAL,
+        ballSpeedY REAL,
+        canvaswidth INTEGER,
+        canvasheight INTEGER,
+        leftPaddleY REAL,
+        rightPaddleY REAL,
+        ballX REAL,
+        ballY REAL
+      )
+    `);
+  });
+
+  console.log('🎮 RAM game DB ready');
+}
+
 function openDb() {
   const db = new sqlite3.Database(DB_PATH);
   db.run('PRAGMA journal_mode = WAL');
@@ -140,7 +166,7 @@ async function setup_newgame(sessionId, body, db) {
   const ballSpeedY = 4;
 
   await new Promise((resolve, reject) => {
-    db.run(
+    db2.run(
       `INSERT INTO game_data
         (sessionId, scoreLeft, scoreRight, ballSpeedX, ballSpeedY,
          canvaswidth, canvasheight, leftPaddleY, rightPaddleY, ballX, ballY)
@@ -184,6 +210,7 @@ function speedOf(vx, vy) {
 }
 
 async function game_actions(sessionId, row, body, db) {
+  console.log('game actions 1');
   let {
     canvasheight,
     canvaswidth,
@@ -225,7 +252,7 @@ async function game_actions(sessionId, row, body, db) {
     upPressed = gameSession.ai.shouldMoveUp(rightPaddleY, 100);
     downPressed = gameSession.ai.shouldMoveDown(rightPaddleY, 100);
   }
-
+  console.log('game actions 2');
   const paddleWidth = 10,
     paddleHeight = 100,
     paddleSpeed = 4,
@@ -260,7 +287,7 @@ async function game_actions(sessionId, row, body, db) {
     ballY = canvasheight - ballSize;
     ballSpeedY *= -1;
   }
-
+  console.log('game actions 3');
   // prevent boring perfectly flat shots
   if (Math.abs(ballSpeedY) < 0.25) {
     ballSpeedY = ballSpeedY < 0 ? -0.25 : 0.25;
@@ -279,7 +306,7 @@ async function game_actions(sessionId, row, body, db) {
     const paddleCenterY = leftPaddleY + paddleHeight / 2;
     const rel = (ballCenterY - paddleCenterY) / (paddleHeight / 2);
     const hit = clamp(rel, -1, 1);
-
+    console.log('game actions 4');
     // Convert hit location to bounce angle
     const angle = hit * MAX_BOUNCE_ANGLE;
 
@@ -337,6 +364,7 @@ async function game_actions(sessionId, row, body, db) {
     ballSpeedX = -BASE_SPEED;
     ballSpeedY = (Math.random() < 0.5 ? -1 : 1) * BASE_SPEED;
   }
+  console.log('game actions 5');
   let winnerIndex = null;
   if (scoreLeft >= 2) winnerIndex = 1;
   else if (scoreRight >= 2) winnerIndex = 2;
@@ -373,8 +401,9 @@ async function game_actions(sessionId, row, body, db) {
     ballSpeedY = 4;
     ballX = canvaswidth / 2;
     ballY = canvasheight / 2;
+    console.log('update data');
     await new Promise((resolve, reject) => {
-      db.run(
+      db2.run(
         `
       UPDATE game_data
       SET
@@ -406,6 +435,8 @@ async function game_actions(sessionId, row, body, db) {
         (err) => (err ? reject(err) : resolve()),
       );
     });
+
+    console.log('updated data');
     return {
       ballX,
       ballY,
@@ -418,8 +449,9 @@ async function game_actions(sessionId, row, body, db) {
       winnerIndex,
     };
   }
+  console.log('game actions 7');
   await new Promise((resolve, reject) => {
-    db.run(
+    db2.run(
       `
       UPDATE game_data
       SET
@@ -485,8 +517,10 @@ fastify.post('/game', async function (request, reply) {
   // This prevents the read-compute-write race condition that causes rubberbanding
   return withSessionLock(sessionId, async () => {
     const db = openDb();
+
     try {
       // Verify user is player1 in this game session
+      console.log('update data');
       const gameSessionRecord = await new Promise((resolve, reject) => {
         db.get(
           'SELECT player1_id, player2_id, tournament_id FROM game_sessions WHERE id = ?',
@@ -494,7 +528,7 @@ fastify.post('/game', async function (request, reply) {
           (err, row) => (err ? reject(err) : resolve(row)),
         );
       });
-
+      console.log('update data');
       if (!gameSessionRecord) {
         console.log('Game session not found:', sessionId);
         return reply.code(404).send({ error: 'Game session not found' });
@@ -536,7 +570,7 @@ fastify.post('/game', async function (request, reply) {
 
       // 1) get row
       let row = await getAsync(
-        db,
+        db2,
         `SELECT * FROM game_data WHERE sessionId = ?`,
         [sessionId],
       );
@@ -582,7 +616,7 @@ fastify.post('/game', async function (request, reply) {
       }
 
       // 3) step simulation
-      const out = await game_actions(sessionId, row, body, db);
+      const out = await game_actions(sessionId, row, body);
 
       return reply.send({
         leftPaddleY: out.leftPaddleY,
@@ -726,4 +760,5 @@ fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
     process.exit(1);
   }
   console.log(`✅ Game Service running`);
+  initDb2();
 });
