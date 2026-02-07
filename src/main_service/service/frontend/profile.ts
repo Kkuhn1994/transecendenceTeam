@@ -109,15 +109,15 @@ export async function initProfile() {
     : `Last seen ${profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}`;
   const winratePercent = ((stats.winrate ?? 0) * 100).toFixed(1);
 
+  // Only treat data-URLs as valid uploaded avatars
+  const hasAvatar = profile.avatar && profile.avatar.startsWith('data:');
+  const avatarSrc = hasAvatar ? profile.avatar : 'default.png';
+
   infoDiv.innerHTML = `
     <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-      ${
-        profile.avatar
-          ? `<img src="${profile.avatar}" alt="Avatar"
-              style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #00ffff;background:#222;"
-              onerror="this.style.display='none';" />`
-          : `<div style="width:72px;height:72px;border-radius:50%;background:#222;border:2px solid #00ffff;display:flex;align-items:center;justify-content:center;">👤</div>`
-      }
+      <img id="profileAvatarImg" src="${avatarSrc}" alt="Avatar"
+           style="width:72px;height:72px;border-radius:50%;object-fit:cover;background:#222;"
+           onerror="this.src='default.png';" />
       <div>
         <div style="font-size:18px;font-weight:bold;">${displayName}</div>
         <div style="opacity:0.75; margin-top:4px;">${lastSeen}</div>
@@ -140,17 +140,26 @@ export async function initProfile() {
       location.hash = `#/history?userId=${effectiveUserId}`;
     };
   }
+  // Only show update button on own profile
   if (updateBtn) {
-    const myModal = document.getElementById('myModal');
-    updateBtn.onclick = () => {
-      myModal!.style.display = 'flex';
-    };
+    if (friendId) {
+      updateBtn.style.display = 'none';
+    } else {
+      const myModal = document.getElementById('myModal');
+      updateBtn.onclick = () => {
+        myModal!.style.display = 'flex';
+        // Pre-fill name input with current display name
+        if (nameInput) {
+          nameInput.value = displayName;
+        }
+      };
+    }
   }
   //avatar upload
   if (doUpdateBtn) {
     const myModal = document.getElementById('myModal');
     doUpdateBtn.onclick = async () => {
-      const nameValue = nameInput?.value;
+      const nameValue = nameInput?.value?.trim();
 
       // Read PNG file as base64 data URL
       let avatarDataUrl: string | undefined;
@@ -169,7 +178,7 @@ export async function initProfile() {
       }
 
       const body: Record<string, string> = {};
-      if (nameValue) body.nickname = nameValue;
+      if (nameValue && nameValue !== displayName) body.nickname = nameValue;
       if (avatarDataUrl) body.avatar = avatarDataUrl;
 
       if (Object.keys(body).length === 0) {
@@ -177,15 +186,42 @@ export async function initProfile() {
         return;
       }
 
+      try {
+        const res = await fetch('/login_service/user/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(data.error || 'Update failed');
+          return;
+        }
+      } catch (e) {
+        alert('Network error');
+        return;
+      }
+      myModal!.style.display = 'none';
+      location.reload();
+    };
+  }
+  // Delete avatar button
+  const deleteAvatarBtn = document.getElementById('deleteAvatarBtn') as HTMLButtonElement | null;
+  if (deleteAvatarBtn) {
+    const myModal = document.getElementById('myModal');
+    // Only show delete button if user has a custom avatar and is viewing own profile
+    deleteAvatarBtn.style.display = hasAvatar && !friendId ? '' : 'none';
+    deleteAvatarBtn.onclick = async () => {
       await fetch('/login_service/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ avatar: '' }),
       });
       myModal!.style.display = 'none';
       location.reload();
     };
   }
+
   if (closeBtn) {
     const myModal = document.getElementById('myModal');
     closeBtn.onclick = () => {

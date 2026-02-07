@@ -1,6 +1,7 @@
 server {
     listen 1080 ssl;
 
+    client_max_body_size 2m;
 
     ssl_certificate     /etc/nginx/certs/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/privkey.pem;

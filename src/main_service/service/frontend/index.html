@@ -29,14 +29,17 @@
     <div class="modal" id="myModal">
       <div class="modal-content">
         <span class="close" id="closeModalBtn">&times;</span>
-        <h2>Gib etwas ein:</h2>
+        <h2> Enter New Data:</h2>
         <input type="text" id="nameInputField" placeholder="change name" />
         <label for="avatarField" style="display:block;margin-top:8px;cursor:pointer;">
           Upload avatar (.png)
           <input type="file" id="avatarField" accept="image/png" style="margin-top:4px;" />
         </label>
         <br /><br />
-        <button id="updateBtn">Update</button>
+        <div style="display: flex; gap: 16px;">
+          <button id="updateBtn">Update</button>
+          <button id="deleteAvatarBtn">Delete Avatar</button>
+        </div>
       </div>
     </div>
     <script type="module" src="app.ts"></script>

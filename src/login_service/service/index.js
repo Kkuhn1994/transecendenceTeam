@@ -76,6 +76,15 @@ function runAsync(db, sql, params = []) {
   });
 }
 
+function getAsync(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
 function getJWTToken(refresh_token, db) {
   return new Promise((resolve, reject) => {
     console.log(
@@ -108,7 +117,6 @@ function getJWTToken(refresh_token, db) {
             id: row.id,
             email: row.email,
             nickname: row.nickname,
-            avatar: row.avatar,
           },
           process.env.JWT_SECRET,
           { expiresIn: '5m' },
@@ -348,7 +356,6 @@ fastify.post('/auth/me', async (request, reply) => {
         id: decoded.id,
         email: decoded.email,
         nickname: decoded.nickname,
-        avatar: decoded.avatar,
       });
     } catch (jwtErr) {
       console.log('JWT verification failed:', jwtErr.message);
@@ -396,7 +403,6 @@ fastify.post('/auth/me', async (request, reply) => {
         id: decoded.id,
         email: decoded.email,
         nickname: decoded.nickname,
-        avatar: decoded.avatar,
       });
   } catch (refreshErr) {
     console.error('Token refresh failed:', refreshErr.message);
@@ -474,27 +480,39 @@ fastify.post('/user/update', async (request, reply) => {
 
   const { nickname, avatar } = request.body || {};
   console.log(request.body);
-  if (!nickname && !avatar)
+  // avatar can be empty string (delete) so check with !== undefined
+  if (!nickname && avatar === undefined)
     return sendError(reply, 400, 'Nickname or avatar required');
 
-  if (avatar) {
+  if (avatar && avatar.length > 0) {
     if (!avatar.startsWith('data:image/png;base64,'))
       return sendError(reply, 400, 'Avatar must be a PNG image');
-    if (avatar.length > 500_000)
-      return sendError(reply, 400, 'Avatar too large (max ~375KB)');
+    if (avatar.length > 2_000_000)
+      return sendError(reply, 400, 'Avatar too large (max ~1.5MB)');
   }
 
   const db = openDb();
 
-  db.get(
-    'SELECT user_id AS id FROM sessions WHERE session_cookie = ?',
-    [sessionCookie],
-    (err, user) => {
-      if (err || !user) {
-        db.close();
-        return sendError(reply, 401, 'Invalid session');
-      }
+  const user = await getAsync(db, 'SELECT user_id AS id FROM sessions WHERE session_cookie = ?', [sessionCookie]);
+  if (!user) {
+    db.close();
+    return sendError(reply, 401, 'Invalid session');
+  }
 
+  // Check nickname uniqueness
+  if (nickname) {
+    const existing = await getAsync(
+      db,
+      'SELECT id FROM users WHERE nickname = ? AND id != ?',
+      [nickname, user.id],
+    );
+    if (existing) {
+      db.close();
+      return sendError(reply, 409, 'Nickname already taken');
+    }
+  }
+
+  {
       const updates = [];
       const values = [];
 
@@ -502,29 +520,28 @@ fastify.post('/user/update', async (request, reply) => {
         updates.push('nickname = ?');
         values.push(nickname);
       }
-      if (avatar) {
+      // avatar === '' means delete (set to null), truthy means upload
+      if (avatar !== undefined) {
         updates.push('avatar = ?');
-        values.push(avatar);
+        values.push(avatar || null);
       }
 
       values.push(user.id);
 
-      db.run(
-        `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
-        values,
-        function (err2) {
-          db.close();
-
-          if (err2) {
-            console.error('Error updating profile:', err2);
-            return sendError(reply, 500, 'Failed to update profile');
-          }
-
-          return reply.send({ status: 'ok', updated: this.changes });
-        },
-      );
-    },
-  );
+      try {
+        const result = await runAsync(
+          db,
+          `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+          values,
+        );
+        db.close();
+        return reply.send({ status: 'ok', updated: result.changes || 0 });
+      } catch (err2) {
+        db.close();
+        console.error('Error updating profile:', err2);
+        return sendError(reply, 500, 'Failed to update profile');
+      }
+  }
 });
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {
