@@ -17,7 +17,7 @@ const dispatcher = new Agent({
 });
 
 const fastify = Fastify({
-  logger: true,
+  logger: false,
   https: {
     key: fs.readFileSync('/service/service.key'),
     cert: fs.readFileSync('/service/service.crt'),
@@ -59,10 +59,9 @@ async function cleanupStaleSessions(playerId) {
      WHERE (player1_id = ? OR player2_id = ?) 
        AND winner_id IS NULL 
        AND started_at < datetime('now', '-10 minutes')`,
-    [playerId, playerId]
+    [playerId, playerId],
   );
 }
-
 
 async function insertRoundMatches(tournamentId, round, pairs) {
   // pairs: Array<[p1, p2|null]>
@@ -123,11 +122,7 @@ async function advanceRoundIfComplete(tournamentId) {
   t.matchQueue = nextPairs;
 
   // persist round matches
-  await insertRoundMatches(
-    t.id,
-    t.round,
-    nextPairs,
-  );
+  await insertRoundMatches(t.id, t.round, nextPairs);
 
   return { nextRoundReady: true, remaining: players.length };
 }
@@ -165,12 +160,7 @@ async function getNextPlayableMatch(tournamentId) {
         `UPDATE tournament_matches
          SET winner_id = ?
          WHERE tournament_id = ? AND round = ? AND match_index = ?`,
-        [
-          player1,
-          t.id,
-          t.round,
-          t.currentMatchIndex,
-        ],
+        [player1, t.id, t.round, t.currentMatchIndex],
       );
 
       t.currentMatchIndex++;
@@ -189,12 +179,7 @@ async function getNextPlayableMatch(tournamentId) {
       `UPDATE tournament_matches
        SET session_id = ?
        WHERE tournament_id = ? AND round = ? AND match_index = ?`,
-      [
-        result.lastID,
-        t.id,
-        t.round,
-        t.currentMatchIndex,
-      ],
+      [result.lastID, t.id, t.round, t.currentMatchIndex],
     );
 
     t.currentMatchIndex++;
@@ -241,7 +226,6 @@ fastify.post('/tournament/create', async (request, reply) => {
       await cleanupStaleSessions(playerId);
     }
 
-
     const result = await dbRun('INSERT INTO tournaments (name) VALUES (?)', [
       cleanName,
     ]);
@@ -278,7 +262,9 @@ fastify.post('/tournament/start-match', async (request, reply) => {
 
     const tid = Number(tournamentId);
     if (!activeTournaments.has(tid)) {
-      return reply.code(400).send({ error: 'No active tournament with that ID!' });
+      return reply
+        .code(400)
+        .send({ error: 'No active tournament with that ID!' });
     }
 
     const out = await getNextPlayableMatch(tid);
@@ -324,7 +310,9 @@ fastify.post('/tournament/match-finished', async (request, reply) => {
     const tid = Number(session.tournament_id);
     const t = activeTournaments.get(tid);
     if (!t) {
-      return reply.code(400).send({ error: 'No active tournament for this session!' });
+      return reply
+        .code(400)
+        .send({ error: 'No active tournament for this session!' });
     }
 
     const winnerId =
@@ -440,7 +428,7 @@ fastify.post('/tournament/delete', async (request, reply) => {
     // First, get all unfinished sessions for this tournament and end them
     const unfinishedSessions = await dbAll(
       `SELECT id FROM game_sessions WHERE tournament_id = ? AND winner_id IS NULL`,
-      [id]
+      [id],
     );
 
     // End all unfinished tournament sessions (mark as abandoned)
@@ -448,7 +436,7 @@ fastify.post('/tournament/delete', async (request, reply) => {
       `UPDATE game_sessions 
        SET ended_at = CURRENT_TIMESTAMP, winner_id = -1 
        WHERE tournament_id = ? AND winner_id IS NULL`,
-      [id]
+      [id],
     );
 
     // Cleanup AI sessions in game_service for each ended session
@@ -478,7 +466,9 @@ fastify.post('/tournament/delete', async (request, reply) => {
     // Remove from active tournaments map
     activeTournaments.delete(id);
 
-    console.log(`Tournament ${id} deleted, ended ${unfinishedSessions.length} unfinished sessions`);
+    console.log(
+      `Tournament ${id} deleted, ended ${unfinishedSessions.length} unfinished sessions`,
+    );
     return reply.send({ ok: true, endedSessions: unfinishedSessions.length });
   } catch (err) {
     console.error('Tournament delete failed', err);
@@ -491,5 +481,5 @@ fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, address) {
     fastify.log.error(err);
     process.exit(1);
   }
-  fastify.log.info(`Tournament service running at ${address}`);
+  console.log(`✅ Tournament service running`);
 });
