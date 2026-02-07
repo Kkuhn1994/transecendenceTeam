@@ -52,7 +52,6 @@ async function getCurrentUser(req, reply) {
   return await res.json();
 }
 
-
 function openDb() {
   const db = new sqlite3.Database(DB_PATH);
   db.run('PRAGMA journal_mode = WAL');
@@ -93,7 +92,6 @@ function allAsync(db, sql, params = []) {
 async function canAccessUser(db, viewerId, targetId) {
   if (!Number.isFinite(viewerId) || viewerId <= 0) return false;
   if (!Number.isFinite(targetId) || targetId <= 0) return false;
-
   if (viewerId === targetId) return true;
 
   // one-direction check: viewer -> target
@@ -104,54 +102,13 @@ async function canAccessUser(db, viewerId, targetId) {
   );
   return !!row;
 }
-// Not used for now
-// fastify.post('/user/update', async (request, reply) => {
-//   const me = await getCurrentUser(request, reply);
-//   if (!me) return sendError(reply, 401, 'Not authenticated');
-
-//   const sessionCookie = request.cookies.session;
-//   if (!sessionCookie) return sendError(reply, 401, 'Authentication required');
-
-//   const { nickname, avatar } = request.body || {};
-//   if (!nickname && !avatar) return sendError(reply, 400, 'Nickname or avatar required');
-
-//   const db = openDb();
-
-//   try {
-//     const user = await getAsync(db, 'SELECT id FROM users WHERE session_cookie = ?', [sessionCookie]);
-//     if (!user) return sendError(reply, 401, 'Invalid session');
-
-//     const updates = [];
-//     const values = [];
-
-//     if (nickname) {
-//       updates.push('nickname = ?');
-//       values.push(nickname);
-//     }
-//     if (avatar) {
-//       updates.push('avatar = ?');
-//       values.push(avatar);
-//     }
-
-//     values.push(user.id);
-
-//     const result = await runAsync(db, `UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
-//     return reply.send({ status: 'ok', updated: result.changes || 0 });
-//   } catch (err) {
-//     console.error('Error updating profile:', err);
-//     return sendError(reply, 500, 'Failed to update profile');
-//   } finally {
-//     db.close();
-//   }
-// });
 
 fastify.get('/user/profile', async (request, reply) => {
   const me = await getCurrentUser(request, reply);
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const userId = Number(request.query.userId);
-  if (!Number.isFinite(userId) || userId <= 0)
-    return sendError(reply, 400, 'userId required');
+  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -187,8 +144,8 @@ fastify.get('/user/matches', async (request, reply) => {
 
   const userId = Number(request.query.userId);
   const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 10));
-  if (!Number.isFinite(userId) || userId <= 0)
-    return sendError(reply, 400, 'userId required');
+
+  if (!Number.isFinite(userId) || userId <= 0) return sendError(reply, 400, 'userId required');
 
   const db = openDb();
   try {
@@ -229,11 +186,9 @@ fastify.get('/user/summary', async (request, reply) => {
   if (!me) return sendError(reply, 401, 'Not authenticated');
 
   const uid = Number(request.query.userId);
-  if (!Number.isFinite(uid) || uid <= 0)
-    return sendError(reply, 400, 'Invalid userId');
+  if (!Number.isFinite(uid) || uid <= 0) return sendError(reply, 400, 'Invalid userId');
 
   const db = openDb();
-
   try {
     const allowed = await canAccessUser(db, Number(me.id), uid);
     if (!allowed) return sendError(reply, 403, 'Forbidden');
@@ -241,13 +196,14 @@ fastify.get('/user/summary', async (request, reply) => {
     const stats = await getAsync(
       db,
       `
-      SELECT
-        COUNT(*) AS games_played,
-        SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) AS wins,
-        SUM(CASE WHEN winner_id IS NOT NULL AND winner_id != ? THEN 1 ELSE 0 END) AS losses
-      FROM game_sessions
-      WHERE (player1_id = ? OR player2_id = ?)
-       AND player2_id != 0`,
+        SELECT
+          COUNT(*) AS games_played,
+          SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) AS wins,
+          SUM(CASE WHEN winner_id IS NOT NULL AND winner_id != ? THEN 1 ELSE 0 END) AS losses
+        FROM game_sessions
+        WHERE (player1_id = ? OR player2_id = ?)
+          AND player2_id != 0
+      `,
       [uid, uid, uid, uid],
     );
 
@@ -263,14 +219,7 @@ fastify.get('/user/summary', async (request, reply) => {
     const winrate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
     const tournamentsWon = Number(tour?.tournaments_won || 0);
 
-    return reply.send({
-      userId: uid,
-      gamesPlayed,
-      wins,
-      losses,
-      winrate,
-      tournamentsWon,
-    });
+    return reply.send({ userId: uid, gamesPlayed, wins, losses, winrate, tournamentsWon });
   } catch (err) {
     console.error('Error in /user/summary:', err);
     return sendError(reply, 500, 'Database error');

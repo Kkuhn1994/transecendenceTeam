@@ -8,6 +8,7 @@ function getUserIdFromHash(): number | null {
   const params = new URLSearchParams(qs);
   const v = params.get('userId');
   if (!v) return null;
+
   const n = Number(v);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n;
@@ -42,8 +43,9 @@ async function fetchJson<T = any>(
 
 async function getMeId(): Promise<number | null> {
   const me = await fetchJson('/login_service/auth/me', { method: 'POST' });
-  if (!me.ok || !me.data?.id) return null;
-  const id = Number(me.data.id);
+  if (!me.ok || !(me.data as any)?.id) return null;
+
+  const id = Number((me.data as any).id);
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
@@ -86,12 +88,13 @@ export async function initProfile() {
   }
 
   // Profile
-  const p = await fetchJson(`/profile_service/user/profile?userId=${effectiveUserId}`);
+  const p = await fetchJson<any>(`/profile_service/user/profile?userId=${effectiveUserId}`);
   if (!p.ok || !p.data) {
     infoDiv.innerHTML = `
       <p>Could not load profile (HTTP ${p.status}).</p>
       ${friendId ? `<button id="backToFriends" class="btn btn-primary">Back to Friends</button>` : ''}
     `;
+
     document.getElementById('backToFriends')?.addEventListener('click', () => {
       location.hash = '#/friends';
     });
@@ -100,16 +103,18 @@ export async function initProfile() {
 
   const profile = p.data; // { id, username, nickname, avatar, is_active, last_login }
 
-  const s = await fetchJson(`/profile_service/user/summary?userId=${effectiveUserId}`);
-  const stats = s.ok && s.data
-    ? s.data
-    : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
+  const s = await fetchJson<any>(`/profile_service/user/summary?userId=${effectiveUserId}`);
+  const stats =
+    s.ok && s.data
+      ? s.data
+      : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
 
   const displayName = profile.nickname || profile.username;
   const lastSeen = profile.is_active
     ? 'Online'
     : `Last seen ${profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}`;
-  const winratePercent = ((stats.winrate ?? 0) * 100).toFixed(1);
+
+  const winratePercent = (((stats.winrate ?? 0) as number) * 100).toFixed(1);
 
   //avatar upload 
   const hasAvatar = profile.avatar && profile.avatar.startsWith('data:');
@@ -251,7 +256,7 @@ export async function initHistory() {
     return;
   }
 
-  const r = await fetchJson(`/profile_service/user/matches?userId=${effectiveUserId}&limit=25`);
+  const r = await fetchJson<any>(`/profile_service/user/matches?userId=${effectiveUserId}&limit=25`);
   if (!r.ok || !r.data) {
     container.textContent = `Could not load history (HTTP ${r.status}).`;
     return;
@@ -263,6 +268,7 @@ export async function initHistory() {
     return;
   }
 
+  // Wrap table in scrollable container
   let html = `
     <div class="history-wrapper">
       <table class="history-table">

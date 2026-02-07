@@ -87,26 +87,32 @@ export async function initTournamentBracket() {
 
     let html = `
       <div class="mb-3">
-        <div style="font-size:18px;font-weight:700;">
+        <div class="bracket-header-title">
           <i class="fas fa-trophy"></i> ${data.tournament.name}
         </div>
-        <div style="opacity:0.8;font-size:12px;">
+        <div class="bracket-header-sub">
           <i class="fas fa-hashtag"></i> Tournament id=${data.tournament.id}
         </div>
-        ${winnerName ? `<div style="margin-top:8px;"><i class="fas fa-medal"></i> Winner: <b>${winnerName}</b></div>` : ''}
+        ${
+          winnerName
+            ? `<div class="bracket-header-winner"><i class="fas fa-medal"></i> Winner: <b>${winnerName}</b></div>`
+            : ''
+        }
       </div>
 
-      <div style="display:flex; gap:16px; overflow:auto; padding-bottom:10px;">
+      <div class="bracket-scroll">
+        <div class="bracket">
     `;
 
     for (const r of rounds) {
       const matches = byRound.get(r)!;
 
       html += `
-        <div style="min-width:260px;">
-          <div style="font-weight:700; margin-bottom:10px;">
+        <div class="bracket-round">
+          <div class="bracket-round-title">
             <i class="fas fa-layer-group"></i> Round ${r}
           </div>
+          <div class="bracket-matches">
       `;
 
       for (const m of matches) {
@@ -119,31 +125,42 @@ export async function initTournamentBracket() {
           : null;
 
         html += `
-          <div style="
-            border:1px solid rgba(0,255,255,0.35);
-            border-radius:10px;
-            padding:10px;
-            margin-bottom:10px;
-            background: rgba(0,0,0,0.12);
-          ">
-            <div>
-              <i class="fas fa-user"></i> ${p1} 
-              <span style="opacity:0.7;">vs</span> 
-              ${m.player2_id ? '<i class="fas fa-user"></i>' : ''} ${p2}
+          <div class="bracket-match">
+            <div class="bracket-row">
+              <span><i class="fas fa-user"></i> ${p1}</span>
             </div>
-            ${
-              w
-                ? `<div style="margin-top:6px; opacity:0.9;"><i class="fas fa-crown"></i> Winner: <b>${w}</b></div>`
-                : `<div style="margin-top:6px; opacity:0.6;"><i class="fas fa-hourglass-half"></i> Pending</div>`
-            }
+
+            <div class="bracket-row">
+              <span>
+                ${
+                  m.player2_id
+                    ? `<i class="fas fa-user"></i> ${p2}`
+                    : `<i class="fas fa-fast-forward"></i> ${p2}`
+                }
+              </span>
+            </div>
+
+            <div class="bracket-meta">
+              ${
+                w
+                  ? `<i class="fas fa-crown"></i> Winner: <b>${w}</b>`
+                  : `<i class="fas fa-hourglass-half"></i> Pending`
+              }
+            </div>
           </div>
         `;
       }
 
-      html += `</div>`;
+      html += `
+          </div>
+        </div>
+      `;
     }
-
-    html += `</div>`;
+    
+    html += `
+      </div>
+    </div>
+    `;
     root.innerHTML = html;
   } catch (e) {
     await uiAlert('Bracket request crashed', 'Network error');

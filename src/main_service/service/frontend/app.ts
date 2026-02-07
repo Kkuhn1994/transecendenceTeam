@@ -12,47 +12,30 @@ const views: ViewMap = {
   '/': `
     <div class="login-container">
       <h1><i class="fas fa-lock"></i> Pong Login</h1>
+
       <form id="loginForm" novalidate>
         <div class="mb-3">
           <label for="loginUsername" class="form-label">
             <i class="fas fa-user"></i> Username
           </label>
-          <input
-            type="text"
-            id="loginUsername"
-            class="form-control"
-            placeholder="Enter your username"
-            maxlength="20"
-            required
-          />
+          <input type="text" id="loginUsername" class="form-control"
+                 placeholder="Enter your username" maxlength="20" required />
         </div>
 
         <div class="mb-3">
           <label for="loginPassword" class="form-label">
             <i class="fas fa-key"></i> Password
           </label>
-          <input
-            type="password"
-            id="loginPassword"
-            class="form-control"
-            placeholder="Enter your password"
-            autocomplete="current-password"
-            maxlength="128"
-            required
-          />
+          <input type="password" id="loginPassword" class="form-control"
+                 placeholder="Enter your password"
+                 autocomplete="current-password" maxlength="128" required />
         </div>
 
         <div class="mb-3">
           <label for="otp" class="form-label">
             <i class="fas fa-mobile-alt"></i> OTP
           </label>
-          <input
-            id="otp"
-            class="form-control"
-            placeholder="Enter your OTP"
-            maxlength="6"
-            required
-          />
+          <input id="otp" class="form-control" placeholder="Enter your OTP" maxlength="6" required />
         </div>
 
         <button type="submit" class="btn btn-primary">
@@ -63,9 +46,10 @@ const views: ViewMap = {
       <p class="text-center mt-3">
         Not registered? <a href="#/register"><i class="fas fa-user-plus"></i> Sign up</a>
       </p>
+
       <div style="position: fixed; bottom: 10px; right: 20px; z-index: 1000;">
         <a href="#/privacy" style="font-size: 0.95em; color: #888; cursor: pointer;">
-        <i class="fas fa-shield-alt"></i> Privacy Policy & Terms of Service
+          <i class="fas fa-shield-alt"></i> Privacy Policy & Terms of Service
         </a>
       </div>
     </div>
@@ -80,28 +64,17 @@ const views: ViewMap = {
           <label for="registerUsername" class="form-label">
             <i class="fas fa-user"></i> Username
           </label>
-          <input
-            id="registerUsername"
-            class="form-control"
-            placeholder="Enter your Username"
-            maxlength="20"
-            required
-          />
+          <input id="registerUsername" class="form-control"
+                 placeholder="Enter your Username" maxlength="20" required />
         </div>
 
         <div class="mb-3">
           <label for="registerPassword" class="form-label">
             <i class="fas fa-key"></i> Password
           </label>
-          <input
-            type="password"
-            id="registerPassword"
-            class="form-control"
-            placeholder="Create a password"
-            autocomplete="new-password"
-            maxlength="128"
-            required
-          />
+          <input type="password" id="registerPassword" class="form-control"
+                 placeholder="Create a password"
+                 autocomplete="new-password" maxlength="128" required />
         </div>
 
         <button type="submit" class="btn btn-primary">
@@ -113,10 +86,7 @@ const views: ViewMap = {
         Already have an account? <a href="#/"><i class="fas fa-sign-in-alt"></i> Login</a>
       </p>
 
-      <div
-        class="col-md-4 d-flex justify-content-center align-items-center"
-        style="min-height: 200px;"
-      >
+      <div class="col-md-4 d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="mb-3" id="qr-container"></div>
       </div>
     </div>
@@ -182,7 +152,8 @@ const views: ViewMap = {
 
       <h1><i class="fas fa-gamepad"></i> Play Game</h1>
 
-      <div style="border:2px solid #000; padding:12px; background:#e0ddd7; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #808080;" class="d-flex gap-3 justify-content-center mt-4">
+      <div style="border:2px solid #000; padding:12px; background:#e0ddd7; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #808080;"
+           class="d-flex gap-3 justify-content-center mt-4">
         <button id="go1v1" class="btn btn-primary">
           <i class="fas fa-user-friends"></i> 1v1 Match
         </button>
@@ -206,42 +177,25 @@ const views: ViewMap = {
       <h1><i class="fas fa-user-friends"></i> 1v1 Match Setup</h1>
       <p>Player 1 is the currently logged in user.</p>
 
-      <!-- Match Type Selection -->
       <div class="mb-4">
         <h5><i class="fas fa-dice-d20"></i> Choose your opponent:</h5>
-
         <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="matchType"
-            id="humanMatch"
-            value="human"
-            checked
-          />
+          <input class="form-check-input" type="radio" name="matchType" id="humanMatch" value="human" checked />
           <label class="form-check-label" for="humanMatch">
             <i class="fas fa-user"></i> Play against another player
           </label>
         </div>
 
         <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="matchType"
-            id="aiMatch"
-            value="ai"
-          />
+          <input class="form-check-input" type="radio" name="matchType" id="aiMatch" value="ai" />
           <label class="form-check-label" for="aiMatch">
             <i class="fas fa-robot"></i> Play against AI opponent
           </label>
         </div>
       </div>
 
-      <!-- Human Player Section -->
       <div id="humanMatchSection">
         <p><i class="fas fa-info-circle"></i> Player 2 must log in here:</p>
-
         <form id="player2Form">
           <div class="mb-3">
             <label for="player2Username" class="form-label">
@@ -259,25 +213,15 @@ const views: ViewMap = {
             <label for="player2Password" class="form-label">
               <i class="fas fa-key"></i> Player 2 Password
             </label>
-            <input
-              type="password"
-              id="player2Password"
-              class="form-control"
-              placeholder="Enter Player 2's password"
-              required
-            />
+            <input type="password" id="player2Password" class="form-control"
+                   placeholder="Enter Player 2's password" required />
           </div>
 
           <div class="mb-3">
             <label for="otp" class="form-label">
               <i class="fas fa-mobile-alt"></i> OTP
             </label>
-            <input
-              id="otp"
-              class="form-control"
-              placeholder="Enter Player 2's OTP"
-              required
-            />
+            <input id="otp" class="form-control" placeholder="Enter Player 2's OTP" required />
           </div>
 
           <button type="submit" class="btn btn-primary">
@@ -286,7 +230,6 @@ const views: ViewMap = {
         </form>
       </div>
 
-      <!-- AI Match Section -->
       <div id="aiMatchSection" style="display: none;">
         <p><i class="fas fa-robot"></i> Ready to challenge our AI opponent?</p>
         <button id="startAiMatch" class="btn btn-primary">
@@ -319,7 +262,6 @@ const views: ViewMap = {
             <i class="fas fa-user"></i> Player 2
           </div>
         </div>
-
         <canvas id="pongCanvas"></canvas>
       </div>
 
@@ -386,16 +328,10 @@ const views: ViewMap = {
         <label for="tournamentName" class="form-label">
           <i class="fas fa-tag"></i> Tournament name
         </label>
-        <input
-          id="tournamentName"
-          class="form-control"
-          placeholder="Tournament name"
-          maxlength="40"
-        />
+        <input id="tournamentName" class="form-control" placeholder="Tournament name" maxlength="40" />
       </div>
 
       <h3><i class="fas fa-user-plus"></i> Add Players</h3>
-
       <form id="addPlayerForm" class="mb-3">
         <input
           id="playerUsername"
@@ -454,12 +390,14 @@ const views: ViewMap = {
 
       <h1><i class="fas fa-sitemap"></i> Tournament Bracket</h1>
       <div id="bracketRoot" class="mb-3">Loading...</div>
+
       <button id="backToTournament" class="btn btn-primary">
         <i class="fas fa-arrow-left"></i> Back
       </button>
     </div>
   `,
-    '/friends': `
+
+  '/friends': `
     <div class="page-container">
       <div class="nav">
         <button id="navHome"><i class="fas fa-home"></i> Home</button>
@@ -470,10 +408,7 @@ const views: ViewMap = {
       </div>
 
       <h1><i class="fas fa-users"></i> Friends</h1>
-
-      <div id="friendsRoot" class="card" style="padding:12px;">
-        Loading...
-      </div>
+      <div id="friendsRoot" class="card" style="padding:12px;">Loading...</div>
     </div>
   `,
 };
@@ -547,36 +482,30 @@ async function abandonProgressIfAny(): Promise<void> {
     window.currentSessionId = undefined;
   }
 
-  // Tournament abandon = delete tournament + clear everything
-  if (window.currentTournamentId != null) {
-    try {
-      await fetch('/tournament_service/tournament/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId: window.currentTournamentId }),
-      });
-    } catch {
-      // ignore
-    }
-
-    window.currentTournamentId = undefined;
-    (window as any).currentMatchPlayer1Id = undefined;
-    (window as any).currentMatchPlayer2Id = undefined;
-    (window as any).tournamentPlayerMap = undefined;
-    window.currentMatchPlayer1Name = undefined;
-    window.currentMatchPlayer2Name = undefined;
-
-    sessionStorage.removeItem(TOURNAMENT_UI_KEY);
+  // Tournament abandon = delete tournament + clear everything if (window.currentTournamentId != null) {
+  try {
+    await fetch('/tournament_service/tournament/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournamentId: window.currentTournamentId }),
+    });
+  } catch {
+    // ignore
   }
+
+  window.currentTournamentId = undefined;
+  (window as any).currentMatchPlayer1Id = undefined;
+  (window as any).currentMatchPlayer2Id = undefined;
+  (window as any).tournamentPlayerMap = undefined;
+  window.currentMatchPlayer1Name = undefined;
+  window.currentMatchPlayer2Name = undefined;
+  sessionStorage.removeItem(TOURNAMENT_UI_KEY);
 }
 
 async function guardedNavigate(targetHash: string): Promise<void> {
   const inGame = location.hash.startsWith('#/game');
   const inProgress =
-    inGame &&
-    (window.currentSessionId != null ||
-      window.currentTournamentId != null ||
-      hasPendingMatch());
+    inGame && (window.currentSessionId != null || window.currentTournamentId != null || hasPendingMatch());
 
   if (inProgress) {
     const ok = await uiConfirm(
@@ -585,7 +514,6 @@ async function guardedNavigate(targetHash: string): Promise<void> {
       'Leave',
       'Stay',
     );
-
     if (!ok) return;
     await abandonProgressIfAny();
   }
@@ -593,7 +521,7 @@ async function guardedNavigate(targetHash: string): Promise<void> {
   location.hash = targetHash;
 }
 
-// Register beforeunload cleanup once (not inside handleNavButtons to avoid duplicates)
+// Register beforeunload cleanup once
 window.addEventListener('beforeunload', () => {
   if (window.currentSessionId != null) {
     const abandonData = new Blob(
@@ -644,6 +572,7 @@ async function router() {
   if (route === '/privacy') {
     app.innerHTML = views['/privacy'] || '<h1>404 Not Found</h1>';
     const backBtn = document.getElementById('privacyBack');
+
     if (backBtn) {
       backBtn.addEventListener('click', async () => {
         try {
@@ -660,11 +589,13 @@ async function router() {
     }
     return;
   }
+
   const res = await fetch('/login_service/auth/me', {
     method: 'POST',
     credentials: 'include',
     cache: 'no-store',
   });
+
   if (!res.ok) {
     app.innerHTML = `
       <div class="error">
@@ -695,14 +626,8 @@ async function router() {
 
   if (route === '/play') {
     await handleNavButtons();
-
-    document.getElementById('go1v1')?.addEventListener('click', () => {
-      location.hash = '#/1v1';
-    });
-
-    document.getElementById('goTournament')?.addEventListener('click', () => {
-      location.hash = '#/tournament';
-    });
+    document.getElementById('go1v1')?.addEventListener('click', () => (location.hash = '#/1v1'));
+    document.getElementById('goTournament')?.addEventListener('click', () => (location.hash = '#/tournament'));
   }
 
   if (route === '/1v1') {
