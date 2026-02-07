@@ -6,6 +6,7 @@ function getUserIdFromHash(): number | null {
   const params = new URLSearchParams(qs);
   const v = params.get('userId');
   if (!v) return null;
+
   const n = Number(v);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n;
@@ -20,7 +21,7 @@ type FetchJsonResult<T = any> = {
 
 async function fetchJson<T = any>(
   url: string,
-  opts: { method?: string; body?: any } = {}
+  opts: { method?: string; body?: any } = {},
 ): Promise<FetchJsonResult<T>> {
   const res = await fetch(url, {
     method: opts.method || 'GET',
@@ -40,8 +41,9 @@ async function fetchJson<T = any>(
 
 async function getMeId(): Promise<number | null> {
   const me = await fetchJson('/login_service/auth/me', { method: 'POST' });
-  if (!me.ok || !me.data?.id) return null;
-  const id = Number(me.data.id);
+  if (!me.ok || !(me.data as any)?.id) return null;
+
+  const id = Number((me.data as any).id);
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
@@ -63,12 +65,13 @@ export async function initProfile() {
   }
 
   // Profile
-  const p = await fetchJson(`/profile_service/user/profile?userId=${effectiveUserId}`);
+  const p = await fetchJson<any>(`/profile_service/user/profile?userId=${effectiveUserId}`);
   if (!p.ok || !p.data) {
     infoDiv.innerHTML = `
       <p>Could not load profile (HTTP ${p.status}).</p>
       ${friendId ? `<button id="backToFriends" class="btn btn-primary">Back to Friends</button>` : ''}
     `;
+
     document.getElementById('backToFriends')?.addEventListener('click', () => {
       location.hash = '#/friends';
     });
@@ -77,16 +80,18 @@ export async function initProfile() {
 
   const profile = p.data; // { id, email, nickname, avatar, is_active, last_login }
 
-  const s = await fetchJson(`/profile_service/user/summary?userId=${effectiveUserId}`);
-  const stats = s.ok && s.data
-    ? s.data
-    : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
+  const s = await fetchJson<any>(`/profile_service/user/summary?userId=${effectiveUserId}`);
+  const stats =
+    s.ok && s.data
+      ? s.data
+      : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
 
   const displayName = profile.nickname || profile.email;
   const lastSeen = profile.is_active
     ? 'Online'
     : `Last seen ${profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}`;
-  const winratePercent = ((stats.winrate ?? 0) * 100).toFixed(1);
+
+  const winratePercent = (((stats.winrate ?? 0) as number) * 100).toFixed(1);
 
   infoDiv.innerHTML = `
     <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
@@ -134,7 +139,7 @@ export async function initHistory() {
     return;
   }
 
-  const r = await fetchJson(`/profile_service/user/matches?userId=${effectiveUserId}&limit=25`);
+  const r = await fetchJson<any>(`/profile_service/user/matches?userId=${effectiveUserId}&limit=25`);
   if (!r.ok || !r.data) {
     container.textContent = `Could not load history (HTTP ${r.status}).`;
     return;
@@ -146,7 +151,7 @@ export async function initHistory() {
     return;
   }
 
-  // CRITICAL: Wrap table in scrollable container
+  // Wrap table in scrollable container
   let html = `
     <div class="history-wrapper">
       <table class="history-table">
@@ -173,7 +178,7 @@ export async function initHistory() {
     const winner =
       m.winner_id === m.player1_id ? p1 : m.winner_id === m.player2_id ? p2 : '–';
 
-    const tName = m.tournament_id ? (m.tournament_name || `Tournament ${m.tournament_id}`) : '–';
+    const tName = m.tournament_id ? m.tournament_name || `Tournament ${m.tournament_id}` : '–';
 
     const bracketBtn = m.tournament_id
       ? `<button class="btn btn-primary" data-tour="${m.tournament_id}">See tournament</button>`
@@ -199,13 +204,14 @@ export async function initHistory() {
       </table>
     </div>
   `;
-  
+
   container.innerHTML = html;
 
   container.querySelectorAll('button[data-tour]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = (btn as HTMLButtonElement).dataset.tour;
       if (!id) return;
+
       sessionStorage.setItem('bracketBackTo', `#/history?userId=${effectiveUserId}`);
       location.hash = `#/tournament_bracket?tournamentId=${id}`;
     });
