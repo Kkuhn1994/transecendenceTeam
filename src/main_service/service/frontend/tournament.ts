@@ -2,7 +2,7 @@ export {};
 
 import { uiAlert, uiConfirm, uiDialog } from './ui_modal';
 
-type TournamentPlayer = { id: number; email: string };
+type TournamentPlayer = { id: number; username: string };
 
 type PendingMatch = {
   tournamentId: number;
@@ -122,7 +122,7 @@ function loadTournamentUIState(): {
       name: String(parsed.name || 'Tournament'),
       players: parsed.players.map((p: any) => ({
         id: Number(p.id),
-        email: String(p.email),
+        username: String(p.username || p.email || ''),
       })),
       currentTournamentId:
         parsed.currentTournamentId != null
@@ -146,15 +146,15 @@ async function getMe(): Promise<TournamentPlayer | null> {
     if (!res.ok) return null;
 
     const me = await res.json();
-    if (!me?.id || !me?.email) return null;
-    return { id: me.id, email: me.email };
+    if (!me?.id || !me?.username) return null;
+    return { id: me.id, username: me.username };
   } catch (e) {
     return null;
   }
 }
 
 async function verifyPlayer(
-  email: string,
+  username: string,
   password: string,
   otp: string,
 ): Promise<TournamentPlayer | null> {
@@ -162,7 +162,7 @@ async function verifyPlayer(
     const res = await fetch('/login_service/verifyCredentials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, otp }),
+      body: JSON.stringify({ username, password, otp }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -172,7 +172,7 @@ async function verifyPlayer(
       return null;
     }
 
-    if (!data?.id || !data?.email) {
+    if (!data?.id || !data?.username) {
       await uiAlert(
         'verifyCredentials returned invalid payload',
         'Server error',
@@ -180,7 +180,7 @@ async function verifyPlayer(
       return null;
     }
 
-    return { id: data.id, email: data.email };
+    return { id: data.id, username: data.username };
   } catch (e) {
     await uiAlert(
       'verifyCredentials crashed (network/server)',
@@ -209,8 +209,8 @@ async function loadTournamentPlayerMap(tournamentId: number) {
 
     window.tournamentPlayerMap = {};
     for (const p of data.players) {
-      if (p?.id && p?.email)
-        window.tournamentPlayerMap[Number(p.id)] = String(p.email);
+      if (p?.id && p?.username)
+        window.tournamentPlayerMap[Number(p.id)] = String(p.username);
     }
   } catch {
     // ignore
@@ -382,7 +382,7 @@ export async function initTournamentUI() {
     list!.innerHTML = '';
     tournamentPlayers.forEach((p) => {
       const li = document.createElement('li');
-      li.textContent = `${p.email} (id=${p.id})`;
+      li.textContent = `${p.username} (id=${p.id})`;
       list!.appendChild(li);
     });
 
@@ -451,9 +451,9 @@ export async function initTournamentUI() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email =
+    const username =
       (
-        document.getElementById('playerEmail') as HTMLInputElement | null
+        document.getElementById('playerUsername') as HTMLInputElement | null
       )?.value.trim() || '';
     const password =
       (document.getElementById('playerPassword') as HTMLInputElement | null)
@@ -463,12 +463,12 @@ export async function initTournamentUI() {
         document.getElementById('playerOtp') as HTMLInputElement | null
       )?.value.trim() || '';
 
-    if (!email || !password || !otp) {
+    if (!username || !password || !otp) {
       await uiAlert('Please fill username / password / OTP.', 'Missing info');
       return;
     }
 
-    const player = await verifyPlayer(email, password, otp);
+    const player = await verifyPlayer(username, password, otp);
     if (!player) return;
 
     if (hasPlayer(player.id)) {

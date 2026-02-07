@@ -65,7 +65,7 @@ async function getCurrentUser(req, reply) {
     }
   }
 
-  return await res.json(); // { id, email }
+  return await res.json(); // { id, username }
 }
 
 fastify.post('/session/create', async (req, reply) => {
@@ -75,11 +75,11 @@ fastify.post('/session/create', async (req, reply) => {
       return reply.code(401).send({ error: 'Not authenticated as Player 1' });
     }
 
-    const { player2Email, player2Password, otp } = req.body || {};
-    if (!player2Email || !player2Password || !otp) {
+    const { player2Username, player2Password, otp } = req.body || {};
+    if (!player2Username || !player2Password || !otp) {
       return reply
         .code(400)
-        .send({ error: 'Player 2 email, password and otp are required' });
+        .send({ error: 'Player 2 username, password and otp are required' });
     }
 
     const verifyRes = await fetch(
@@ -89,7 +89,7 @@ fastify.post('/session/create', async (req, reply) => {
         dispatcher,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: player2Email,
+          username: player2Username,
           password: player2Password,
           otp,
         }),
@@ -143,8 +143,8 @@ fastify.post('/session/create', async (req, reply) => {
       return reply.send({
         sessionId,
         pairingToken,
-        player1: { id: me.id, email: me.email },
-        player2: { id: player2.id, email: player2.email },
+        player1: { id: me.id, username: me.username },
+        player2: { id: player2.id, username: player2.username },
       });
     } finally {
       db.close();
@@ -181,7 +181,7 @@ fastify.post('/session/create_ai', async (req, reply) => {
 
       return reply.send({
         sessionId,
-        player1: { id: me.id, email: me.email },
+        player1: { id: me.id, username: me.username },
         ai: { type: 'basic' },
         isAI: true,
       });
@@ -398,7 +398,7 @@ fastify.get('/profile/me', async (req, reply) => {
 
       return reply.send({
         id: me.id,
-        email: me.email,
+        username: me.username,
         gamesPlayed,
         wins,
         winrate,
@@ -427,8 +427,8 @@ fastify.get('/profile/history', async (req, reply) => {
             gs.id,
             gs.player1_id,
             gs.player2_id,
-            u1.email AS player1_email,
-            u2.email AS player2_email,
+            u1.username AS player1_username,
+            u2.username AS player2_username,
             gs.score1,
             gs.score2,
             gs.winner_id,

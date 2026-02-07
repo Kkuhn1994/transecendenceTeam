@@ -6,12 +6,12 @@ type BracketMatch = {
   round: number;
   match_index: number;
   player1_id: number;
-  player1_email: string;
+  player1_username: string;
   player2_id: number | null;
-  player2_email: string | null;
+  player2_username: string | null;
   session_id: number | null;
   winner_id: number | null;
-  winner_email: string | null;
+  winner_username: string | null;
   created_at: string;
 };
 
@@ -82,7 +82,7 @@ export async function initTournamentBracket() {
       const w = (data.matches || []).find(
         (m) => m.winner_id === data.tournament.winner_id,
       );
-      winnerName = w?.winner_email || `Player ${data.tournament.winner_id}`;
+      winnerName = w?.winner_username || `Player ${data.tournament.winner_id}`;
     }
 
     let html = `
@@ -110,12 +110,12 @@ export async function initTournamentBracket() {
       `;
 
       for (const m of matches) {
-        const p1 = m.player1_email || `Player ${m.player1_id}`;
+        const p1 = m.player1_username || `Player ${m.player1_id}`;
         const p2 = m.player2_id
-          ? m.player2_email || `Player ${m.player2_id}`
+          ? m.player2_username || `Player ${m.player2_id}`
           : '<i class="fas fa-fast-forward"></i> BYE';
         const w = m.winner_id
-          ? m.winner_email || `Player ${m.winner_id}`
+          ? m.winner_username || `Player ${m.winner_id}`
           : null;
 
         html += `

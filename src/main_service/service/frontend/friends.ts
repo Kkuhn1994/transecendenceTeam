@@ -7,7 +7,7 @@ import { uiAlert, uiConfirm } from './ui_modal';
 
 interface Friend {
   id: number;
-  email: string;
+  username: string;
   nickname: string | null;
   avatar: string;
   is_active: boolean;
@@ -44,15 +44,15 @@ async function getFriends(): Promise<Friend[]> {
   }
 }
 
-async function addFriendByEmail(
-  friendEmail: string
+async function addFriendByUsername(
+  friendUsername: string
 ): Promise<{ ok: boolean; mode?: 'pending' | 'accepted'; error?: string }> {
   try {
     const response = await fetch('/friends_service/user/friends/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ friendEmail }),
+      body: JSON.stringify({ friendUsername }),
       cache: 'no-store',
     });
 
@@ -166,7 +166,7 @@ export async function initFriends(): Promise<void> {
             const isIncoming = rel === 'incoming_pending';
             const isOutgoing = rel === 'outgoing_pending';
 
-            const displayName = escapeHtml(f.nickname || f.email);
+            const displayName = escapeHtml(f.nickname || f.username);
             const avatar = f.avatar || '';
             const statusIcon = f.is_active
               ? '<i class="fas fa-circle" style="color:#00aa00;font-size:10px;"></i>'
@@ -175,7 +175,7 @@ export async function initFriends(): Promise<void> {
             const friendPayload = encodeURIComponent(
               JSON.stringify({
                 id: f.id,
-                email: f.email,
+                username: f.username,
                 nickname: f.nickname,
                 avatar: f.avatar,
               })
@@ -242,7 +242,7 @@ export async function initFriends(): Promise<void> {
     <div class="add-friend" style="margin-bottom:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <input
         type="text"
-        id="friendEmailInput"
+        id="friendUsernameInput"
         class="form-control"
         placeholder="Enter username"
         style="width:260px;"
@@ -262,21 +262,21 @@ export async function initFriends(): Promise<void> {
 
   // Add friend
   const addBtn = document.getElementById('addFriendBtn');
-  const friendEmailInput = document.getElementById('friendEmailInput') as HTMLInputElement | null;
+  const friendUsernameInput = document.getElementById('friendUsernameInput') as HTMLInputElement | null;
 
   addBtn?.addEventListener('click', async () => {
-    const friendEmail = (friendEmailInput?.value || '').trim();
-    if (!friendEmail) {
+    const friendUsername = (friendUsernameInput?.value || '').trim();
+    if (!friendUsername) {
       await uiAlert('Please enter a username.', 'Missing info');
       return;
     }
 
-    const result = await addFriendByEmail(friendEmail);
+    const result = await addFriendByUsername(friendUsername);
 
     if (result.ok) {
       const msg = result.mode === 'accepted' ? 'Friend added.' : 'Friend request sent.';
       await uiAlert(msg, 'Success');
-      if (friendEmailInput) friendEmailInput.value = '';
+      if (friendUsernameInput) friendUsernameInput.value = '';
       await initFriends();
     } else {
       await uiAlert(result.error || 'Failed to add friend.', 'Error');

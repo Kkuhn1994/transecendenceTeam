@@ -363,12 +363,12 @@ fastify.get('/tournament/:id/bracket', async (request, reply) => {
         tm.round,
         tm.match_index,
         tm.player1_id,
-        u1.email AS player1_email,
+        u1.username AS player1_username,
         tm.player2_id,
-        u2.email AS player2_email,
+        u2.username AS player2_username,
         tm.session_id,
         tm.winner_id,
-        uw.email AS winner_email,
+        uw.username AS winner_username,
         tm.created_at
       FROM tournament_matches tm
       JOIN users u1 ON tm.player1_id = u1.id
@@ -397,12 +397,12 @@ fastify.get('/tournament/:id/players', async (request, reply) => {
     // Get distinct players from tournament_matches
     const rows = await dbAll(
       `
-      SELECT DISTINCT u.id, u.email
+      SELECT DISTINCT u.id, u.username
       FROM tournament_matches tm
       JOIN users u ON u.id = tm.player1_id
       WHERE tm.tournament_id = ?
       UNION
-      SELECT DISTINCT u.id, u.email
+      SELECT DISTINCT u.id, u.username
       FROM tournament_matches tm
       JOIN users u ON u.id = tm.player2_id
       WHERE tm.tournament_id = ? AND tm.player2_id IS NOT NULL

@@ -16,7 +16,7 @@ declare global {
     currentMatchPlayer2Name?: string;
     currentSessionIsAI?: boolean;
 
-    lastP2Email?: string;
+    lastP2Username?: string;
     lastP2Password?: string;
     lastP2Otp?: string;
     lastPairingToken?: string;

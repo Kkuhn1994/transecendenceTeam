@@ -10,7 +10,7 @@ declare global {
 
     lastPairingToken?: string;
 
-    lastP2Email?: string;
+    lastP2Username?: string;
     lastP2Password?: string;
     lastP2Otp?: string;
   }
@@ -18,8 +18,8 @@ declare global {
 
 export function init1v1Setup() {
   const form = document.getElementById('player2Form') as HTMLFormElement | null;
-  const emailInput = document.getElementById(
-    'player2Email',
+  const usernameInput = document.getElementById(
+    'player2Username',
   ) as HTMLInputElement | null;
   const passwordInput = document.getElementById(
     'player2Password',
@@ -61,9 +61,9 @@ export function init1v1Setup() {
   humanMatchRadio?.addEventListener('change', toggleMatchType);
   aiMatchRadio?.addEventListener('change', toggleMatchType);
 
-  if (!form || !emailInput || !passwordInput || !otpInput) return;
+  if (!form || !usernameInput || !passwordInput || !otpInput) return;
 
-  async function getMeEmail(): Promise<string | null> {
+  async function getMeUsername(): Promise<string | null> {
     try {
       const res = await fetch('/login_service/auth/me', {
         method: 'POST',
@@ -72,7 +72,7 @@ export function init1v1Setup() {
       });
       if (!res.ok) return null;
       const me = await res.json().catch(() => ({}));
-      return typeof me?.email === 'string' ? me.email : null;
+      return typeof me?.username === 'string' ? me.username : null;
     } catch {
       return null;
     }
@@ -82,7 +82,7 @@ export function init1v1Setup() {
     e.preventDefault();
     if (errorEl) errorEl.textContent = '';
 
-    const player2Email = emailInput.value.trim();
+    const player2Username = usernameInput.value.trim();
     const player2Password = passwordInput.value;
     const otp = otpInput.value.trim();
 
@@ -90,7 +90,7 @@ export function init1v1Setup() {
       const response = await fetch('/session/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player2Email, player2Password, otp }),
+        body: JSON.stringify({ player2Username, player2Password, otp }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -115,18 +115,18 @@ export function init1v1Setup() {
       window.currentSessionIsAI = false;
       window.lastPairingToken = String(data.pairingToken);
 
-      window.lastP2Email = player2Email;
+      window.lastP2Username = player2Username;
       window.lastP2Password = player2Password;
       return true;
     }
 
     try {
       //  store player2 name right away (we already know it)
-      window.currentMatchPlayer2Name = player2Email || 'Player 2';
+      window.currentMatchPlayer2Name = player2Username || 'Player 2';
 
       //  fetch player1 name (logged-in user)
-      const meEmail = await getMeEmail();
-      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+      const meUsername = await getMeUsername();
+      window.currentMatchPlayer1Name = meUsername || 'Player 1';
 
       const success = await tryCreateSession();
       if (success) {
@@ -169,8 +169,8 @@ export function init1v1Setup() {
 
     try {
       // Get player 1 name
-      const meEmail = await getMeEmail();
-      window.currentMatchPlayer1Name = meEmail || 'Player 1';
+      const meUsername = await getMeUsername();
+      window.currentMatchPlayer1Name = meUsername || 'Player 1';
       window.currentMatchPlayer2Name = 'AI Bot';
 
       const success = await tryCreateAISession();

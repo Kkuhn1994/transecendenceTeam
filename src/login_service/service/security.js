@@ -17,19 +17,19 @@ function sanitizeInput(input) {
 }
 
 /**
- * Validate email format
- * @param {string} email - Email to validate
+ * Validate username format
+ * @param {string} username - Username to validate
  * @returns {object} - {isValid: boolean, error?: string}
  */
-function validateEmail(email) {
-  if (!email || typeof email !== 'string') {
-    return { isValid: false, error: 'Email is required' };
+function validateUsername(username) {
+  if (!username || typeof username !== 'string') {
+    return { isValid: false, error: 'Username is required' };
   }
 
-  const sanitized = sanitizeInput(email);
+  const sanitized = sanitizeInput(username);
 
   if (sanitized.length > 20) {
-    return { isValid: false, error: 'Email is too long (max 254 characters)' };
+    return { isValid: false, error: 'Username is too long (max 20 characters)' };
   }
 
   if (sanitized.includes('>') || sanitized.includes('<')) {
@@ -94,11 +94,11 @@ function validateAuthRequest(body) {
   const errors = [];
   const sanitizedData = {};
 
-  const emailValidation = validateEmail(body?.email);
-  if (!emailValidation.isValid) {
-    errors.push(emailValidation.error);
+  const usernameValidation = validateUsername(body?.username);
+  if (!usernameValidation.isValid) {
+    errors.push(usernameValidation.error);
   } else {
-    sanitizedData.email = emailValidation.sanitized;
+    sanitizedData.username = usernameValidation.sanitized;
   }
 
   const passwordValidation = validatePassword(body?.password);
@@ -117,7 +117,7 @@ function validateAuthRequest(body) {
 
 module.exports = {
   sanitizeInput,
-  validateEmail,
+  validateUsername,
   validatePassword,
   validateAuthRequest,
 };

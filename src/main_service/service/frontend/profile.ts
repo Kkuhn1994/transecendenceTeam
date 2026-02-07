@@ -96,20 +96,20 @@ export async function initProfile() {
     return;
   }
 
-  const profile = p.data; // { id, email, nickname, avatar, is_active, last_login }
+  const profile = p.data; // { id, username, nickname, avatar, is_active, last_login }
 
   const s = await fetchJson(`/profile_service/user/summary?userId=${effectiveUserId}`);
   const stats = s.ok && s.data
     ? s.data
     : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
 
-  const displayName = profile.nickname || profile.email;
+  const displayName = profile.nickname || profile.username;
   const lastSeen = profile.is_active
     ? 'Online'
     : `Last seen ${profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}`;
   const winratePercent = ((stats.winrate ?? 0) * 100).toFixed(1);
 
-  // Only treat data-URLs as valid uploaded avatars
+  //avatar upload 
   const hasAvatar = profile.avatar && profile.avatar.startsWith('data:');
   const avatarSrc = hasAvatar ? profile.avatar : 'default.png';
 
@@ -205,7 +205,7 @@ export async function initProfile() {
       location.reload();
     };
   }
-  // Delete avatar button
+  //avatar upload
   const deleteAvatarBtn = document.getElementById('deleteAvatarBtn') as HTMLButtonElement | null;
   if (deleteAvatarBtn) {
     const myModal = document.getElementById('myModal');
@@ -279,9 +279,9 @@ export async function initHistory() {
 
   for (const m of matches) {
     const p1 =
-      m.player1_nickname || m.player1_email || `Player ${m.player1_id}`;
+      m.player1_nickname || m.player1_username || `Player ${m.player1_id}`;
     const p2 =
-      m.player2_nickname || m.player2_email || `Player ${m.player2_id}`;
+      m.player2_nickname || m.player2_username || `Player ${m.player2_id}`;
 
     const winner =
       m.winner_id === m.player1_id

@@ -105,7 +105,7 @@ fastify.get('/user/friends', async (request, reply) => {
       db,
       `
       SELECT
-        u.id, u.email, u.nickname, u.avatar,
+        u.id, u.username, u.nickname, u.avatar,
         (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active,
         u.last_login,
         f.created_at AS friendship_date,
@@ -123,7 +123,7 @@ fastify.get('/user/friends', async (request, reply) => {
       db,
       `
       SELECT
-        u.id, u.email, u.nickname, u.avatar,
+        u.id, u.username, u.nickname, u.avatar,
         (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active,
         u.last_login,
         fr.created_at AS friendship_date,
@@ -141,7 +141,7 @@ fastify.get('/user/friends', async (request, reply) => {
       db,
       `
       SELECT
-        u.id, u.email, u.nickname, u.avatar,
+        u.id, u.username, u.nickname, u.avatar,
         (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active,
         u.last_login,
         fr.created_at AS friendship_date,
@@ -175,9 +175,9 @@ fastify.post('/user/friends/add', async (request, reply) => {
   if (!me) return reply.code(401).send({ error: 'Not authenticated as Player 1' });
 
   const sessionCookie = request.cookies.session;
-  const { friendId, friendEmail } = request.body || {};
+  const { friendId, friendUsername } = request.body || {};
   if (!sessionCookie) return sendError(reply, 401, 'Authentication required');
-  if (!friendId && !friendEmail) return sendError(reply, 400, 'friendId or friendEmail required');
+  if (!friendId && !friendUsername) return sendError(reply, 400, 'friendId or friendUsername required');
 
   const db = openDb();
 
@@ -187,8 +187,8 @@ fastify.post('/user/friends/add', async (request, reply) => {
 
     // resolve target
     let target = null;
-    if (friendEmail) {
-      target = await getAsync(db, 'SELECT id FROM users WHERE email = ?', [friendEmail]);
+    if (friendUsername) {
+      target = await getAsync(db, 'SELECT id FROM users WHERE username = ?', [friendUsername]);
     } else {
       target = await getAsync(db, 'SELECT id FROM users WHERE id = ?', [friendId]);
     }

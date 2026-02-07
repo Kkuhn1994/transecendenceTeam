@@ -25,10 +25,9 @@ export class SecurityValidator {
       .substring(0, 1000); // Limit length as failsafe
   }
 
-  // Validate email format
-  static isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email) && email.length <= 254;
+  // Validate username format
+  static isValidUsername(username: string): boolean {
+    return username.length > 0 && username.length <= 20;
   }
 
   // Validate password - basic validation only
@@ -104,11 +103,10 @@ export class SecurityValidator {
 
 // Form validation rules
 export const VALIDATION_RULES = {
-  email: {
+  username: {
     required: true,
     maxLength: 20,
     customValidator: (value: string) => {
-      // Very permissive - just needs @ and . somewhere
       return (!value.includes('>') && !value.includes('<')) ? null : 'Please enter a valid username (no < and >)';
     }
   },

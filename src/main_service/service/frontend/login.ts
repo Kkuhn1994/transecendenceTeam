@@ -1,23 +1,23 @@
 import { SecurityValidator, VALIDATION_RULES } from './security';
 
 interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
   otp?: string;
 }
 
 interface LoginResponse {
   status: string;
-  email?: string;
+  username?: string;
   userId?: number;
   error?: string;
 }
 
 async function createUser(
-  email: string,
+  username: string,
   password: string,
 ): Promise<LoginResponse> {
-  const body: LoginRequest = { email, password };
+  const body: LoginRequest = { username, password };
 
   try {
     const response = await fetch('/login_service/createAccount', {
@@ -42,11 +42,11 @@ async function createUser(
 }
 
 export async function loginUser(
-  email: string,
+  username: string,
   password: string,
   otp: string,
 ): Promise<LoginResponse> {
-  const body: LoginRequest = { email, password, otp };
+  const body: LoginRequest = { username, password, otp };
 
   try {
     const response = await fetch('/login_service/loginAccount', {
@@ -165,7 +165,7 @@ export function initLoginAndRegister() {
 
   if (route === '/') {
     const form = document.getElementById('loginForm') as HTMLFormElement | null;
-    const emailInput = document.getElementById(
+    const usernameInput = document.getElementById(
       'loginUsername',
     ) as HTMLInputElement | null;
     const passwordInput = document.getElementById(
@@ -173,7 +173,7 @@ export function initLoginAndRegister() {
     ) as HTMLInputElement | null;
     const otpInput = document.getElementById('otp') as HTMLInputElement | null;
 
-    if (!form || !emailInput || !passwordInput) return;
+    if (!form || !usernameInput || !passwordInput) return;
 
     // Add error display elements
     addErrorDisplayElements(form);
@@ -185,15 +185,15 @@ export function initLoginAndRegister() {
       clearFormErrors(form);
 
       // Get sanitized input values
-      const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
+      const username = SecurityValidator.sanitizeInput(usernameInput.value.trim());
       const password = passwordInput.value; // Don't sanitize passwords, just validate length
       const otp = otpInput!.value;
 
       // Validate form data
       const errors = SecurityValidator.validateForm(
-        { email, password, otp },
+        { username, password, otp },
         {
-          email: VALIDATION_RULES.email,
+          username: VALIDATION_RULES.username,
           password: VALIDATION_RULES.password,
           otp: VALIDATION_RULES.password,
         },
@@ -205,7 +205,7 @@ export function initLoginAndRegister() {
       }
 
       // Proceed with login
-      const res = await loginUser(email, password, otp);
+      const res = await loginUser(username, password, otp);
       // alert(res.status);
       if (res.status === 'ok') {
         location.hash = '#/home';
@@ -219,7 +219,7 @@ export function initLoginAndRegister() {
     const form = document.getElementById(
       'registerForm',
     ) as HTMLFormElement | null;
-    const emailInput = document.getElementById(
+    const usernameInput = document.getElementById(
       'registerUsername',
     ) as HTMLInputElement | null;
     const passwordInput = document.getElementById(
@@ -227,7 +227,7 @@ export function initLoginAndRegister() {
     ) as HTMLInputElement | null;
     var qrCodeSet = false;
 
-    if (!form || !emailInput || !passwordInput) return;
+    if (!form || !usernameInput || !passwordInput) return;
 
     // Add error display elements
     addErrorDisplayElements(form);
@@ -239,14 +239,14 @@ export function initLoginAndRegister() {
       clearFormErrors(form);
 
       // Get sanitized input values
-      const email = SecurityValidator.sanitizeInput(emailInput.value.trim());
+      const username = SecurityValidator.sanitizeInput(usernameInput.value.trim());
       const password = passwordInput.value;
 
       // Validate form data
       const errors = SecurityValidator.validateForm(
-        { email, password },
+        { username, password },
         {
-          email: VALIDATION_RULES.email,
+          username: VALIDATION_RULES.username,
           password: VALIDATION_RULES.password,
         },
       );
@@ -258,7 +258,7 @@ export function initLoginAndRegister() {
 
       // Proceed with registration
       if (!qrCodeSet) {
-        const res = await createUser(email, password);
+        const res = await createUser(username, password);
         if (res.status === 'ok') {
           displaySuccessMessage(
             form,

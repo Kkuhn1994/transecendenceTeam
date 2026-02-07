@@ -52,7 +52,7 @@ async function getCurrentUser(req, reply) {
     }
   }
 
-  return await res.json(); // { id, email }
+  return await res.json(); // { id, username }
 }
 
 /** Helper: open DB */
@@ -109,13 +109,13 @@ function getJWTToken(refresh_token, db) {
 
         console.log('Found user for JWT creation:', {
           id: row.id,
-          email: row.email,
+          username: row.username,
         });
 
         const token = jwt.sign(
           {
             id: row.id,
-            email: row.email,
+            username: row.username,
             nickname: row.nickname,
           },
           process.env.JWT_SECRET,
@@ -169,7 +169,7 @@ function verifyTOTP(secret, otp, window = 1, period = 30) {
 
 /**
  * Create account
- * Body: { email, password }
+ * Body: { username, password }
  */
 fastify.post('/createAccount', async (request, reply) => {
   const validation = validateAuthRequest(request.body);
@@ -177,7 +177,7 @@ fastify.post('/createAccount', async (request, reply) => {
     return sendError(reply, 400, validation.errors.join(', '));
   }
 
-  const { email, password } = validation.sanitizedData;
+  const { username, password } = validation.sanitizedData;
   const db = openDb();
   const hashed = hashPassword(password);
 
@@ -190,8 +190,8 @@ fastify.post('/createAccount', async (request, reply) => {
   try {
     const result = await runAsync(
       db,
-      'INSERT INTO users (email, password, secret) VALUES (?, ?, ?)',
-      [email, hashed, secret.base32],
+      'INSERT INTO users (username, password, secret) VALUES (?, ?, ?)',
+      [username, hashed, secret.base32],
     );
 
     const otpAuthUrl = secret.otpauth_url;
@@ -200,7 +200,7 @@ fastify.post('/createAccount', async (request, reply) => {
     return reply.send({
       status: 'ok',
       userId: result.lastID,
-      email,
+      username,
       qr,
       otpAuthUrl,
     });
@@ -217,7 +217,7 @@ fastify.post('/createAccount', async (request, reply) => {
 
 /**
  * Login and set session cookie
- * Body: { email, password, otp }
+ * Body: { username, password, otp }
  */
 fastify.post('/loginAccount', async (request, reply) => {
   console.log('login 1');
@@ -229,7 +229,7 @@ fastify.post('/loginAccount', async (request, reply) => {
     return sendError(reply, 400, validation.errors.join(', '));
   }
 
-  const { email, password } = validation.sanitizedData;
+  const { username, password } = validation.sanitizedData;
   const otp = request.body.otp;
 
   const db = openDb();
@@ -239,7 +239,7 @@ fastify.post('/loginAccount', async (request, reply) => {
     method: 'POST',
     dispatcher,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, otp }),
+    body: JSON.stringify({ username, password, otp }),
   });
 
   const data = await res.json();
@@ -293,7 +293,7 @@ fastify.post('/loginAccount', async (request, reply) => {
         path: '/',
         maxAge: 60 * 60 * 24,
       })
-      .send({ status: 'ok', email: data.email, userId: id });
+      .send({ status: 'ok', username: data.username, userId: id });
   } catch (err) {
     console.error('Error updating or verifying session cookie:', err);
     return sendError(reply, 500, 'Failed to update session');
@@ -354,7 +354,7 @@ fastify.post('/auth/me', async (request, reply) => {
 
       return reply.send({
         id: decoded.id,
-        email: decoded.email,
+        username: decoded.username,
         nickname: decoded.nickname,
       });
     } catch (jwtErr) {
@@ -401,7 +401,7 @@ fastify.post('/auth/me', async (request, reply) => {
       })
       .send({
         id: decoded.id,
-        email: decoded.email,
+        username: decoded.username,
         nickname: decoded.nickname,
       });
   } catch (refreshErr) {
@@ -413,17 +413,17 @@ fastify.post('/auth/me', async (request, reply) => {
 });
 
 /**
- * /verifyCredentials — check email+password WITHOUT setting cookie
- * Body: { email, password, otp }
+ * /verifyCredentials — check username+password WITHOUT setting cookie
+ * Body: { username, password, otp }
  */
 fastify.post('/verifyCredentials', (request, reply) => {
-  const { email, password, otp } = request.body || {};
+  const { username, password, otp } = request.body || {};
 
-  console.log(email);
+  console.log(username);
   console.log(password);
 
-  if (!email || !password) {
-    return sendError(reply, 400, 'Email and password are required');
+  if (!username || !password) {
+    return sendError(reply, 400, 'Username and password are required');
   }
 
   const db = openDb();
@@ -432,8 +432,8 @@ fastify.post('/verifyCredentials', (request, reply) => {
   console.log('DB call pre');
 
   db.get(
-    'SELECT id, email, secret FROM users WHERE email = ? AND password = ?',
-    [email, hashed],
+    'SELECT id, username, secret FROM users WHERE username = ? AND password = ?',
+    [username, hashed],
     (err, row) => {
       db.close();
       console.log('DB call');
@@ -445,7 +445,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
 
       if (!row) {
         console.log('user not found');
-        return sendError(reply, 401, 'Invalid email or password for Player 2');
+        return sendError(reply, 401, 'Invalid username or password');
       }
 
       const secret = row.secret;
@@ -461,7 +461,7 @@ fastify.post('/verifyCredentials', (request, reply) => {
       return reply.send({
         status: 'ok',
         id: row.id,
-        email: row.email,
+        username: row.username,
       });
     },
   );

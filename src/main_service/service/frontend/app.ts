@@ -244,11 +244,11 @@ const views: ViewMap = {
 
         <form id="player2Form">
           <div class="mb-3">
-            <label for="player2Email" class="form-label">
+            <label for="player2Username" class="form-label">
               <i class="fas fa-user"></i> Player 2 username
             </label>
             <input
-              id="player2Email"
+              id="player2Username"
               class="form-control"
               placeholder="Enter Player 2's username"
               required
@@ -398,7 +398,7 @@ const views: ViewMap = {
 
       <form id="addPlayerForm" class="mb-3">
         <input
-          id="playerEmail"
+          id="playerUsername"
           class="form-control mb-2"
           placeholder="Player username"
           required

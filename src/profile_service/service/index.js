@@ -162,7 +162,7 @@ fastify.get('/user/profile', async (request, reply) => {
       db,
       `
       SELECT
-        u.id, u.email, u.nickname, u.avatar,
+        u.id, u.username, u.nickname, u.avatar,
         (EXISTS(SELECT 1 FROM sessions s WHERE s.user_id = u.id)) AS is_active,
         u.last_login
       FROM users u
@@ -201,8 +201,8 @@ fastify.get('/user/matches', async (request, reply) => {
       SELECT
         gs.*,
         t.name AS tournament_name,
-        u1.nickname as player1_nickname, u1.avatar as player1_avatar, u1.email as player1_email,
-        u2.nickname as player2_nickname, u2.avatar as player2_avatar, u2.email as player2_email
+        u1.nickname as player1_nickname, u1.avatar as player1_avatar, u1.username as player1_username,
+        u2.nickname as player2_nickname, u2.avatar as player2_avatar, u2.username as player2_username
       FROM game_sessions gs
       JOIN users u1 ON gs.player1_id = u1.id
       LEFT JOIN users u2 ON gs.player2_id = u2.id

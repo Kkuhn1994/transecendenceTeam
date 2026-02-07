@@ -16,7 +16,7 @@ RUN sqlite3 /app/data/database.db " \
 
     CREATE TABLE IF NOT EXISTS users ( \
         id INTEGER PRIMARY KEY, \
-        email TEXT UNIQUE, \
+        username TEXT UNIQUE, \
         password TEXT, \
         secret TEXT, \
         nickname TEXT, \

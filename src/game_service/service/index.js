@@ -91,7 +91,7 @@ async function getCurrentUser(req, reply) {
     }
   }
 
-  return await res.json(); // { id, email }
+  return await res.json(); // { id, username }
 }
 
 // -------------------- GAME LOOP --------------------
