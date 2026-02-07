@@ -156,15 +156,19 @@ export function startGame() {
     const stage = canvas.parentElement as HTMLElement | null;
     if (!stage) return;
 
-    const rectW = stage.getBoundingClientRect().width;
-    const availableW = Math.min(900, window.innerWidth - 40); // 20px padding each side
-    const baseW = rectW > 200 ? rectW : availableW; // fallback if layout is tiny
-    const cssW = Math.max(320, Math.min(900, baseW));
+    const cs = getComputedStyle(stage);
+
+    const padX =
+      parseFloat(cs.paddingLeft || '0') + parseFloat(cs.paddingRight || '0');
+
+    const innerW = Math.max(0, stage.clientWidth - padX);
+
+    const cssW = Math.max(320, innerW);
     const cssH = Math.round(cssW / 2);
 
     const dpr = window.devicePixelRatio || 1;
 
-    canvas.style.width = cssW + 'px';
+    canvas.style.width = '100%';
     canvas.style.height = cssH + 'px';
 
     canvas.width = Math.floor(cssW * dpr);
@@ -175,6 +179,7 @@ export function startGame() {
 
     ctx.setTransform(scaleX * dpr, 0, 0, scaleY * dpr, 0, 0);
   }
+
 
   fitCanvasToStage();
   window.addEventListener('resize', fitCanvasToStage);

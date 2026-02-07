@@ -1,4 +1,3 @@
-
 :root{
   --bg: #c3c3c3;
   --panel: #d4d0c8;
@@ -16,6 +15,13 @@
   --btn-face: #d4d0c8;
   --btn-dark: #808080;
   --btn-darker: #404040;
+  
+  --win-blue: #000080;
+  --win-blue-light: #1084d0;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 html, body{
@@ -66,8 +72,7 @@ a:hover{ color: var(--accent); }
 .login-container,
 .page-container,
 .profile-container,
-.card,
-#historyContainer{
+.card{
   background: var(--panel);
   border: 2px solid var(--line);
   box-shadow:
@@ -95,7 +100,7 @@ p,label{ color: var(--text); }
 .page-container > h1,
 .login-container > h1,
 .game-container > h1{
-  background: linear-gradient(90deg, #000080, #1084d0);
+  background: linear-gradient(90deg, var(--win-blue), var(--win-blue-light));
   color: #fff;
   padding: 6px 10px;
   border: 2px solid var(--line);
@@ -134,6 +139,9 @@ p,label{ color: var(--text); }
   color: var(--text);
   user-select: none;
   transition: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn:active,
@@ -198,7 +206,7 @@ p,label{ color: var(--text); }
   flex-direction:column;
   align-items:center;
   width: min(900px, 92vw);
-  margin: 18px;
+  margin: 18px auto;
   padding: 10px;
   background: var(--panel);
   border: 2px solid var(--line);
@@ -207,6 +215,7 @@ p,label{ color: var(--text); }
 
 .game-stage{
   width: 100%;
+  aspect-ratio: 2 / 1;
   padding: 10px;
   border: 2px solid var(--line);
   background: #bdbdbd;
@@ -216,10 +225,12 @@ p,label{ color: var(--text); }
 #pongCanvas{
   display:block;
   width: 100%;
+  max-width: 100%;
   border: 2px solid var(--line);
   border-radius: 0;
   box-shadow: inset 2px 2px 0 #808080, inset -2px -2px 0 #fff;
   background: #000;
+  box-sizing: border-box;
 }
 
 .player-bar{
@@ -275,7 +286,7 @@ p,label{ color: var(--text); }
 }
 
 .ui-modal-title{
-  background: linear-gradient(90deg, #000080, #1084d0);
+  background: linear-gradient(90deg, var(--win-blue), var(--win-blue-light));
   color: #fff;
   padding: 6px 8px;
   border: 2px solid var(--line);
@@ -332,6 +343,51 @@ p,label{ color: var(--text); }
   margin-top: auto;
 }
 
+.history-table tbody tr:nth-child(even) td {
+  background: #f5f5f5;
+}
+
+.history-table tbody tr:hover td {
+  background: #e8f4ff;
+}
+
+/* Make buttons fit in cells */
+.history-table button {
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* Compact columns */
+.history-table th:nth-child(1),
+.history-table td:nth-child(1) {
+  width: 50px;
+  text-align: center;
+}
+
+.history-table th:nth-child(4),
+.history-table td:nth-child(4) {
+  width: 80px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.history-table th:nth-child(7),
+.history-table td:nth-child(7) {
+  width: 100px;
+  text-align: center;
+}
+
+/* Date columns can be narrower */
+.history-table th:nth-child(8),
+.history-table th:nth-child(9),
+.history-table td:nth-child(8),
+.history-table td:nth-child(9) {
+  font-size: 11px;
+  min-width: 140px;
+}
+
 .text-center{ text-align:center; }
 .mt-3{ margin-top: 12px; }
 .mt-4{ margin-top: 16px; }
@@ -341,3 +397,89 @@ p,label{ color: var(--text); }
 .d-flex{ display:flex; }
 .gap-3{ gap: 12px; }
 .justify-content-center{ justify-content:center; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .history-table {
+    font-size: 11px;
+  }
+  
+  .history-table th,
+  .history-table td {
+    padding: 6px 4px;
+  }
+  
+  .history-table button {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
+
+/* History header + cells (missing right now) */
+.history-table thead{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.history-table th{
+  background: linear-gradient(180deg, var(--win-blue), var(--win-blue-light));
+  color: #fff;
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.history-table td{
+  padding: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  white-space: nowrap;
+}
+
+#historyContainer,
+#historyContainer.mt-4 {
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+
+  overflow: hidden !important;
+}
+
+.history-wrapper{
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  border: 2px solid var(--line);
+  background: #fff;
+
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh;
+
+  padding: 0;
+}
+
+.history-table{
+  border-collapse: collapse;
+  margin: 0;
+
+  width: max-content;
+  min-width: 100%;
+
+  background: #fff;
+}
+
+.page-container{
+  overflow-x: hidden;
+}

@@ -48,7 +48,7 @@ export async function initTournamentBracket() {
 
   const id = getTournamentIdFromHash();
   if (!id) {
-    root.textContent = 'Missing tournamentId.';
+    root.innerHTML = '<p><i class="fas fa-exclamation-triangle"></i> Missing tournamentId.</p>';
     return;
   }
 
@@ -61,7 +61,7 @@ export async function initTournamentBracket() {
         (data as any)?.error || `Failed to load bracket (${res.status})`,
         'Error',
       );
-      root.textContent = 'Could not load bracket.';
+      root.innerHTML = '<p><i class="fas fa-times-circle"></i> Could not load bracket.</p>';
       return;
     }
 
@@ -87,9 +87,13 @@ export async function initTournamentBracket() {
 
     let html = `
       <div class="mb-3">
-        <div style="font-size:18px;font-weight:700;">${data.tournament.name}</div>
-        <div style="opacity:0.8;font-size:12px;">Tournament id=${data.tournament.id}</div>
-        ${winnerName ? `<div style="margin-top:8px;">Winner: <b>${winnerName}</b></div>` : ''}
+        <div style="font-size:18px;font-weight:700;">
+          <i class="fas fa-trophy"></i> ${data.tournament.name}
+        </div>
+        <div style="opacity:0.8;font-size:12px;">
+          <i class="fas fa-hashtag"></i> Tournament id=${data.tournament.id}
+        </div>
+        ${winnerName ? `<div style="margin-top:8px;"><i class="fas fa-medal"></i> Winner: <b>${winnerName}</b></div>` : ''}
       </div>
 
       <div style="display:flex; gap:16px; overflow:auto; padding-bottom:10px;">
@@ -100,14 +104,16 @@ export async function initTournamentBracket() {
 
       html += `
         <div style="min-width:260px;">
-          <div style="font-weight:700; margin-bottom:10px;">Round ${r}</div>
+          <div style="font-weight:700; margin-bottom:10px;">
+            <i class="fas fa-layer-group"></i> Round ${r}
+          </div>
       `;
 
       for (const m of matches) {
         const p1 = m.player1_email || `Player ${m.player1_id}`;
         const p2 = m.player2_id
           ? m.player2_email || `Player ${m.player2_id}`
-          : 'BYE';
+          : '<i class="fas fa-fast-forward"></i> BYE';
         const w = m.winner_id
           ? m.winner_email || `Player ${m.winner_id}`
           : null;
@@ -120,11 +126,15 @@ export async function initTournamentBracket() {
             margin-bottom:10px;
             background: rgba(0,0,0,0.12);
           ">
-            <div>${p1} <span style="opacity:0.7;">vs</span> ${p2}</div>
+            <div>
+              <i class="fas fa-user"></i> ${p1} 
+              <span style="opacity:0.7;">vs</span> 
+              ${m.player2_id ? '<i class="fas fa-user"></i>' : ''} ${p2}
+            </div>
             ${
               w
-                ? `<div style="margin-top:6px; opacity:0.9;">Winner: <b>${w}</b></div>`
-                : `<div style="margin-top:6px; opacity:0.6;">Pending</div>`
+                ? `<div style="margin-top:6px; opacity:0.9;"><i class="fas fa-crown"></i> Winner: <b>${w}</b></div>`
+                : `<div style="margin-top:6px; opacity:0.6;"><i class="fas fa-hourglass-half"></i> Pending</div>`
             }
           </div>
         `;
@@ -137,6 +147,6 @@ export async function initTournamentBracket() {
     root.innerHTML = html;
   } catch (e) {
     await uiAlert('Bracket request crashed', 'Network error');
-    root.textContent = 'Network error.';
+    root.innerHTML = '<p><i class="fas fa-exclamation-triangle"></i> Network error.</p>';
   }
 }

@@ -49,7 +49,23 @@ export function uiDialog<T extends string = string>(
 
   const title = document.createElement('div');
   title.className = 'ui-modal-title';
-  title.textContent = opts.title || 'Notice';
+  
+  // Add icon based on title/context
+  let icon = '<i class="fas fa-info-circle"></i>';
+  const titleText = (opts.title || 'Notice').toLowerCase();
+  if (titleText.includes('error') || titleText.includes('fail')) {
+    icon = '<i class="fas fa-exclamation-triangle"></i>';
+  } else if (titleText.includes('success') || titleText.includes('done')) {
+    icon = '<i class="fas fa-check-circle"></i>';
+  } else if (titleText.includes('confirm') || titleText.includes('warning')) {
+    icon = '<i class="fas fa-question-circle"></i>';
+  } else if (titleText.includes('tournament') || titleText.includes('match')) {
+    icon = '<i class="fas fa-trophy"></i>';
+  } else if (titleText.includes('game')) {
+    icon = '<i class="fas fa-gamepad"></i>';
+  }
+  
+  title.innerHTML = `${icon} ${opts.title || 'Notice'}`;
 
   const body = document.createElement('div');
   body.className = 'ui-modal-body';
@@ -84,7 +100,29 @@ export function uiDialog<T extends string = string>(
       const b = document.createElement('button');
       b.type = 'button';
       b.className = `ui-btn ${btn.variant ? `ui-btn-${btn.variant}` : 'ui-btn-primary'}`;
-      b.textContent = btn.text;
+      
+      // Add icons to common button types
+      let btnIcon = '';
+      const btnText = btn.text.toLowerCase();
+      if (btnText.includes('ok') || btnText.includes('yes') || btnText.includes('confirm')) {
+        btnIcon = '<i class="fas fa-check"></i> ';
+      } else if (btnText.includes('cancel') || btnText.includes('no')) {
+        btnIcon = '<i class="fas fa-times"></i> ';
+      } else if (btnText.includes('delete') || btnText.includes('remove')) {
+        btnIcon = '<i class="fas fa-trash"></i> ';
+      } else if (btnText.includes('start')) {
+        btnIcon = '<i class="fas fa-play"></i> ';
+      } else if (btnText.includes('back')) {
+        btnIcon = '<i class="fas fa-arrow-left"></i> ';
+      } else if (btnText.includes('abandon')) {
+        btnIcon = '<i class="fas fa-flag"></i> ';
+      } else if (btnText.includes('leave')) {
+        btnIcon = '<i class="fas fa-door-open"></i> ';
+      } else if (btnText.includes('stay')) {
+        btnIcon = '<i class="fas fa-hand-paper"></i> ';
+      }
+      
+      b.innerHTML = btnIcon + btn.text;
       b.addEventListener('click', () => finish(btn.id));
       footer.appendChild(b);
       focusable.push(b);

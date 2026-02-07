@@ -146,18 +146,24 @@ export async function initHistory() {
     return;
   }
 
-  let html = `<table class="history-table" border="1" cellpadding="4" cellspacing="0">
-    <tr>
-      <th>ID</th>
-      <th>Player 1</th>
-      <th>Player 2</th>
-      <th>Score</th>
-      <th>Winner</th>
-      <th>Tournament</th>
-      <th>Bracket</th>
-      <th>Started</th>
-      <th>Ended</th>
-    </tr>
+  // CRITICAL: Wrap table in scrollable container
+  let html = `
+    <div class="history-wrapper">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Player 1</th>
+            <th>Player 2</th>
+            <th>Score</th>
+            <th>Winner</th>
+            <th>Tournament</th>
+            <th>Bracket</th>
+            <th>Started</th>
+            <th>Ended</th>
+          </tr>
+        </thead>
+        <tbody>
   `;
 
   for (const m of matches) {
@@ -188,7 +194,12 @@ export async function initHistory() {
     `;
   }
 
-  html += `</table>`;
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `;
+  
   container.innerHTML = html;
 
   container.querySelectorAll('button[data-tour]').forEach((btn) => {

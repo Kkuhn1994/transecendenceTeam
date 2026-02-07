@@ -110,11 +110,14 @@ export async function initFriends(): Promise<void> {
 
   const friendsHtml =
     friends.length === 0
-      ? '<p>No friends yet. Add some!</p>'
+      ? '<p style="text-align:center;padding:20px;"><i class="fas fa-user-slash"></i> No friends yet. Add some!</p>'
       : friends
           .map((f) => {
             const displayName = escapeHtml(f.nickname || f.email);
             const avatar = f.avatar || '';
+            const statusIcon = f.is_active 
+              ? '<i class="fas fa-circle" style="color:#00aa00;font-size:10px;"></i>' 
+              : '<i class="fas fa-circle" style="color:#888;font-size:10px;"></i>';
             const statusLine = f.is_active
               ? 'Online'
               : `Last seen ${f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'}`;
@@ -135,20 +138,20 @@ export async function initFriends(): Promise<void> {
                      onerror="this.style.display='none';" />
                 <div class="friend-info" style="flex:1; margin-right: 15px;">
                   <h3 style="margin:0;">${displayName}</h3>
-                  <p style="margin:5px 0; color:#888;">${statusLine}</p>
+                  <p style="margin:5px 0; color:#888;">${statusIcon} ${statusLine}</p>
                 </div>
 
                 <div class="friend-actions" style="display: flex; gap: 10px; align-items: center;">
                   <button class="view-profile-btn btn btn-primary"
                           data-friend='${friendPayload}'
                           style="margin-top: 0; height: 38px; min-width: 120px;">
-                    View Profile
+                    <i class="fas fa-user"></i> View Profile
                   </button>
 
                   <button class="remove-friend-btn btn btn-danger"
                           data-friend-id="${f.id}"
                           style="margin-top: 0; height: 38px; min-width: 100px;">
-                    Remove
+                    <i class="fas fa-user-times"></i> Remove
                   </button>
                 </div>
               </div>
@@ -157,15 +160,25 @@ export async function initFriends(): Promise<void> {
           .join('');
 
   container.innerHTML = `
-    <div class="friends-container" style="max-width:800px; margin:0 auto; padding:20px;">
-      <h1>Friends List</h1>
+    <div class="page-container">
+      <div class="nav">
+        <button id="navHome"><i class="fas fa-home"></i> Home</button>
+        <button id="navPlay"><i class="fas fa-gamepad"></i> Play</button>
+        <button id="navProfile"><i class="fas fa-user"></i> Profile</button>
+        <button id="navFriends"><i class="fas fa-users"></i> Friends</button>
+        <button id="navLogout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+
+      <h1><i class="fas fa-users"></i> Friends List</h1>
 
       <div class="add-friend" style="margin:20px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <input type="text" id="friendEmailInput"
                class="form-control"
                placeholder="Enter friend's username"
                style="width:250px;" />
-        <button id="addFriendBtn" class="btn btn-primary" style="margin-top: 0; height: 38px;">Add Friend</button>
+        <button id="addFriendBtn" class="btn btn-primary" style="margin-top: 0; height: 38px;">
+          <i class="fas fa-user-plus"></i> Add Friend
+        </button>
       </div>
 
       <div class="friends-list">
@@ -173,10 +186,34 @@ export async function initFriends(): Promise<void> {
       </div>
 
       <div style="margin-top:20px;">
-        <button id="backHomeBtn" class="btn btn-secondary">Back to Home</button>
+        <button id="backHomeBtn" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> Back to Home
+        </button>
       </div>
     </div>
   `;
+
+  // Handle navigation
+  const handleNav = async () => {
+    const homeBtn = document.getElementById('navHome');
+    const playBtn = document.getElementById('navPlay');
+    const profileBtn = document.getElementById('navProfile');
+    const friendsBtn = document.getElementById('navFriends');
+    const logoutBtn = document.getElementById('navLogout');
+
+    if (homeBtn) homeBtn.addEventListener('click', () => { location.hash = '#/home'; });
+    if (playBtn) playBtn.addEventListener('click', () => { location.hash = '#/play'; });
+    if (profileBtn) profileBtn.addEventListener('click', () => { location.hash = '#/profile'; });
+    if (friendsBtn) friendsBtn.addEventListener('click', () => { location.hash = '#/friends'; });
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        await fetch('/login_service/logout', { method: 'POST' });
+        location.hash = '#/';
+      });
+    }
+  };
+
+  await handleNav();
 
   document.getElementById('backHomeBtn')?.addEventListener('click', () => {
     location.hash = '#/home';
