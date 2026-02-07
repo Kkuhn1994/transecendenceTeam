@@ -480,10 +480,10 @@ fastify.post('/user/update', async (request, reply) => {
 
   const { nickname, avatar } = request.body || {};
   console.log(request.body);
-  // avatar can be empty string (delete) so check with !== undefined
   if (!nickname && avatar === undefined)
     return sendError(reply, 400, 'Nickname or avatar required');
 
+  //avatar upload
   if (avatar && avatar.length > 0) {
     if (!avatar.startsWith('data:image/png;base64,'))
       return sendError(reply, 400, 'Avatar must be a PNG image');
@@ -499,12 +499,12 @@ fastify.post('/user/update', async (request, reply) => {
     return sendError(reply, 401, 'Invalid session');
   }
 
-  // Check nickname uniqueness
+  // Check nickname/username uniqueness (also catches users with NULL nickname)
   if (nickname) {
     const existing = await getAsync(
       db,
-      'SELECT id FROM users WHERE nickname = ? AND id != ?',
-      [nickname, user.id],
+      'SELECT id FROM users WHERE (nickname = ? OR username = ? OR (nickname IS NULL AND username = ?)) AND id != ?',
+      [nickname, nickname, nickname, user.id],
     );
     if (existing) {
       db.close();
@@ -519,8 +519,10 @@ fastify.post('/user/update', async (request, reply) => {
       if (nickname) {
         updates.push('nickname = ?');
         values.push(nickname);
+        updates.push('username = ?'); /////
+        values.push(nickname);
       }
-      // avatar === '' means delete (set to null), truthy means upload
+      //avatar upload
       if (avatar !== undefined) {
         updates.push('avatar = ?');
         values.push(avatar || null);
@@ -534,11 +536,25 @@ fastify.post('/user/update', async (request, reply) => {
           `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
           values,
         );
+
+        // Refresh JWT so it reflects the updated username/nickname
+        const newJWT = await getJWTToken(sessionCookie, db);
         db.close();
-        return reply.send({ status: 'ok', updated: result.changes || 0 });
+        return reply
+          .setCookie('JWT', newJWT, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'strict',
+            path: '/',
+            maxAge: 60 * 60 * 24,
+          })
+          .send({ status: 'ok', updated: result.changes || 0 });
       } catch (err2) {
         db.close();
         console.error('Error updating profile:', err2);
+        if (err2.code === 'SQLITE_CONSTRAINT') {
+          return sendError(reply, 409, 'Nickname already taken');
+        }
         return sendError(reply, 500, 'Failed to update profile');
       }
   }
