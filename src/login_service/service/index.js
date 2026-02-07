@@ -492,6 +492,7 @@ fastify.post('/user/update', async (request, reply) => {
   if (!sessionCookie) return sendError(reply, 401, 'Authentication required');
 
   const { nickname, avatar } = request.body || {};
+  console.log(request.body);
   if (!nickname && !avatar)
     return sendError(reply, 400, 'Nickname or avatar required');
 

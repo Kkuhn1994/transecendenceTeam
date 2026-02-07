@@ -1,15 +1,12 @@
 export {};
 
-
 import { initTournamentUI } from './tournament';
 import { uiConfirm } from './ui_modal';
 import { privacyPage } from './privacy';
 
-
 const app = document.getElementById('app') as HTMLDivElement | null;
 
 type ViewMap = Record<string, string>;
-
 
 const views: ViewMap = {
   '/': `
@@ -350,6 +347,9 @@ const views: ViewMap = {
         <button id="viewHistory" class="btn btn-primary">
           <i class="fas fa-chart-bar"></i> Match History
         </button>
+        <button id="updateProfile" class="btn btn-primary">
+          <i class="fas fa-chart-bar"></i> Update Profile
+        </button>
       </div>
     </div>
   `,
@@ -566,7 +566,7 @@ async function guardedNavigate(targetHash: string): Promise<void> {
       'A match/tournament is in progress.\nIf you leave now, progress will be lost.',
       'Leave game?',
       'Leave',
-      'Stay'
+      'Stay',
     );
 
     if (!ok) return;
@@ -581,7 +581,7 @@ window.addEventListener('beforeunload', () => {
   if (window.currentSessionId != null) {
     const abandonData = new Blob(
       [JSON.stringify({ sessionId: window.currentSessionId })],
-      { type: 'application/json' }
+      { type: 'application/json' },
     );
     navigator.sendBeacon('/session/abandon', abandonData);
   }
@@ -594,8 +594,10 @@ async function handleNavButtons() {
   const logoutBtn = document.getElementById('navLogout');
   const friendsBtn = document.getElementById('navFriends');
 
-  if (homeBtn) homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
-  if (playBtn) playBtn.addEventListener('click', () => guardedNavigate('#/play'));
+  if (homeBtn)
+    homeBtn.addEventListener('click', () => guardedNavigate('#/home'));
+  if (playBtn)
+    playBtn.addEventListener('click', () => guardedNavigate('#/play'));
   if (profileBtn)
     profileBtn.addEventListener('click', () => guardedNavigate('#/profile'));
   if (friendsBtn)
@@ -661,17 +663,17 @@ async function router() {
   if (route === '/home') {
     await handleNavButtons();
 
-  document.getElementById('homeLaunchGame')?.addEventListener('click', () => {
-    location.hash = '#/play';
-  });
+    document.getElementById('homeLaunchGame')?.addEventListener('click', () => {
+      location.hash = '#/play';
+    });
 
-  document.getElementById('homeTournament')?.addEventListener('click', () => {
-    location.hash = '#/tournament';
-  });
+    document.getElementById('homeTournament')?.addEventListener('click', () => {
+      location.hash = '#/tournament';
+    });
 
-  document.getElementById('homeHistory')?.addEventListener('click', () => {
-    location.hash = '#/history';
-  });
+    document.getElementById('homeHistory')?.addEventListener('click', () => {
+      location.hash = '#/history';
+    });
   }
 
   if (route === '/play') {

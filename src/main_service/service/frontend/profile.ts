@@ -20,7 +20,7 @@ type FetchJsonResult<T = any> = {
 
 async function fetchJson<T = any>(
   url: string,
-  opts: { method?: string; body?: any } = {}
+  opts: { method?: string; body?: any } = {},
 ): Promise<FetchJsonResult<T>> {
   const res = await fetch(url, {
     method: opts.method || 'GET',
@@ -46,9 +46,30 @@ async function getMeId(): Promise<number | null> {
 }
 
 export async function initProfile() {
-  const infoDiv = document.getElementById('profileInfo') as HTMLDivElement | null;
-  const historyBtn = document.getElementById('viewHistory') as HTMLButtonElement | null;
-  const actions = document.getElementById('profileActions') as HTMLDivElement | null;
+  const infoDiv = document.getElementById(
+    'profileInfo',
+  ) as HTMLDivElement | null;
+  const historyBtn = document.getElementById(
+    'viewHistory',
+  ) as HTMLButtonElement | null;
+  const updateBtn = document.getElementById(
+    'updateProfile',
+  ) as HTMLButtonElement | null;
+  const doUpdateBtn = document.getElementById(
+    'updateBtn',
+  ) as HTMLButtonElement | null;
+  const closeBtn = document.getElementById(
+    'closeModalBtn',
+  ) as HTMLButtonElement | null;
+  const actions = document.getElementById(
+    'profileActions',
+  ) as HTMLDivElement | null;
+  const nameInput = document.getElementById(
+    'nameInputField',
+  ) as HTMLFormElement | null;
+  const avatarInput = document.getElementById(
+    'avatarField',
+  ) as HTMLFormElement | null;
 
   if (!infoDiv) return;
   if (actions) actions.style.display = 'block';
@@ -63,7 +84,9 @@ export async function initProfile() {
   }
 
   // Profile
-  const p = await fetchJson(`/login_service/user/profile?userId=${effectiveUserId}`);
+  const p = await fetchJson(
+    `/login_service/user/profile?userId=${effectiveUserId}`,
+  );
   if (!p.ok || !p.data) {
     infoDiv.innerHTML = `
       <p>Could not load profile (HTTP ${p.status}).</p>
@@ -77,10 +100,13 @@ export async function initProfile() {
 
   const profile = p.data; // { id, email, nickname, avatar, is_active, last_login }
 
-  const s = await fetchJson(`/login_service/user/summary?userId=${effectiveUserId}`);
-  const stats = s.ok && s.data
-    ? s.data
-    : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
+  const s = await fetchJson(
+    `/login_service/user/summary?userId=${effectiveUserId}`,
+  );
+  const stats =
+    s.ok && s.data
+      ? s.data
+      : { gamesPlayed: 0, wins: 0, losses: 0, winrate: 0, tournamentsWon: 0 };
 
   const displayName = profile.nickname || profile.email;
   const lastSeen = profile.is_active
@@ -119,10 +145,42 @@ export async function initProfile() {
       location.hash = `#/history?userId=${effectiveUserId}`;
     };
   }
+  if (updateBtn) {
+    const myModal = document.getElementById('myModal');
+    updateBtn.onclick = () => {
+      myModal!.style.display = 'flex';
+    };
+  }
+  if (doUpdateBtn) {
+    const myModal = document.getElementById('myModal');
+    doUpdateBtn.onclick = () => {
+      const nameValue = nameInput?.value;
+      const avatar = avatarInput?.value;
+      const body = {
+        nickname: nameValue,
+        avatar: avatar,
+      };
+      fetch('/login_service/user/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      myModal!.style.display = 'none';
+      location.reload();
+    };
+  }
+  if (closeBtn) {
+    const myModal = document.getElementById('myModal');
+    closeBtn.onclick = () => {
+      myModal!.style.display = 'none';
+    };
+  }
 }
 
 export async function initHistory() {
-  const container = document.getElementById('historyContainer') as HTMLDivElement | null;
+  const container = document.getElementById(
+    'historyContainer',
+  ) as HTMLDivElement | null;
   if (!container) return;
 
   // friend history via ?userId, else self history
@@ -134,7 +192,9 @@ export async function initHistory() {
     return;
   }
 
-  const r = await fetchJson(`/login_service/user/matches?userId=${effectiveUserId}&limit=25`);
+  const r = await fetchJson(
+    `/login_service/user/matches?userId=${effectiveUserId}&limit=25`,
+  );
   if (!r.ok || !r.data) {
     container.textContent = `Could not load history (HTTP ${r.status}).`;
     return;
@@ -167,13 +227,21 @@ export async function initHistory() {
   `;
 
   for (const m of matches) {
-    const p1 = m.player1_nickname || m.player1_email || `Player ${m.player1_id}`;
-    const p2 = m.player2_nickname || m.player2_email || `Player ${m.player2_id}`;
+    const p1 =
+      m.player1_nickname || m.player1_email || `Player ${m.player1_id}`;
+    const p2 =
+      m.player2_nickname || m.player2_email || `Player ${m.player2_id}`;
 
     const winner =
-      m.winner_id === m.player1_id ? p1 : m.winner_id === m.player2_id ? p2 : '–';
+      m.winner_id === m.player1_id
+        ? p1
+        : m.winner_id === m.player2_id
+          ? p2
+          : '–';
 
-    const tName = m.tournament_id ? (m.tournament_name || `Tournament ${m.tournament_id}`) : '–';
+    const tName = m.tournament_id
+      ? m.tournament_name || `Tournament ${m.tournament_id}`
+      : '–';
 
     const bracketBtn = m.tournament_id
       ? `<button class="btn btn-primary" data-tour="${m.tournament_id}">See tournament</button>`
@@ -199,14 +267,17 @@ export async function initHistory() {
       </table>
     </div>
   `;
-  
+
   container.innerHTML = html;
 
   container.querySelectorAll('button[data-tour]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = (btn as HTMLButtonElement).dataset.tour;
       if (!id) return;
-      sessionStorage.setItem('bracketBackTo', `#/history?userId=${effectiveUserId}`);
+      sessionStorage.setItem(
+        'bracketBackTo',
+        `#/history?userId=${effectiveUserId}`,
+      );
       location.hash = `#/tournament_bracket?tournamentId=${id}`;
     });
   });
