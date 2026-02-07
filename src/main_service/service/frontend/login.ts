@@ -74,12 +74,12 @@ function addErrorDisplayElements(form: HTMLFormElement): void {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-display';
     errorDiv.style.cssText = `
-      color: #ff6b6b;
-      background: rgba(255, 107, 107, 0.1);
-      border: 1px solid rgba(255, 107, 107, 0.3);
-      border-radius: 4px;
+      color: #111;
+      background: #ffe7ef; /* soft pink */
+      border: 2px solid #000;
+      box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #808080, 2px 2px 0 #7b7b7b;
       padding: 10px;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       display: none;
       font-size: 14px;
     `;
@@ -91,12 +91,12 @@ function addErrorDisplayElements(form: HTMLFormElement): void {
     const successDiv = document.createElement('div');
     successDiv.className = 'success-display';
     successDiv.style.cssText = `
-      color: #51cf66;
-      background: rgba(81, 207, 102, 0.1);
-      border: 1px solid rgba(81, 207, 102, 0.3);
-      border-radius: 4px;
+      color: #111;
+      background: #e0ddd7;
+      border: 2px solid #000;
+      box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #808080, 2px 2px 0 #7b7b7b;
       padding: 10px;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       display: none;
       font-size: 14px;
     `;
@@ -262,7 +262,7 @@ export function initLoginAndRegister() {
         if (res.status === 'ok') {
           displaySuccessMessage(
             form,
-            'Account created successfully! Pls scan the QR-Code for 2-FA then you can log in',
+            'Account created successfully! Please scan the QR-Code for 2-FA then you can log in',
           );
           qrCodeSet = true;
           // setTimeout(() => {

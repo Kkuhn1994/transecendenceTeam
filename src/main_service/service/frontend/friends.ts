@@ -116,13 +116,8 @@ export async function initFriends(): Promise<void> {
             const displayName = escapeHtml(f.nickname || f.email);
             const avatar = f.avatar || '';
             const statusLine = f.is_active
-              ? '🟢 Online'
-              : `⚫ Last seen ${
-                  f.last_login
-                    ? new Date(f.last_login).toLocaleDateString()
-                    : 'Never'
-                }`;
-
+              ? 'Online'
+              : `Last seen ${f.last_login ? new Date(f.last_login).toLocaleDateString() : 'Never'}`;
             const friendPayload = encodeURIComponent(
               JSON.stringify({
                 id: f.id,

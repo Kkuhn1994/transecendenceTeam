@@ -420,7 +420,7 @@ export function startGame() {
     const winner = winnerIndex === 1 ? p1 : p2;
 
     const choice = await uiDialog<'again' | 'lobby'>({
-      title: '🏁 Game finished!',
+      title: ' Game finished!',
       message: `Final score: ${scoreLeft} - ${scoreRight}\nWinner: ${winner}`,
       buttons: [
         { id: 'again', text: 'Play again', variant: 'primary' },
@@ -572,7 +572,7 @@ export function startGame() {
           const winnerName = winnerIndex === 1 ? p1Name : p2Name;
 
           await uiAlert(
-            `✅ Match finished!\n${p1Name} vs ${p2Name}\nFinal score: ${scoreLeft} - ${scoreRight}\n🏅 Winner: ${winnerName}`,
+            `Match finished!\n${p1Name} vs ${p2Name}\nFinal score: ${scoreLeft} - ${scoreRight}\n Winner: ${winnerName}`,
             'Match finished',
           );
 

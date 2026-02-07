@@ -122,12 +122,25 @@ const views: ViewMap = {
       </div>
 
       <h1>Home</h1>
-      <p>Choose what you want to do:</p>
 
-      <div class="d-flex gap-3 justify-content-center mt-4">
-        <button id="goPlay" class="btn btn-primary">Play Game</button>
-        <button id="goProfile" class="btn btn-primary">Profile</button>
-        <button id="goFriends" class="btn btn-primary">Friends</button>
+      <div class="menu-panel">
+        <div class="menu-item">
+          <h3>Play</h3>
+          <p>Start a quick match.</p>
+          <button id="homeLaunchGame" class="btn btn-primary">Launch Game</button>
+        </div>
+
+        <div class="menu-item">
+          <h3>Tournament</h3>
+          <p>Create or manage tournaments.</p>
+          <button id="homeTournament" class="btn">Tournament Wizard</button>
+        </div>
+
+        <div class="menu-item">
+          <h3>History</h3>
+          <p>View past matches and results.</p>
+          <button id="homeHistory" class="btn">Match History</button>
+        </div>
       </div>
 
       <div style="position: fixed; bottom: 10px; right: 20px; z-index: 1000;">
@@ -150,7 +163,7 @@ const views: ViewMap = {
 
       <h1>Play Game</h1>
 
-      <div class="d-flex gap-3 justify-content-center mt-4">
+      <div style="border:2px solid #000; padding:12px; background:#e0ddd7; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #808080;" class="d-flex gap-3 justify-content-center mt-4">
         <button id="go1v1" class="btn btn-primary">1v1 Match</button>
         <button id="goTournament" class="btn btn-primary">
           Create Tournament
@@ -606,17 +619,17 @@ async function router() {
   if (route === '/home') {
     await handleNavButtons();
 
-    document.getElementById('goPlay')?.addEventListener('click', () => {
-      location.hash = '#/play';
-    });
+  document.getElementById('homeLaunchGame')?.addEventListener('click', () => {
+    location.hash = '#/play';
+  });
 
-    document.getElementById('goProfile')?.addEventListener('click', () => {
-      location.hash = '#/profile';
-    });
+  document.getElementById('homeTournament')?.addEventListener('click', () => {
+    location.hash = '#/tournament';
+  });
 
-    document.getElementById('goFriends')?.addEventListener('click', () => {
-      location.hash = '#/friends';
-    });
+  document.getElementById('homeHistory')?.addEventListener('click', () => {
+    location.hash = '#/history';
+  });
   }
 
   if (route === '/play') {

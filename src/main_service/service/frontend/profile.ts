@@ -84,8 +84,8 @@ export async function initProfile() {
 
   const displayName = profile.nickname || profile.email;
   const lastSeen = profile.is_active
-    ? '🟢 Online'
-    : `⚫ Last seen ${profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}`;
+    ? 'Online'
+    : `Last seen ${profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never'}`;
   const winratePercent = ((stats.winrate ?? 0) * 100).toFixed(1);
 
   infoDiv.innerHTML = `
@@ -146,7 +146,7 @@ export async function initHistory() {
     return;
   }
 
-  let html = `<table border="1" cellpadding="4" cellspacing="0">
+  let html = `<table class="history-table" border="1" cellpadding="4" cellspacing="0">
     <tr>
       <th>ID</th>
       <th>Player 1</th>
