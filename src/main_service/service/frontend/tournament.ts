@@ -286,7 +286,7 @@ async function startMatchLoop(
       return;
     }
 
-    // ✅ Store as pending BEFORE user decides, so Back doesn't skip
+    // Store as pending BEFORE user decides, so Back doesn't skip
     const pending: PendingMatch = {
       tournamentId: Number(window.currentTournamentId),
       sessionId: Number(data.sessionId),

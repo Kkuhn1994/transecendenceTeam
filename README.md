@@ -2,10 +2,6 @@
 
 # ft_transcendence
 
-## TODO
-
-- [ ] Better UI ->maybe use other buttons than standard
-- [ ] Better tournament messages (match vs "BYE" insead of a real message)
 
 ## Description
 
@@ -68,7 +64,7 @@ A secure, multiplayer web-based Pong game featuring JWT authentication, 2FA, HTT
 ## Database Schema
 
 ```
-users: id, username, email, password_hash, avatar, display_name, created_at
+users: id, username, password_hash, avatar, display_name, created_at
 friends: id, user_id, friend_id, status, created_at
 games: id, player1_id, player2_id, winner_id, score, created_at
 tournaments: id, name, status, created_at
@@ -77,17 +73,18 @@ tournament_players: tournament_id, user_id
 
 ---
 
-## Features
+## Mandatory Features
 
 | Feature | Description | Contributors |
 |---------|-------------|--------------|
-| Docker Deployment | Single-command containerized deployment | |
+| Docker Deployment | Single-command containerized deployment | kkuhn |
 | Multi-user Support | Concurrent users, real-time updates, no race conditions | |
 | Responsive Frontend | Chrome-compatible, mobile-friendly interface | |
-| Secure Authentication | Hashed passwords, HTTPS everywhere | |
+| Secure Authentication | HTTPS everywhere | temil-da |
+| | HTTPS everywhere | kkuhn |
 | Input Validation | Frontend and backend validation on all forms | |
-| Privacy & Terms | Accessible Privacy Policy and Terms of Service | |
-| Database Schema | SQLite schema with clear relations | |
+| Privacy & Terms | Accessible Privacy Policy and Terms of Service | rwegat |
+| Database Schema | SQLite | |
 
 ---
 
@@ -95,24 +92,17 @@ tournament_players: tournament_id, user_id
 
 | Category | Module | Points | Contributors |
 |----------|--------|:------:|--------------|
-| Web | Backend Framework | 1 | |
-| User Management | Standard User Management | 2 | rwegat |
-| | Game Stats & Match History | 1 | rwegat|
-| AI | Opponent AI | 2 | rwegat|
-| Cybersecurity | 2FA | 1 | |
-| Gaming & UX | Web-based Game | 2 | |
-| | Tournament System | 1 | |
-| DevOps | Backend as Microservices | 2 | |
-| Modules of Choice | JWT Authentication | 2 | |
+| Web | Backend Framework | 1 | kkuhn |
+| User Management | Standard User Management | 2 | rwegat, temil-da |
+| | Game Stats & Match History | 1 | temil-da, rwegat |
+| AI | Opponent AI | 2 | rwegat |
+| Cybersecurity | 2FA | 1 | kkuhn|
+| Gaming & UX | Web-based Game | 2 | temil-da |
+| | Tournament System | 1 | temil-da |
+| DevOps | Backend as Microservices | 2 | kkuhn |
+| Modules of Choice | JWT Authentication | 2 | kkuhn |
 | | **Total** | **14** | |
 
----
-
-## Individual Contributions
-//subject wants a lot more here  
-**kkuhn:**  
-**temil-da:**  
-**rwegat:**
 
 ---
 
@@ -139,6 +129,7 @@ Open `https://localhost:1080` in your browser.
 
 AI disclosure: We have used AI to help with design, tracking down bugs, creating temporary content as proof of concepts
 and assisting by providing pseudo code to help with getting familiar in new topics and areas.
+It has also been used to create the README
 
 ---
 

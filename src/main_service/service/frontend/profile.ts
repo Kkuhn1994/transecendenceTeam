@@ -1,5 +1,7 @@
 export {};
 
+import { SecurityValidator } from './security';
+
 function getUserIdFromHash(): number | null {
   const fullRoute = location.hash.replace('#', '') || '/';
   const qs = fullRoute.split('?')[1] || '';
@@ -69,7 +71,7 @@ export async function initProfile() {
   ) as HTMLFormElement | null;
   const avatarInput = document.getElementById(
     'avatarField',
-  ) as HTMLFormElement | null;
+  ) as HTMLInputElement | null;
 
   if (!infoDiv) return;
   if (actions) actions.style.display = 'block';
@@ -152,6 +154,9 @@ export async function initProfile() {
         if (nameInput) {
           nameInput.value = displayName;
         }
+        if (avatarInput) {
+          (avatarInput as HTMLInputElement).value = '';
+        }
       };
     }
   }
@@ -159,7 +164,8 @@ export async function initProfile() {
   if (doUpdateBtn) {
     const myModal = document.getElementById('myModal');
     doUpdateBtn.onclick = async () => {
-      const nameValue = nameInput?.value?.trim();
+      const rawName = nameInput?.value?.trim() || '';
+      const nameValue = rawName ? SecurityValidator.sanitizeInput(rawName) : '';
 
       // Read PNG file as base64 data URL
       let avatarDataUrl: string | undefined;
@@ -257,7 +263,6 @@ export async function initHistory() {
     return;
   }
 
-  // CRITICAL: Wrap table in scrollable container
   let html = `
     <div class="history-wrapper">
       <table class="history-table">

@@ -8,7 +8,7 @@ const fastifyCookie = require('@fastify/cookie');
 const { hashPassword } = require('./hash.js');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
-const { validateAuthRequest } = require('./security.js');
+const { validateAuthRequest, validateUsername } = require('./security.js');
 const base32 = require('thirty-two');
 const jwt = require('jsonwebtoken');
 const { Agent } = require('undici');
@@ -516,7 +516,7 @@ fastify.post('/user/update', async (request, reply) => {
       const updates = [];
       const values = [];
 
-      if (nickname) {
+      if (validateUsername(nickname)) {
         updates.push('nickname = ?');
         values.push(nickname);
         updates.push('username = ?'); /////
