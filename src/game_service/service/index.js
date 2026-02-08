@@ -187,7 +187,7 @@ async function setup_newgame(sessionId, body, db) {
   });
 
   // Return the created row so game_actions gets real numbers
-  return await getAsync(db, `SELECT * FROM game_data WHERE sessionId = ?`, [
+  return await getAsync(db2, `SELECT * FROM game_data WHERE sessionId = ?`, [
     sessionId,
   ]);
 }
@@ -211,6 +211,7 @@ function speedOf(vx, vy) {
 
 async function game_actions(sessionId, row, body, db) {
   console.log('game actions 1');
+  console.log(row);
   let {
     canvasheight,
     canvaswidth,
@@ -225,7 +226,7 @@ async function game_actions(sessionId, row, body, db) {
   } = row;
   let { upPressed, downPressed, wPressed, sPressed } = body;
   const isAI = body.isAI || false;
-
+  console.log('game actions 2');
   // AI opponent logic
   if (isAI && gameSessions.has(sessionId)) {
     const gameSession = gameSessions.get(sessionId);
