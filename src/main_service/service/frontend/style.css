@@ -522,3 +522,39 @@ p,label{ color: var(--text); }
   padding-top: 6px;
   border-top: 1px solid rgba(0,0,0,0.25);
 }
+
+:root {
+  --win-gray:  #C0C0C0;
+  --win-white: #FFFFFF;
+  --win-black: #000000;
+  --win-dark:  #808080;
+}
+
+.modal-content {
+  background-color: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
+  padding: 4px;
+  width: 35vh;
+  height: 20vw;
+  box-shadow: 2px 2px 0px var(--win-black);
+}
+
+.modal {
+  position: fixed;   
+  justify-content: center; /* Horizontale Zentrierung */
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+
+#closeModalBtn {
+  background-color: #0000FF;  /* kräftiges Rot */
+  color: #FFFFFF;
+  border: 2px solid;
+  border-color: #FFFFFF #000000 #000000 #FFFFFF;
+  padding: 4px 10px;
+  font-family: Tahoma, Arial, sans-serif;
+  cursor: pointer;
+}
+
